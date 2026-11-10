@@ -7,6 +7,7 @@
   GET  /extra/<名前>.jpg 追加のカメラ（外から見る固定カメラなど）の画像1枚
   POST /api/plan         {"instructions": "1行に1指示"}   指示文から計画を作る
   POST /api/set_plan     {"plan": {...}}                  計画の JSON を直接読み込む
+  POST /api/load_preset  {"name": "x.json"}               用意済みの計画を読み込む
   POST /api/execute      表示中の計画を承認して実行する
   POST /api/stop         停止
   POST /api/reset        停止を解除
@@ -88,7 +89,8 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <div class="row"><button class="primary" id="bplan">計画を作る</button></div>
 <details><summary>計画の JSON を直接編集する／読み込む</summary>
 <textarea id="pjson" placeholder='{"steps": [...]}'></textarea>
-<div class="row"><button id="bload">この JSON を計画にする</button></div></details>
+<div class="row"><button id="bload">この JSON を計画にする</button></div>
+<div class="row" id="presets"></div></details>
 <div id="msg"></div>
 </section>
 <section><h2>2. 計画の確認と承認</h2>
@@ -129,6 +131,7 @@ async function tick(){
     if(extraNames.length){ $("extrasec").style.display=""; for(const c of s.extra_cameras){ const f=document.createElement("figure");
       f.innerHTML='<img id="ex_'+esc(c.name)+'" alt="'+esc(c.label)+'"><figcaption>'+esc(c.label)+'</figcaption>'; $("extras").appendChild(f);} } }
   if(extraNames.length && (extraTick++%2===0)){ for(const n of extraNames){ $("ex_"+n).src="/extra/"+n+".jpg?t="+Date.now(); } }
+  if(!buttonsMade){ for(const n of s.presets){ const el=document.createElement("button"); el.textContent="用意済み: "+n; el.onclick=()=>post("/api/load_preset",{name:n}); $("presets").appendChild(el);} }
   if(!buttonsMade){ buttonsMade=true; for(const b of s.buttons){ const el=document.createElement("button"); el.textContent=b.label; el.onclick=()=>post("/api/trigger",{name:b.name}); $("extra").appendChild(el);} }
   const t=$("task"); t.textContent=TS[s.task_state]||s.task_state; t.className="badge"+(s.task_state==="done"?" ok":(s.task_state==="failed"||s.task_state==="stopped"?" ng":""));
   $("taskmsg").textContent=s.task_message+(s.stopped?"（停止中）":"");
@@ -252,6 +255,8 @@ def _make_handler(runtime: TaskRuntime, stream_hz: float):
                 self._result(runtime.request_plan(str(body.get("instructions", ""))))
             elif url.path == "/api/set_plan":
                 self._result(runtime.set_plan(body.get("plan")))
+            elif url.path == "/api/load_preset":
+                self._result(runtime.load_preset(str(body.get("name", ""))))
             elif url.path == "/api/execute":
                 self._result(runtime.execute())
             elif url.path == "/api/stop":

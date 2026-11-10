@@ -50,7 +50,8 @@ class Stack:
 def make_stack():
     servers = []
 
-    def _make(world: FakeWorld, latency=0.3, noise=0.0, flip=0.0, seed=0, skill=None, executor=None) -> Stack:
+    def _make(world: FakeWorld, latency=0.3, noise=0.0, flip=0.0, seed=0, skill=None, executor=None,
+              run_dir=None) -> Stack:
         mock = MockVlm(world.wp, MockConfig(latency_s=0.0, point_noise_px=noise, check_flip_prob=flip, seed=seed),
                        world.truth, lambda: world.camera_true)
         server = make_server(mock, "127.0.0.1", 0)
@@ -58,7 +59,7 @@ def make_stack():
         servers.append(server)
         url = f"http://127.0.0.1:{server.server_address[1]}/v1"
         vlm = SimLatencyVlm(VlmConfig(base_url=url, model="mock-vlm"), world, latency)
-        events = EventLog(None, keep=100000)
+        events = EventLog(run_dir, keep=100000)
         cancel = threading.Event()
         perception = Perception(world, vlm, PerceptionConfig(), events)
         skill_cfg = SkillConfig(**{"repoint_period_s": 0.0, **(skill or {})})
@@ -242,6 +243,29 @@ def test_condition_timeout_when_elevator_never_comes(make_stack):
     assert 20.0 <= world.t <= 23.0 and world.x == pytest.approx(-1.0)
 
 
+def test_export_labelled_samples_from_a_mock_run(make_stack, tmp_path):
+    # モック VLM で通した記録から、正解つきの画像の組（机上評価用）が作れる
+    import importlib.util
+
+    script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__)))))), "scripts", "inside", "export_samples.py")
+    spec = importlib.util.spec_from_file_location("export_samples", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    run_dir = str(tmp_path / "run")
+    world = FakeWorld()
+    stack = make_stack(world, run_dir=run_dir)
+    assert run_task(stack).ok
+    stack.events.close()
+    samples = module.select(module.load_events(run_dir))
+    checks = [(s["step"], s["expected"]) for s in samples if s["kind"] == "check"]
+    assert {(0, "no"), (0, "yes"), (2, "no"), (2, "yes")} <= set(checks)
+    points = [s for s in samples if s["kind"] == "point"]
+    assert [p["target"] for p in points] == ["center of the elevator car floor", "hallway floor 1 m past the door"]
+    assert all(os.path.isfile(os.path.join(run_dir, s["image"])) for s in samples)
+
+
 # -- 実行系のまとめ役と Web UI（HTTP の API）を通した試験 -------------------------
 def _http(url, body=None):
     data = None if body is None else json.dumps(body).encode("utf-8")
@@ -267,6 +291,7 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
     cfg = load_config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config",
                                    "task_sim.yaml"), env={"VLM_BASE_URL": stack.url, "VLM_MODEL": "mock-vlm"})
     cfg.log_dir = str(tmp_path)
+    cfg.plan_dir = os.path.join(TASK_PKG, "plans")
     cfg.skills.repoint_period_s = 0.0
     cfg.web = WebConfig(host="127.0.0.1", port=0, buttons=cfg.web.buttons)
     hooks = {"stop": 0, "reset": 0}
@@ -316,6 +341,10 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
         with open(os.path.join(TASK_PKG, "plans", "elevator_fixed_distance.json"), encoding="utf-8") as f:
             assert json.loads(_http(base + "/api/set_plan", {"plan": f.read()}))["ok"]
         assert not json.loads(_http(base + "/api/set_plan", {"plan": {"steps": []}}))["ok"]
+        # 用意済みの計画
+        assert state["presets"] == ["elevator_expected.json", "elevator_fixed_distance.json"]
+        assert json.loads(_http(base + "/api/load_preset", {"name": "elevator_expected.json"}))["ok"]
+        assert not json.loads(_http(base + "/api/load_preset", {"name": "../config/task.yaml"}))["ok"]
         # VLM に渡した画像と記録がディスクに残っている
         run_dir = state["run_dir"]
         assert os.path.isfile(os.path.join(run_dir, "events.jsonl"))

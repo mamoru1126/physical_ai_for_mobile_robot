@@ -148,6 +148,22 @@ class TaskRuntime:
         self.events.emit("plan_loaded", plan=plan.to_dict())
         return True, "計画を読み込みました"
 
+    def presets(self) -> List[str]:
+        """用意済みの計画（plan_dir の JSON ファイル）の名前."""
+        try:
+            return sorted(f for f in os.listdir(self.cfg.plan_dir) if f.endswith(".json")) if self.cfg.plan_dir else []
+        except OSError:
+            return []
+
+    def load_preset(self, name: str) -> Tuple[bool, str]:
+        if name not in self.presets():
+            return False, f"用意済みの計画にありません: {name}"
+        try:
+            with open(os.path.join(self.cfg.plan_dir, name), "r", encoding="utf-8") as f:
+                return self.set_plan(f.read())
+        except OSError as e:
+            return False, f"計画のファイルを読めません: {e}"
+
     # -- 実行 ---------------------------------------------------------------
     def execute(self) -> Tuple[bool, str]:
         """表示中の計画を承認して実行する."""
@@ -263,6 +279,7 @@ class TaskRuntime:
         out["extra_cameras"] = [{"name": c.get("name", ""), "label": c.get("label", c.get("name", ""))}
                                 for c in self.cfg.web.extra_cameras]
         out["instructions"] = self.cfg.instructions
+        out["presets"] = self.presets()
         out["run_dir"] = self.events.run_dir or ""
         out["events"] = self.events.since(since)
         return out

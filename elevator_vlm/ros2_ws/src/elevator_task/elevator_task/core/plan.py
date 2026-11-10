@@ -91,7 +91,15 @@ class Plan:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
 
 
-# VLM の構造化出力に渡す JSON スキーマ. 細かい範囲は parse_plan で検査する.
+# VLM の構造化出力に渡す JSON スキーマ. スキルごと、「いつ」の種類ごとに、必要な項目を決めてある
+# （サーバが出力をこの形に縛るので、「旋回なのに角度がない」といった計画は出てこない）.
+# 数値の範囲は parse_plan で検査する.
+def _variant(key: str, values: List[str], extra: Dict[str, Any]) -> Dict[str, Any]:
+    props: Dict[str, Any] = {key: {"type": "string", "enum": values}}
+    props.update(extra)
+    return {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}
+
+
 PLAN_JSON_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -103,32 +111,25 @@ PLAN_JSON_SCHEMA: Dict[str, Any] = {
                 "type": "object",
                 "properties": {
                     "instruction": {"type": "string"},
-                    "when": {
-                        "type": "object",
-                        "properties": {
-                            "type": {"type": "string", "enum": list(WHEN_TYPES)},
-                            "condition": {"type": "string"},
-                        },
-                        "required": ["type"],
-                    },
-                    "do": {
-                        "type": "object",
-                        "properties": {
-                            "skill": {"type": "string", "enum": list(SKILLS)},
-                            "angle_deg": {"type": "number"},
-                            "distance_m": {"type": "number"},
-                            "target": {"type": "string"},
-                            "seconds": {"type": "number"},
-                        },
-                        "required": ["skill"],
-                    },
+                    "when": {"anyOf": [
+                        _variant("type", [WHEN_NOW], {}),
+                        _variant("type", [WHEN_TRUE, WHEN_AFTER_FALSE_THEN_TRUE], {"condition": {"type": "string"}}),
+                    ]},
+                    "do": {"anyOf": [
+                        _variant("skill", [SKILL_ROTATE], {"angle_deg": {"type": "number"}}),
+                        _variant("skill", [SKILL_MOVE_STRAIGHT], {"distance_m": {"type": "number"}}),
+                        _variant("skill", [SKILL_GO_TO_VISUAL_TARGET], {"target": {"type": "string"}}),
+                        _variant("skill", [SKILL_WAIT], {"seconds": {"type": "number"}}),
+                    ]},
                     "timeout_s": {"type": "number"},
                 },
                 "required": ["instruction", "when", "do", "timeout_s"],
+                "additionalProperties": False,
             },
         }
     },
     "required": ["steps"],
+    "additionalProperties": False,
 }
 
 

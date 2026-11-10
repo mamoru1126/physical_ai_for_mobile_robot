@@ -277,7 +277,7 @@ def observer_models(p: WorldParams) -> str:
     out = []
     for floor in p.floors():
         z0 = p.floor_z(floor)
-        cx, cy, cz = -3.3, -1.55, z0 + 2.3
+        cx, cy, cz = -2.7, -1.6, z0 + 2.3
         tx, ty, tz = -0.3, 0.0, z0 + 1.0
         yaw = math.atan2(ty - cy, tx - cx)
         pitch = math.atan2(cz - tz, math.hypot(tx - cx, ty - cy))

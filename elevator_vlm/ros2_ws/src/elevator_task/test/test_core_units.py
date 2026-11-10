@@ -95,6 +95,17 @@ def test_invalid_plans_are_rejected(bad):
         parse_plan(bad)
 
 
+def test_plan_schema_has_one_variant_per_skill_and_when_type():
+    from elevator_task.core.plan import PLAN_JSON_SCHEMA, SKILLS, WHEN_TYPES
+    item = PLAN_JSON_SCHEMA["properties"]["steps"]["items"]["properties"]
+    skills = [v["properties"]["skill"]["enum"] for v in item["do"]["anyOf"]]
+    assert sorted(sum(skills, [])) == sorted(SKILLS) and all(len(s) == 1 for s in skills)
+    whens = sum((v["properties"]["type"]["enum"] for v in item["when"]["anyOf"]), [])
+    assert sorted(whens) == sorted(WHEN_TYPES)
+    for variant in item["do"]["anyOf"] + item["when"]["anyOf"]:
+        assert set(variant["required"]) == set(variant["properties"]) and variant["additionalProperties"] is False
+
+
 def test_split_instructions():
     assert split_instructions(" a \r\n\n b\n") == ["a", "b"]
 

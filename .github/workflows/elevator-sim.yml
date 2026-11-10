@@ -31,7 +31,7 @@ jobs:
       - name: End-to-end run in Gazebo with the mock VLM (software rendering)
         run: |
           mkdir -p elevator_vlm/runs
-          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e LAUNCH_LOG_LINES=250 \
+          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=250 \
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
 
       - name: Upload run records

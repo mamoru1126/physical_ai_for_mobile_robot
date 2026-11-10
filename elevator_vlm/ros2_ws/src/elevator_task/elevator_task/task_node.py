@@ -10,6 +10,7 @@ Web UI もこのプロセスの中で動く（既定は http://<ホスト>:8080/
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 from functools import partial
@@ -17,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import rclpy
+from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.executors import ExternalShutdownException
@@ -178,6 +180,11 @@ class TaskNode(Node):
         if log_dir:
             overrides["log_dir"] = log_dir
         cfg = load_config(config_file or None, overrides)
+        if not cfg.plan_dir:
+            try:        # 用意済みの計画は、このパッケージの plans/ にある
+                cfg.plan_dir = os.path.join(get_package_share_directory("elevator_task"), "plans")
+            except Exception:  # noqa: BLE001
+                pass
 
         self.io = RosRobotIO(self, cfg)
         stop_cli = self.create_client(Trigger, "safety/stop")

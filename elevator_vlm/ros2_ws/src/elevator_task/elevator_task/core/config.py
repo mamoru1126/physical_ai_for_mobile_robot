@@ -59,6 +59,8 @@ class TaskConfig:
     instructions: List[str] = field(default_factory=lambda: list(DEFAULT_INSTRUCTIONS))
     planner_thinking: bool = False
     log_dir: str = "runs"
+    # 画面から読み込める、用意済みの計画（JSON ファイル）の置き場所. 空なら使わない
+    plan_dir: str = ""
 
 
 def _coerce(value: Any, current: Any, where: str) -> Any:

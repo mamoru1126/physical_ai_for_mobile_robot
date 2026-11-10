@@ -4,6 +4,7 @@
 #   環境変数:
 #     RENDER        egl（NVIDIA の GPU で描画. 既定）か xvfb（GPU なし. ソフトウェア描画）
 #     PRINT_IMAGES  true にすると、要所の画像を小さくして base64 でログに出す（CI 用）
+#     PRINT_SAMPLES true にすると、正解つきの画像の組（机上評価用）を作って base64 でログに出す（CI 用）
 #     DOOR_HOLD_S / DOOR_SENSOR / BOARD_FLOOR / DEST_FLOOR   エレベーターの設定
 set -u
 MODE="${1:-mock}"
@@ -34,6 +35,20 @@ done
 pkill -9 -f "gz sim" 2>/dev/null
 pkill -9 -f "parameter_bridge" 2>/dev/null
 
+if [ "${PRINT_SAMPLES:-false}" = "true" ] && [ -f "${OUT}/summary.json" ]; then
+  RUN_DIR="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('run_dir') or '')" "${OUT}/summary.json")"
+  if [ -n "${RUN_DIR}" ] && python3 /workspace/scripts/inside/export_samples.py "${RUN_DIR}" "${OUT}/samples"; then
+    for f in "${OUT}"/samples/*; do
+      echo "SAMPLE_BEGIN $(basename "${f}")"
+      base64 -w 0 "${f}"
+      echo
+      echo "SAMPLE_END"
+    done
+  fi
+fi
+
+echo "---- launch.log の警告とエラー（重複はまとめる）----"
+grep -i -E "error|warn|exception|traceback|\\[err\\]" "${OUT}/launch.log" | sed -E 's/[0-9]+\.[0-9]+/#/g' | sort | uniq -c | sort -rn | head -n 40
 echo "---- launch.log（末尾）----"
 tail -n "${LAUNCH_LOG_LINES:-80}" "${OUT}/launch.log"
 echo "記録: ${OUT}（ホストでは runs/ の下）"

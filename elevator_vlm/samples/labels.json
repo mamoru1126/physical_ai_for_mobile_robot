@@ -1,0 +1,46 @@
+[
+  {
+    "kind": "point",
+    "target": "center of the elevator car floor",
+    "step": 0,
+    "u": 320.0,
+    "v": 254.4,
+    "file": "point_hall_to_car.jpg"
+  },
+  {
+    "kind": "point",
+    "target": "hallway floor 1 m past the door",
+    "step": 2,
+    "u": 305.9,
+    "v": 258.2,
+    "file": "point_car_to_hall.jpg"
+  },
+  {
+    "kind": "check",
+    "condition": "Elevator door is fully open.",
+    "expected": "no",
+    "step": 0,
+    "file": "check_hall_closed.jpg"
+  },
+  {
+    "kind": "check",
+    "condition": "Elevator door is fully open.",
+    "expected": "yes",
+    "step": 0,
+    "file": "check_hall_open.jpg"
+  },
+  {
+    "kind": "check",
+    "condition": "Elevator door is fully open.",
+    "expected": "no",
+    "step": 2,
+    "file": "check_car_closed.jpg"
+  },
+  {
+    "kind": "check",
+    "condition": "Elevator door is fully open.",
+    "expected": "yes",
+    "step": 2,
+    "file": "check_car_open.jpg"
+  }
+]

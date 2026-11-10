@@ -28,7 +28,7 @@ def load_events(run_dir: str) -> List[Dict[str, Any]]:
     return events
 
 
-def select(events: List[Dict[str, Any]], per_run: int = 2) -> List[Dict[str, Any]]:
+def select(events: List[Dict[str, Any]], per_run: int = 1) -> List[Dict[str, Any]]:
     samples: List[Dict[str, Any]] = []
     step = -1
     runs: List[List[Dict[str, Any]]] = []          # 同じ手順で同じ答えが続く区間

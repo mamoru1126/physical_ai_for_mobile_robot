@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!-- elevator_sim/world_gen.py が生成したファイル. 手で編集せず、生成し直すこと. -->
+<!--
+  差動二輪の移動ロボット（Gazebo Harmonic）. センサは前向きの単眼カメラと車輪オドメトリだけ.
+    カメラ:        /camera/image_raw（640x480、10 Hz、水平画角 1.5708 rad、
+                   床から 0.5 m、俯角 15 度、車軸から前へ 0.2 m）
+    速度指令:      /cmd_vel
+    車輪オドメトリ: /odom（車輪の回転から計算. 起動時の位置が原点）
+    真値:          /ground_truth/odom（ワールド座標. 評価とモック VLM だけが使う）
+-->
+<sdf version="1.9">
+  <model name="elevator_robot">
+    <link name="base_link">
+      <inertial><pose>0 0 0.14 0 0 0</pose><mass>15</mass><inertia><ixx>0.194</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.3445</iyy><iyz>0</iyz><izz>0.4745</izz></inertia></inertial>
+      <collision name="body_c"><pose>0 0 0.14 0 0 0</pose><geometry><box><size>0.5 0.36 0.16</size></box></geometry></collision>
+      <visual name="body_v"><pose>0 0 0.14 0 0 0</pose><geometry><box><size>0.5 0.36 0.16</size></box></geometry><material><ambient>0.15 0.35 0.75 1</ambient><diffuse>0.15 0.35 0.75 1</diffuse><specular>0.3 0.3 0.3 1</specular></material></visual>
+      <collision name="tower_c"><pose>0.08 0 0.345 0 0 0</pose><geometry><box><size>0.2 0.24 0.25</size></box></geometry></collision>
+      <visual name="tower_v"><pose>0.08 0 0.345 0 0 0</pose><geometry><box><size>0.2 0.24 0.25</size></box></geometry><material><ambient>0.85 0.86 0.88 1</ambient><diffuse>0.85 0.86 0.88 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <collision name="caster_front_c"><pose>0.19 0 0.04 0 0 0</pose><geometry><sphere><radius>0.04</radius></sphere></geometry><surface><friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction></surface></collision>
+      <visual name="caster_front_v"><pose>0.19 0 0.04 0 0 0</pose><geometry><sphere><radius>0.04</radius></sphere></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <collision name="caster_rear_c"><pose>-0.19 0 0.04 0 0 0</pose><geometry><sphere><radius>0.04</radius></sphere></geometry><surface><friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction></surface></collision>
+      <visual name="caster_rear_v"><pose>-0.19 0 0.04 0 0 0</pose><geometry><sphere><radius>0.04</radius></sphere></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+    </link>
+
+    <link name="camera_link">
+      <pose>0.2 0 0.5 0 0.2618 0</pose>
+      <inertial><mass>0.05</mass><inertia><ixx>1e-5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-5</iyy><iyz>0</iyz><izz>1e-5</izz></inertia></inertial>
+      <visual name="visual"><pose>-0.025 0 0 0 0 0</pose><geometry><box><size>0.04 0.08 0.04</size></box></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+      <sensor name="front_camera" type="camera">
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <visualize>false</visualize>
+        <topic>/camera/image_raw</topic>
+        <camera name="front">
+          <horizontal_fov>1.5708</horizontal_fov>
+          <image><width>640</width><height>480</height><format>R8G8B8</format></image>
+          <clip><near>0.03</near><far>60</far></clip>
+        </camera>
+      </sensor>
+    </link>
+    <joint name="camera_joint" type="fixed"><parent>base_link</parent><child>camera_link</child></joint>
+
+    <link name="left_wheel">
+      <pose>0 0.2 0.08 -1.5708 0 0</pose>
+      <inertial><mass>1</mass><inertia><ixx>0.00173333</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.00173333</iyy><iyz>0</iyz><izz>0.0032</izz></inertia></inertial>
+      <collision name="collision"><geometry><cylinder><radius>0.08</radius><length>0.04</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+      <visual name="visual"><geometry><cylinder><radius>0.08</radius><length>0.04</length></cylinder></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+    </link>
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>base_link</parent><child>left_wheel</child>
+      <axis><xyz>0 0 1</xyz><limit><lower>-1.79769e+308</lower><upper>1.79769e+308</upper></limit></axis>
+    </joint>
+    <link name="right_wheel">
+      <pose>0 -0.2 0.08 -1.5708 0 0</pose>
+      <inertial><mass>1</mass><inertia><ixx>0.00173333</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.00173333</iyy><iyz>0</iyz><izz>0.0032</izz></inertia></inertial>
+      <collision name="collision"><geometry><cylinder><radius>0.08</radius><length>0.04</length></cylinder></geometry><surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface></collision>
+      <visual name="visual"><geometry><cylinder><radius>0.08</radius><length>0.04</length></cylinder></geometry><material><ambient>0.08 0.08 0.09 1</ambient><diffuse>0.08 0.08 0.09 1</diffuse><specular>0.1 0.1 0.1 1</specular></material></visual>
+    </link>
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>base_link</parent><child>right_wheel</child>
+      <axis><xyz>0 0 1</xyz><limit><lower>-1.79769e+308</lower><upper>1.79769e+308</upper></limit></axis>
+    </joint>
+
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.4</wheel_separation>
+      <wheel_radius>0.08</wheel_radius>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odom</odom_topic>
+      <tf_topic>/wheel_tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <max_linear_acceleration>1.5</max_linear_acceleration>
+      <min_linear_acceleration>-1.5</min_linear_acceleration>
+      <max_angular_acceleration>4.0</max_angular_acceleration>
+      <min_angular_acceleration>-4.0</min_angular_acceleration>
+      <max_linear_velocity>1.0</max_linear_velocity>
+      <min_linear_velocity>-1.0</min_linear_velocity>
+      <max_angular_velocity>2.0</max_angular_velocity>
+      <min_angular_velocity>-2.0</min_angular_velocity>
+    </plugin>
+
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>world</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <odom_topic>/ground_truth/odom</odom_topic>
+      <tf_topic>/ground_truth/tf</tf_topic>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <dimensions>3</dimensions>
+    </plugin>
+  </model>
+</sdf>

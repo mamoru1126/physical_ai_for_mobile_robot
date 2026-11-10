@@ -1,0 +1,101 @@
+# ros_gz_bridge (parameter_bridge) の設定: Gazebo Harmonic <-> ROS 2
+# elevator_sim/world_gen.py が生成したファイル. 手で編集せず、生成し直すこと.
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /camera/image_raw
+  gz_topic_name: /camera/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /camera/camera_info
+  gz_topic_name: /camera/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# 車輪オドメトリ（ロボットが使ってよいセンサ）
+- ros_topic_name: /odom
+  gz_topic_name: /odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /cmd_vel
+  gz_topic_name: /cmd_vel
+  ros_type_name: geometry_msgs/msg/Twist
+  gz_type_name: gz.msgs.Twist
+  direction: ROS_TO_GZ
+
+# 真値（評価、エレベーターの扉のセンサ、モック VLM だけが使う. 実行系は使わない）
+- ros_topic_name: /ground_truth/odom
+  gz_topic_name: /ground_truth/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
+  direction: GZ_TO_ROS
+
+# エレベーター（扉とかごの関節）
+- ros_topic_name: /elevator/joint_states
+  gz_topic_name: /elevator/joint_states
+  ros_type_name: sensor_msgs/msg/JointState
+  gz_type_name: gz.msgs.Model
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /elevator/lift/cmd_vel
+  gz_topic_name: /elevator/lift/cmd_vel
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /elevator/car_door/cmd_pos
+  gz_topic_name: /elevator/car_door/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /elevator/landing_door_1/cmd_pos
+  gz_topic_name: /elevator/landing_door_1/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /elevator/landing_door_2/cmd_pos
+  gz_topic_name: /elevator/landing_door_2/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /elevator/landing_door_3/cmd_pos
+  gz_topic_name: /elevator/landing_door_3/cmd_pos
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
+  direction: ROS_TO_GZ
+
+# 外から様子を見るための固定カメラ（人が見るためのもの. 実行系は使わない）
+- ros_topic_name: /observer/floor_1/image_raw
+  gz_topic_name: /observer/floor_1/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /observer/floor_2/image_raw
+  gz_topic_name: /observer/floor_2/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /observer/floor_3/image_raw
+  gz_topic_name: /observer/floor_3/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /observer/car/image_raw
+  gz_topic_name: /observer/car/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS

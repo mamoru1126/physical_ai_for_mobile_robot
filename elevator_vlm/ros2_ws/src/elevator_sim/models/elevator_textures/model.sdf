@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!-- elevator_sim/world_gen.py が生成したファイル. 手で編集せず、生成し直すこと. -->
+<sdf version="1.9">
+  <model name="elevator_textures_sample">
+    <static>true</static>
+    <link name="link">
+      <visual name="visual"><geometry><box><size>1 1 1</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://elevator_textures/materials/textures/door_steel.png</albedo_map><roughness>0.8</roughness><metalness>0</metalness></metal></pbr></material></visual>
+    </link>
+  </model>
+</sdf>

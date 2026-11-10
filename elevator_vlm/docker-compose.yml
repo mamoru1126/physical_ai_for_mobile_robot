@@ -1,0 +1,96 @@
+# エレベーター課題のシミュレーション環境
+#   手順は README.md を参照. 変数は .env（cp .env.example .env）で変えられる.
+x-elevator: &elevator
+  image: elevator_vlm:latest
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  network_mode: host          # ROS 2 (DDS) / gz-transport / Web UI / VLM サーバをホストと共有
+  ipc: host
+  environment:
+    DISPLAY: ${DISPLAY:-:0}
+    QT_X11_NO_MITSHM: "1"
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: all   # compute + graphics（Gazebo のカメラの描画に必要）
+    ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+    GZ_PARTITION: ${GZ_PARTITION:-elevator}
+    VLM_BASE_URL: ${VLM_BASE_URL:-http://127.0.0.1:8000/v1}
+    VLM_MODEL: ${VLM_MODEL:-vlm}
+    RENDER: ${RENDER:-egl}
+  volumes:
+    - ./:/workspace
+    - ./runs:/runs
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+  working_dir: /workspace
+  stdin_open: true
+  tty: true
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+services:
+  # VLM サーバ（vLLM、OpenAI 互換 API、ポート 8000）
+  vlm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    network_mode: host
+    ipc: host
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    # イメージの版によって既定の起動コマンドが違うので、明示する（vllm serve <モデル> ...）
+    entrypoint: ["vllm", "serve"]
+    command:
+      - ${VLM_HF_MODEL:-RedHatAI/Qwen3.5-9B-quantized.w4a16}
+      - --served-model-name
+      - ${VLM_MODEL:-vlm}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --max-model-len
+      - "${VLM_MAX_MODEL_LEN:-8192}"
+      - --gpu-memory-utilization
+      - "${VLM_GPU_MEMORY_UTILIZATION:-0.65}"
+      - --reasoning-parser
+      - qwen3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Gazebo + エレベーター + 実行系 + Web UI（http://localhost:8080/）. 本物の VLM サーバを使う
+  sim:
+    <<: *elevator
+    command: >
+      ros2 launch elevator_sim demo.launch.py
+      vlm:=real gui:=${GUI:-true}
+      board_floor:=${BOARD_FLOOR:-1} dest_floor:=${DEST_FLOOR:-3}
+      door_hold_s:=${DOOR_HOLD_S:-6.0} door_sensor:=${DOOR_SENSOR:-true}
+      web_port:=${WEB_PORT:-8080}
+
+  # 同じものを、真値から答えるモック VLM で動かす（VLM サーバも GPU メモリも要らない）
+  sim-mock:
+    <<: *elevator
+    command: >
+      ros2 launch elevator_sim demo.launch.py
+      vlm:=mock gui:=${GUI:-true}
+      board_floor:=${BOARD_FLOOR:-1} dest_floor:=${DEST_FLOOR:-3}
+      door_hold_s:=${DOOR_HOLD_S:-6.0} door_sensor:=${DOOR_SENSOR:-true}
+      web_port:=${WEB_PORT:-8080}
+
+  # 対話シェル
+  shell:
+    <<: *elevator
+    command: bash
+
+volumes:
+  hf-cache:

@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "instruction": "扉が開いたら中に入って",
+      "when": { "type": "when_true", "condition": "Elevator door is fully open." },
+      "do": { "skill": "go_to_visual_target", "target": "center of the elevator car floor" },
+      "timeout_s": 120
+    },
+    {
+      "instruction": "中に入ったら180度旋回して",
+      "when": { "type": "now" },
+      "do": { "skill": "rotate", "angle_deg": 180 },
+      "timeout_s": 30
+    },
+    {
+      "instruction": "再び扉が開いたら出て",
+      "when": { "type": "after_false_then_true", "condition": "Elevator door is fully open." },
+      "do": { "skill": "go_to_visual_target", "target": "hallway floor 1 m past the door" },
+      "timeout_s": 300
+    }
+  ]
+}

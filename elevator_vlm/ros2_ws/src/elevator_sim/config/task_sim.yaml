@@ -1,0 +1,55 @@
+# シミュレーション用の実行系の設定. 書いていない項目は既定値（elevator_task の config/task.yaml と同じ）.
+# camera の値は、シミュレーションのロボット（elevator_sim/world_params.py の RobotParams）に合わせてある.
+
+vlm:
+  # 環境変数 VLM_BASE_URL / VLM_MODEL があればそちらを使う（docker compose が .env から渡す）
+  base_url: http://127.0.0.1:8000/v1
+  model: vlm
+  timeout_s: 20.0
+  structured_output: true
+  disable_thinking: true
+
+perception:
+  jpeg_quality: 90
+  max_image_age_s: 1.0
+  use_logprobs: false
+  point_scale: 1000.0
+  point_order: xy
+
+executor:
+  confirm_count: 2
+  check_period_s: 0.5
+  pre_departure_check: false
+
+skills:
+  max_linear: 0.3
+  max_angular: 0.8
+  max_target_distance_m: 3.0
+  departure_deadline_s: 6.0
+  verify_point: false
+  repoint_period_s: 1.0
+
+camera:
+  height_m: 0.50
+  pitch_deg: 15.0
+  x_offset_m: 0.20
+  hfov_deg: 90.0
+
+web:
+  port: 8080
+  buttons:
+    - {name: call, label: エレベーターを呼ぶ, service: /elevator/call}
+    - {name: hold, label: 「開」を押す／離す, service: /elevator/toggle_hold}
+    - {name: reset_sim, label: 初期位置に戻す, service: /sim/reset}
+  # 外から様子を見るための固定カメラ（画面に映すだけ. 実行系は使わない）
+  extra_cameras:
+    - {name: floor_1, label: 1階の乗場, topic: /observer/floor_1/image_raw}
+    - {name: car, label: かごの中, topic: /observer/car/image_raw}
+    - {name: floor_3, label: 3階の乗場, topic: /observer/floor_3/image_raw}
+
+instructions:
+  - 扉が開いたら中に入って
+  - 中に入ったら180度旋回して
+  - 再び扉が開いたら出て
+
+log_dir: /runs

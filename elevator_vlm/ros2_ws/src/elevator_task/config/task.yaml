@@ -1,0 +1,59 @@
+# 実行系の設定. 書いていない項目は既定値になる（既定値は elevator_task/core/ の各 Config を参照）.
+# 知らない項目名を書くと、誤記とみなして起動時にエラーになる.
+
+vlm:
+  # OpenAI 互換 API の VLM サーバ. 環境変数 VLM_BASE_URL / VLM_MODEL / VLM_API_KEY があればそちらを使う.
+  base_url: http://127.0.0.1:8000/v1
+  model: vlm
+  api_key: EMPTY
+  timeout_s: 20.0
+  structured_output: true      # response_format の json_schema で返答の形を縛る
+  disable_thinking: true       # Qwen3.5 は既定で思考モード. 判定と指差しでは切って速くする
+
+perception:
+  jpeg_quality: 90
+  max_image_age_s: 1.0         # これより古い画像では判定しない
+  use_logprobs: false          # true にすると yes の確率も記録する
+  point_scale: 1000.0          # Qwen 系: 画像サイズに対する 0〜1000 の相対座標. 0 なら画素
+  point_order: xy              # Gemma 系は yx
+
+executor:
+  confirm_count: 2             # 同じ答えがこの回数続いたら確定する
+  check_period_s: 0.5          # 判定の周期（2 Hz）. 推論が遅ければ推論の速さで回る
+  yes_threshold: 0.0           # use_logprobs と併用. yes の確率がこの値以上のときだけ yes とみなす
+  pre_departure_check: false   # 発進の直前に「進路に人や物がないか」を VLM に確かめる
+
+skills:
+  max_linear: 0.3              # [m/s]
+  max_angular: 0.8             # [rad/s]
+  max_target_distance_m: 3.0   # 指差した点がこれより遠ければやり直す
+  departure_deadline_s: 6.0    # 条件の確定から発進までに許す時間. 超えたら条件を確かめ直す
+  verify_point: false          # 指差した点が床の上かを VLM にもう一度尋ねる（鏡や光沢面への対策）
+  repoint_period_s: 1.0        # 走行中に指差しをやり直す周期. 0 で無効
+
+safety:
+  max_linear: 0.5
+  max_angular: 1.2
+  cmd_timeout_s: 0.5
+  odom_timeout_s: 1.0
+  camera_timeout_s: 2.0        # 0 でカメラの監視を無効にする
+
+camera:
+  height_m: 0.50               # カメラの床からの高さ
+  pitch_deg: 15.0              # 俯角（下向きが正）
+  x_offset_m: 0.20             # ロボット中心からカメラまでの前後の距離
+  hfov_deg: 90.0               # カメラ情報が届かないときだけ使う水平画角
+
+web:
+  port: 8080
+  stream_hz: 5.0
+  buttons: []                  # 例: [{name: call, label: エレベーターを呼ぶ, service: /elevator/call}]
+  extra_cameras: []            # 例: [{name: hall, label: 乗場, topic: /observer/floor_1/image_raw}]
+
+instructions:
+  - 扉が開いたら中に入って
+  - 中に入ったら180度旋回して
+  - 再び扉が開いたら出て
+
+planner_thinking: false        # 計画の作成で思考モードを使う（遅くなる）
+log_dir: /runs                 # VLM に渡した画像、問い、答え、所要時間の保存先. 空なら保存しない

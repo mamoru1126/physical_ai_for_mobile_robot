@@ -1,0 +1,43 @@
+name: elevator-sim
+
+# エレベーター課題のシミュレーション環境（elevator_vlm/）の確認.
+#   1. Docker イメージをビルドする（単体テスト、擬似世界での通し試験、ノードの import の確認を含む）
+#   2. Gazebo を画面なし・ソフトウェア描画で起動し、モック VLM で3つの指示を通しで実行する
+# 本物の VLM（GPU が要る）はここでは動かさない.
+
+on:
+  push:
+    paths:
+      - "elevator_vlm/**"
+      - ".github/workflows/elevator-sim.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (unit tests, closed-loop tests and import checks run inside)
+        run: |
+          set -o pipefail
+          cd elevator_vlm
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f docker/Dockerfile -t elevator_vlm:ci . 2>&1 | tee /tmp/docker-build.log
+
+      - name: End-to-end run in Gazebo with the mock VLM (software rendering)
+        run: |
+          mkdir -p elevator_vlm/runs
+          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e LAUNCH_LOG_LINES=250 \
+            -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
+
+      - name: Upload run records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elevator-sim-runs
+          path: elevator_vlm/runs
+          retention-days: 14

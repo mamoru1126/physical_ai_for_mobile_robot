@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>CityWalker の解説と Jetson Orin での構成例</title>
+<meta name="description" content="街歩き動画から都市ナビゲーションを学ぶ CityWalker（CVPR 2025）の解説と、Jetson Orin に載せる場合のシステム構成例。">
+<style>
+:root{
+  --paper:#F2F4F6; --sheet:#FFFFFF; --ink:#18222D; --steel:#56626E; --line:#C9D1D9; --faint:#E6EAEE;
+  --panel:#1B232C; --lamp:#F2A900;
+  --vlm:#3949AB; --vlm-t:#E8EAF6;
+  --ctl:#00796B; --ctl-t:#E0F2F1;
+  --ui:#8A5A00; --ui-t:#FFF3D6;
+  --safe:#B3261E; --safe-t:#FCE8E6;
+  --sans:"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP","Noto Sans CJK JP",sans-serif;
+  --mono:"BIZ UDGothic",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:20px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.85}
+a{color:var(--vlm);text-underline-offset:.2em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--lamp);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{background:var(--sheet);border-bottom:1px solid var(--line);padding:24px 0 36px}
+.crumb{margin:0 0 22px;font-size:.86rem}
+h1{font-size:clamp(1.55rem,5.4vw,2.5rem);line-height:1.42;margin:0 0 .65em;font-weight:700;letter-spacing:.01em;word-break:auto-phrase;text-wrap:balance;max-width:21em}
+.lead{max-width:41em;margin:0 0 30px}
+.strip{display:grid;gap:18px}
+.act{margin:0;display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:center}
+.act svg{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--faint)}
+.act figcaption{font-size:.9rem;line-height:1.65}
+.act figcaption b{display:block;margin-bottom:.2em}
+@media (min-width:760px){
+  .strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+  .act{display:block}
+  .act svg{max-width:250px}
+  .act figcaption{margin-top:12px;max-width:19em}
+}
+
+/* ---------- page grid ---------- */
+.page{padding-top:26px;padding-bottom:72px}
+main{min-width:0;max-width:41rem}
+.toc{display:none}
+@media (min-width:1000px){
+  .page{display:grid;grid-template-columns:200px minmax(0,1fr);gap:60px;align-items:start}
+  .toc{display:block;position:sticky;top:24px;font-size:.88rem;line-height:1.5}
+  .toc-m{display:none}
+}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:.65em;align-items:center;padding:.34em 0;color:var(--steel);text-decoration:none}
+.toc a:hover{color:var(--ink)}
+.toc .fl{flex:none;display:inline-grid;place-items:center;width:2em;height:1.55em;border-radius:3px;background:#DDE3E8;color:#7A8792;font-size:.8em;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;transition:background .2s,color .2s}
+.toc a[aria-current="true"]{color:var(--ink);font-weight:700}
+.toc a[aria-current="true"] .fl{background:var(--panel);color:var(--lamp)}
+@media (prefers-reduced-motion:reduce){.toc .fl{transition:none}}
+.toc-m{margin:0 0 1.6em;border:1px solid var(--line);border-radius:6px;background:var(--sheet);font-size:.92rem}
+.toc-m summary{padding:.7em 1em;cursor:pointer;font-weight:700}
+.toc-m ul{list-style:none;margin:0;padding:0 1em .9em;line-height:1.6}
+.toc-m li{margin:.45em 0}
+
+/* ---------- text ---------- */
+section{margin:0}
+h2{display:flex;align-items:baseline;gap:.6em;font-size:1.38rem;line-height:1.45;margin:3.1em 0 .9em;font-weight:700;word-break:auto-phrase}
+section:first-of-type h2{margin-top:.2em}
+h2 .fl{flex:none;display:inline-grid;place-items:center;min-width:2em;height:1.6em;padding:0 .35em;background:var(--panel);color:var(--lamp);border-radius:4px;font-size:.8em;font-variant-numeric:tabular-nums;line-height:1}
+h3{font-size:1.06rem;line-height:1.5;margin:2.2em 0 .6em;font-weight:700;word-break:auto-phrase}
+p{margin:0 0 1.1em}
+ul,ol{margin:0 0 1.2em;padding-left:1.5em}
+li{margin:.4em 0}
+li > ul{margin:.3em 0 .3em}
+strong{font-weight:700}
+code{font-family:var(--mono);font-size:.9em;background:var(--faint);padding:.1em .35em;border-radius:3px;overflow-wrap:break-word}
+td code,th code{white-space:nowrap}
+table.io small{display:block;margin-top:.3em;font-size:.86em;font-weight:400;color:var(--steel)}
+@media (min-width:641px){table.io td:nth-child(2){width:31%}table.io td:nth-child(3){width:36%}}
+pre{margin:1.2em 0;background:var(--panel);color:#E8EDF2;padding:14px 16px;border-radius:6px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit;word-break:normal}
+a.r{font-size:.74em;vertical-align:super;line-height:0;text-decoration:none;margin-left:.08em;font-variant-numeric:tabular-nums}
+
+ol.verdict{list-style:none;padding:0;margin:0 0 1.4em;counter-reset:v}
+ol.verdict li{counter-increment:v;position:relative;padding-left:2.5em;margin:1.05em 0}
+ol.verdict li::before{content:counter(v);position:absolute;left:0;top:.18em;width:1.75em;height:1.75em;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.86em;line-height:1}
+
+.call{margin:1.4em 0;padding:.9em 1.1em;border-left:4px solid var(--vlm);background:var(--vlm-t);border-radius:0 6px 6px 0}
+.call.warn{border-left-color:var(--safe);background:var(--safe-t)}
+.call p:last-child{margin-bottom:0}
+
+/* ---------- tables ---------- */
+.tw{margin:1.3em 0;overflow-x:auto;background:var(--sheet);border:1px solid var(--line);border-radius:6px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.6}
+th,td{padding:.62em .8em;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+thead th{background:var(--faint);font-weight:700}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+tbody th{font-weight:700;background:transparent}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.num th,table.num td{white-space:nowrap}
+table.num thead th small{display:block;font-weight:400;font-size:.86em;color:var(--steel)}
+tr.grp th{background:var(--paper);font-size:.86em;padding:.4em .8em;color:var(--steel)}
+@media (max-width:640px){
+  table.num{font-size:.86rem}
+  table.num th,table.num td{padding:.55em .5em}
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  table.stack tbody tr{display:block;padding:.8em .9em;border-bottom:1px solid var(--line)}
+  table.stack tbody tr:last-child{border-bottom:0}
+  table.stack tbody th,table.stack tbody td{display:block;border:0;padding:.14em 0}
+  table.stack tbody tr > :first-child{font-weight:700;margin-bottom:.25em}
+  table.stack tbody td[data-l]::before{content:attr(data-l);font-size:.8em;font-weight:700;color:var(--steel);margin-right:.7em}
+}
+dl.models{margin:1.2em 0}
+dl.models dt{font-weight:700;margin-top:1.05em}
+dl.models dd{margin:.25em 0 0;padding-left:1em;border-left:3px solid var(--line)}
+.mk{font-weight:700;margin-right:.35em}
+.mk.a{color:var(--ctl)}.mk.b{color:var(--ui)}.mk.c{color:var(--safe)}
+.tnote{font-size:.86rem;color:var(--steel);line-height:1.65;margin:-.6em 0 1.4em}
+
+/* ---------- figures ---------- */
+.fig{margin:1.9em 0}
+.fig .cv{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:14px 12px}
+.fig svg{display:block;width:100%;max-width:500px;height:auto;margin:0 auto}
+.fig figcaption{font-size:.86rem;line-height:1.65;color:var(--steel);margin-top:.65em}
+.fig text{font-family:var(--sans);fill:var(--ink);font-size:13px}
+.fig text.h{font-weight:700}
+.fig text.s{font-size:11.5px;fill:var(--steel)}
+.fig text.tv{fill:var(--vlm)}
+.fig text.tc{fill:var(--ctl)}
+.fig text.to{fill:#2E7D32}
+.fig text.tl{fill:var(--lamp)}
+@media (max-width:560px){
+  .fig{margin-left:-12px;margin-right:-12px}
+  .fig .cv{padding:12px 4px;border-radius:0;border-left:0;border-right:0}
+  .fig figcaption{padding:0 12px}
+}
+.eq{margin:1.2em 0;font-family:var(--mono);background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.85em 1em;overflow-x:auto;white-space:pre;line-height:1.75;font-size:.88rem}
+
+/* ---------- refs / footer ---------- */
+ol.refs{font-size:.86rem;line-height:1.6;padding-left:2em}
+ol.refs li{margin:.55em 0;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);background:var(--sheet);padding:22px 0 30px;font-size:.84rem;color:var(--steel)}
+footer p{margin:0}
+
+@media print{
+  body{background:#fff}
+  .toc,.toc-m,.crumb{display:none}
+  .page{display:block}
+  pre{white-space:pre-wrap}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="crumb"><a href="../">検討資料の一覧へ</a></p>
+    <h1>CityWalker の解説と Jetson Orin での構成例</h1>
+    <p class="lead" style="margin-bottom:0">CityWalker: Learning Embodied Urban Navigation from Web-Scale Videos（X. Liu, J. Li ほか、ニューヨーク大学、CVPR 2025）<a class="r" href="#r1">[1]</a><a class="r" href="#r2">[2]</a> の解説である。1〜7章は論文の記述、8章と9章は論文の外の見解と設計案で、区別して書く。括弧内の Sec. や Table は論文の該当箇所を指す。2026年11月10日作成。</p>
+  </div>
+</header>
+
+<div class="wrap page">
+  <nav class="toc" aria-label="目次"><ol>
+<li><a href="#conclusion"><span class="fl">▲</span>まとめ</a></li>
+<li><a href="#s1"><span class="fl">1</span>何を解決したいか</a></li>
+<li><a href="#s2"><span class="fl">2</span>全体像</a></li>
+<li><a href="#s3"><span class="fl">3</span>モデルの構造</a></li>
+<li><a href="#s4"><span class="fl">4</span>学習の工夫</a></li>
+<li><a href="#s5"><span class="fl">5</span>学習データ</a></li>
+<li><a href="#s6"><span class="fl">6</span>評価と結果</a></li>
+<li><a href="#s7"><span class="fl">7</span>著者が述べている課題</a></li>
+<li><a href="#s8"><span class="fl">8</span>論文から読み取れること</a></li>
+<li><a href="#s9"><span class="fl">9</span>Jetson Orin での構成例</a></li>
+<li><a href="#refs"><span class="fl">▼</span>出典</a></li>
+  </ol></nav>
+  <main>
+    <details class="toc-m"><summary>目次</summary><ul>
+<li><a href="#conclusion">まとめ</a></li>
+<li><a href="#s1">何を解決したいか</a></li>
+<li><a href="#s2">全体像</a></li>
+<li><a href="#s3">モデルの構造</a></li>
+<li><a href="#s4">学習の工夫</a></li>
+<li><a href="#s5">学習データ</a></li>
+<li><a href="#s6">評価と結果</a></li>
+<li><a href="#s7">著者が述べている課題</a></li>
+<li><a href="#s8">論文から読み取れること</a></li>
+<li><a href="#s9">Jetson Orin での構成例</a></li>
+<li><a href="#refs">出典</a></li>
+    </ul></details>
+
+    <section id="conclusion">
+      <h2>まとめ</h2>
+      <ol class="verdict">
+        <li><strong>ネット上の街歩き動画 2,000 時間超で学習した、目標点へ向かう走行モデルである。</strong>動画に行動のラベルはないので、視覚オドメトリで作る。</li>
+        <li><strong>言語は扱わない。</strong>入力は過去の画像5枚、過去の位置5点、目標の位置1点で、出力は未来の経由点5つと到着の判定である。</li>
+        <li><strong>実機の成功率は 77.3% で、右左折で既存手法との差が大きい。</strong>ViNT（微調整あり）は 57.1%、NoMaD（ゼロショット）は 42.9% だった。</li>
+        <li><strong>モデルは約 2.14 億パラメータで、7B 級の VLA よりかなり小さい。</strong>ただし論文に搭載計算機と推論速度の記載はなく、Jetson Orin での速度は実測が要る。</li>
+        <li><strong>位置の入力が必須である。</strong>地図は要らないが、過去の軌跡と目標の相対位置は要る。著者も GPS の誤差に弱いことを課題に挙げている。</li>
+      </ol>
+    </section>
+
+    <section id="s1">
+      <h2><span class="fl">1</span>何を解決したいか</h2>
+      <p>人は知らない街でも、地図アプリが示す経由点をたどって目的地に着く。アプリが教えるのは大まかな道順だけで、経由点の間を歩くには、人混み、横断歩道、信号、障害物への対応が要る。論文はこの部分を「都市での身体性ナビゲーション」と呼び、未解決の問題だとする（Sec. 1）。</p>
+      <p>既存の強化学習や模倣学習は、静的な環境や管理された環境では動くが、都市の複雑さには届かない。遠隔操作で集めた既存のデータセットにも、こうした場面は十分に含まれていない（Sec. 1）。</p>
+    </section>
+
+    <section id="s2">
+      <h2><span class="fl">2</span>全体像</h2>
+      <p>考え方は単純で、人が街を歩く動画を大量に集め、模倣学習の教師にする。課題は、動画に「どう動いたか」のラベルがないことである。VLM に行動ラベルを作らせる既存の方法は費用がかかり、大規模にしにくい。論文は、既製の視覚オドメトリが出す粗いラベルで十分だと主張する（Sec. 1）。</p>
+      <p>問題設定は、目標の座標を与えて走らせるポイントゴール型に近い。目標は地図アプリから得る経由点を想定している（Sec. 3.1）。</p>
+    </section>
+
+    <section id="s3">
+      <h2><span class="fl">3</span>モデルの構造</h2>
+      <div class="tw"><table class="stack">
+        <thead><tr><th>部分</th><th>内容</th><th>論文の箇所</th></tr></thead>
+        <tbody>
+          <tr><td>画像の入力</td><td data-l="内容">過去5枚の画像。街歩き動画は 350×630、遠隔操作の動画は 392×392</td><td data-l="箇所">Sec. 3.1、App. A</td></tr>
+          <tr><td>画像の符号化</td><td data-l="内容">DINOv2 ViT-B/14。重みは固定</td><td data-l="箇所">Sec. 3.4</td></tr>
+          <tr><td>位置の入力</td><td data-l="内容">過去5点の位置と、目標1点の位置</td><td data-l="箇所">Sec. 3.1</td></tr>
+          <tr><td>位置の符号化</td><td data-l="内容">極座標を6つの周波数のフーリエ特徴にする。学習する</td><td data-l="箇所">Sec. 3.4</td></tr>
+          <tr><td>本体</td><td data-l="内容">Transformer。16 層、8 ヘッド、768 次元</td><td data-l="箇所">Table II</td></tr>
+          <tr><td>出力</td><td data-l="内容">未来の経由点5つ（行動ヘッド）と、到着したかの判定（到着ヘッド）</td><td data-l="箇所">Sec. 3.4</td></tr>
+          <tr><td>大きさ</td><td data-l="内容">全体で 2.14 億パラメータ。学習するのは 1.27 億</td><td data-l="箇所">Table II</td></tr>
+        </tbody>
+      </table></div>
+      <p>画像の間隔（何秒おきの5枚か）と、経由点の時間間隔は、論文の本文からは確認できなかった。公開コードの設定で確かめる必要がある。</p>
+    </section>
+
+    <section id="s4">
+      <h2><span class="fl">4</span>学習の工夫</h2>
+      <h3>行動ラベルの作り方</h3>
+      <p>視覚オドメトリには DPVO を使う。動画全体の軌跡は誤差がたまるので、短い区間の相対姿勢だけを使う。ほかの視覚オドメトリでもよいとしている（Sec. 3.3）。</p>
+      <h3>縮尺の扱い</h3>
+      <p>単眼の動画からは実寸が分からない。そこで、行動を軌跡の中の平均の歩幅で割って正規化する。GNM と同じやり方である。実機で使うときは、そのロボットの歩幅を掛けて戻す（Sec. 3.3）。</p>
+      <h3>損失</h3>
+      <div class="tw"><table>
+        <thead><tr><th>損失</th><th>内容</th><th>重み</th></tr></thead>
+        <tbody>
+          <tr><td>行動</td><td>経由点の L1 誤差</td><td class="num">1.0</td></tr>
+          <tr><td>向き</td><td>予測と正解の向きのコサイン類似度（符号を反転）</td><td class="num">5.0</td></tr>
+          <tr><td>到着</td><td>到着の判定の交差エントロピー</td><td class="num">1.0</td></tr>
+          <tr><td>特徴</td><td>出力の画像トークンと、未来のフレームのトークンとの二乗誤差</td><td class="num">0.1</td></tr>
+        </tbody>
+      </table></div>
+      <p>4つ目は、モデルに未来の見え方を予想させる補助の課題である。学習のときだけ未来のフレームを使う（Sec. 3.4、Table II）。</p>
+    </section>
+
+    <section id="s5">
+      <h2><span class="fl">5</span>学習データ</h2>
+      <div class="tw"><table class="stack">
+        <thead><tr><th>データ</th><th>量</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>街歩き動画</td><td data-l="量">2,000 時間超（集めたのは 2,522 時間）</td><td data-l="内容">YouTube の再生リストから収集。天候と明るさはさまざま</td></tr>
+          <tr><td>運転動画</td><td data-l="量">時間数の記載なし</td><td data-l="内容">歩行と混ぜた学習、運転だけの学習を比較に使用</td></tr>
+          <tr><td>遠隔操作データ</td><td data-l="量">15 時間（微調整に 6 時間、評価に 9 時間）</td><td data-l="内容">ニューヨークで収集。Unitree Go1 に Livox Mid-360 とウェブカメラ。正解の姿勢は LiDAR SLAM（FAST-LIO）</td></tr>
+        </tbody>
+      </table></div>
+      <p>（Sec. 4.1、App. A）</p>
+    </section>
+
+    <section id="s6">
+      <h2><span class="fl">6</span>評価と結果</h2>
+      <h3>実機</h3>
+      <p>機体は四脚の Unitree Go1。出力の経由点は、ViNT と同じ PD 制御で速度指令に変える。目標は 50〜100 m 先に置き、条件ごとに 8〜14 回試した。目標から 5 m 以内で到着と判定できれば成功とする（Sec. 4.2）。</p>
+      <div class="tw"><table>
+        <thead><tr><th>手法</th><th>全体</th><th>直進</th><th>左折</th><th>右折</th></tr></thead>
+        <tbody>
+          <tr><td>ViNT（ゼロショット）</td><td class="num">37.7%</td><td class="num">62.5%</td><td class="num">0.0%</td><td class="num">50.0%</td></tr>
+          <tr><td>ViNT（微調整）</td><td class="num">57.1%</td><td class="num">100.0%</td><td class="num">25.0%</td><td class="num">25.0%</td></tr>
+          <tr><td>NoMaD（ゼロショット）</td><td class="num">42.9%</td><td class="num">75.0%</td><td class="num">16.7%</td><td class="num">28.6%</td></tr>
+          <tr><td><strong>CityWalker（微調整）</strong></td><td class="num"><strong>77.3%</strong></td><td class="num">100.0%</td><td class="num">62.5%</td><td class="num">66.7%</td></tr>
+        </tbody>
+      </table></div>
+      <p>（Table 2）直進はどれも高く、差は右左折で出ている。</p>
+      <h3>机上</h3>
+      <p>評価用の 9 時間のデータで、向きの誤差の最大値の平均（MAOE）と到着の判定の正解率を、場面ごとに測っている（Table 1）。</p>
+      <div class="tw"><table>
+        <thead><tr><th>場面</th><th>向きの誤差</th><th>到着の正解率</th></tr></thead>
+        <tbody>
+          <tr><td>曲がる</td><td class="num">26.63°</td><td class="num">68.91%</td></tr>
+          <tr><td>横断</td><td class="num">14.07°</td><td class="num">75.30%</td></tr>
+          <tr><td>迂回</td><td class="num">13.94°</td><td class="num">78.54%</td></tr>
+          <tr><td>接近</td><td class="num">14.32°</td><td class="num">90.64%</td></tr>
+          <tr><td>人混み</td><td class="num">12.01°</td><td class="num">87.50%</td></tr>
+          <tr><td>全サンプル</td><td class="num">11.53°</td><td class="num">87.84%</td></tr>
+        </tbody>
+      </table></div>
+      <p>微調整なしでも、到着の正解率の場面平均は 79.09% で、GNM（66.22%）、ViNT（69.07%）、NoMaD（70.38%）のゼロショットを上回る。学習データを増やすほど誤差が下がることも示している。</p>
+      <p>著者らは、机上の誤差が大きくても実機で失敗するとは限らないと注記している。正しい動き方が1つではないためである<a class="r" href="#r2">[2]</a>。</p>
+    </section>
+
+    <section id="s7">
+      <h2><span class="fl">7</span>著者が述べている課題</h2>
+      <ul>
+        <li><strong>GPS の誤差に弱い。</strong>位置の扱いが単純で、大きな位置の誤りを想定していない（Sec. 5）。</li>
+        <li><strong>迂回の場面が弱い。</strong>学習に使った動画に迂回の場面が少ないためとしている（Sec. 4.2）。</li>
+      </ul>
+    </section>
+
+    <section id="s8">
+      <h2><span class="fl">8</span>論文から読み取れること</h2>
+      <p>ここからは論文の記述ではなく、この資料の見解である。</p>
+      <ul>
+        <li><strong>言語指示の課題には、単体では使えない。</strong>「扉が開いたら入る」のような条件は入力できない。使うなら、VLM が決めた目標点まで走る下位の走行器としてである（<a href="../elevator-task/">エレベーターの検討</a>の「VLA を後から足す道」と同じ位置づけ）。</li>
+        <li><strong>自己位置が要る。</strong>地図は要らないが、過去5点の軌跡と目標の相対位置は要る。短い距離ならオドメトリで代用できる見込みがあるが、論文は GPS を前提にしており、確かめられていない。</li>
+        <li><strong>車輪型と屋内は検証の外である。</strong>実機は四脚、場所は屋外の歩道である。車輪型では歩幅の換算を決め直す必要があり、微調整も要ると見ておく。</li>
+        <li><strong>大きさは扱いやすい。</strong>2.14 億パラメータで、画像の符号化器は固定である。7B 級の OmniVLA と比べると、ロボットの上で動かす負担はずっと小さい。</li>
+        <li><strong>障害物回避は学習まかせである。</strong>距離センサを使わない。安全の層は別に要る。</li>
+      </ul>
+    </section>
+
+    <section id="s9">
+      <h2><span class="fl">9</span>Jetson Orin での構成例</h2>
+      <p>論文に搭載計算機と推論速度の記載はない。以下はこの資料の設計案で、数値は目安である。</p>
+      <div class="tw"><table class="stack">
+        <thead><tr><th>ノード</th><th>役割</th><th>頻度の目安</th></tr></thead>
+        <tbody>
+          <tr><td><code>camera_driver</code></td><td data-l="役割">RGB 画像を出す</td><td data-l="頻度">10 Hz</td></tr>
+          <tr><td><code>pose_source</code></td><td data-l="役割">GPS かオドメトリから、ロボット基準の過去5点と目標の位置を作る</td><td data-l="頻度">10 Hz</td></tr>
+          <tr><td><code>frame_buffer</code></td><td data-l="役割">画像5枚と位置5点を、学習時と同じ間隔で保持する</td><td data-l="頻度">学習時の間隔</td></tr>
+          <tr><td><code>citywalker_infer</code></td><td data-l="役割">経由点5つと到着の判定を出す。TensorRT、FP16</td><td data-l="頻度">2〜5 Hz（要実測）</td></tr>
+          <tr><td><code>waypoint_follower</code></td><td data-l="役割">歩幅を掛けて実寸に戻し、PD 制御で速度指令にする</td><td data-l="頻度">20〜50 Hz</td></tr>
+          <tr><td><code>safety_gate</code></td><td data-l="役割">速度の上限。推論が途絶えたら停止</td><td data-l="頻度">50 Hz</td></tr>
+          <tr><td><code>goal_manager</code></td><td data-l="役割">到着の判定で、次の目標点へ切り替える</td><td data-l="頻度">切替時</td></tr>
+        </tbody>
+      </table></div>
+      <h3>設計の要点</h3>
+      <ul>
+        <li><strong>画像の符号化器と本体を分けて変換する。</strong>DINOv2 は重みが固定なので、単独で TensorRT にでき、5枚をまとめて流せる。新しい1枚だけを符号化し、残りの4枚は結果を使い回せば、計算は約5分の1になる。</li>
+        <li><strong>目標点の与え方を先に決める。</strong>屋外は GPS の経由点、屋内はオドメトリ座標での相対目標になる。どちらも、ロボット基準の相対位置に直してから渡す。</li>
+        <li><strong>画像の間隔を学習時に合わせる。</strong>間隔がずれると、過去の位置の並びと歩幅の正規化が学習時と合わなくなる。</li>
+        <li><strong>歩幅の換算を機体に合わせる。</strong>車輪型では「1ステップで進む距離」を、巡航速度と画像の間隔から決める。</li>
+        <li><strong>推論が遅れても走れるようにする。</strong>経由点はオドメトリ座標で保持し、次の推論が届くまで同じ経由点を追う。</li>
+      </ul>
+      <h3>確かめる順序</h3>
+      <ol>
+        <li>公開コードの設定で、画像の間隔と解像度、重みの公開の有無を確かめる。</li>
+        <li>Orin の上で変換し、推論1回の時間を測る。</li>
+        <li>手持ちの走行記録を流し、出力の経由点が実際の軌跡に沿うかを机上で見る。</li>
+        <li>低速で実機を走らせる。合わなければ、走行記録で微調整する。</li>
+      </ol>
+    </section>
+
+    <section id="refs">
+      <h2>出典</h2>
+      <ol class="refs">
+        <li id="r1">X. Liu, J. Li, Y. Jiang, N. Sujay, Z. Yang, J. Zhang, J. Abanes, J. Zhang, C. Feng, "CityWalker: Learning Embodied Urban Navigation from Web-Scale Videos," CVPR 2025. <a href="https://arxiv.org/html/2411.17820v1">arXiv:2411.17820</a></li>
+        <li id="r2">CityWalker プロジェクトページ（コードとデータへのリンクを含む）. <a href="https://ai4ce.github.io/CityWalker/">ai4ce.github.io/CityWalker</a></li>
+      </ol>
+      <p>論文の図や本文の切り抜きは載せていない。数値は arXiv 版（v1）の記載による。</p>
+    </section>
+  </main>
+</div>
+<footer>
+  <div class="wrap">
+    <p>2026年11月10日作成。<a href="https://github.com/mamoru1126/physical_ai_for_mobile_robot">mamoru1126/physical_ai_for_mobile_robot</a></p>
+  </div>
+</footer>
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  if(!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var secs = Object.keys(map).map(function(id){ return document.getElementById(id); }).filter(Boolean);
+  var current = null;
+  function set(id){
+    if(current === id) return;
+    current = id;
+    links.forEach(function(a){ a.removeAttribute('aria-current'); });
+    if(map[id]) map[id].setAttribute('aria-current','true');
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) set(e.target.id); });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+  secs.forEach(function(s){ io.observe(s); });
+  set(secs[0].id);
+})();
+</script>
+</body>
+</html>

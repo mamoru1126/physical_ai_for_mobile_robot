@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>画像と言語の指示でエレベーターに乗り降りする | ソフトウェア構成の検討</title>
+<meta name="description" content="移動ロボットに文字で指示を与え、カメラとオドメトリだけでエレベーターに乗り降りさせるソフトウェア構成の検討資料。VLM と VLA の比較、提案構成、時間予算、リスク、進め方。">
+<style>
+:root{
+  --paper:#F2F4F6; --sheet:#FFFFFF; --ink:#18222D; --steel:#56626E; --line:#C9D1D9; --faint:#E6EAEE;
+  --panel:#1B232C; --lamp:#F2A900;
+  --vlm:#3949AB; --vlm-t:#E8EAF6;
+  --ctl:#00796B; --ctl-t:#E0F2F1;
+  --ui:#8A5A00; --ui-t:#FFF3D6;
+  --safe:#B3261E; --safe-t:#FCE8E6;
+  --sans:"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP","Noto Sans CJK JP",sans-serif;
+  --mono:"BIZ UDGothic",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:20px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.85}
+a{color:var(--vlm);text-underline-offset:.2em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--lamp);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{background:var(--sheet);border-bottom:1px solid var(--line);padding:24px 0 36px}
+.crumb{margin:0 0 22px;font-size:.86rem}
+h1{font-size:clamp(1.55rem,5.4vw,2.5rem);line-height:1.42;margin:0 0 .65em;font-weight:700;letter-spacing:.01em;word-break:auto-phrase;text-wrap:balance;max-width:21em}
+.lead{max-width:41em;margin:0 0 30px}
+.strip{display:grid;gap:18px}
+.act{margin:0;display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:center}
+.act svg{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--faint)}
+.act figcaption{font-size:.9rem;line-height:1.65}
+.act figcaption b{display:block;margin-bottom:.2em}
+@media (min-width:760px){
+  .strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+  .act{display:block}
+  .act svg{max-width:250px}
+  .act figcaption{margin-top:12px;max-width:19em}
+}
+
+/* ---------- page grid ---------- */
+.page{padding-top:26px;padding-bottom:72px}
+main{min-width:0;max-width:41rem}
+.toc{display:none}
+@media (min-width:1000px){
+  .page{display:grid;grid-template-columns:200px minmax(0,1fr);gap:60px;align-items:start}
+  .toc{display:block;position:sticky;top:24px;font-size:.88rem;line-height:1.5}
+  .toc-m{display:none}
+}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:.65em;align-items:center;padding:.34em 0;color:var(--steel);text-decoration:none}
+.toc a:hover{color:var(--ink)}
+.toc .fl{flex:none;display:inline-grid;place-items:center;width:2em;height:1.55em;border-radius:3px;background:#DDE3E8;color:#7A8792;font-size:.8em;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;transition:background .2s,color .2s}
+.toc a[aria-current="true"]{color:var(--ink);font-weight:700}
+.toc a[aria-current="true"] .fl{background:var(--panel);color:var(--lamp)}
+@media (prefers-reduced-motion:reduce){.toc .fl{transition:none}}
+.toc-m{margin:0 0 1.6em;border:1px solid var(--line);border-radius:6px;background:var(--sheet);font-size:.92rem}
+.toc-m summary{padding:.7em 1em;cursor:pointer;font-weight:700}
+.toc-m ul{list-style:none;margin:0;padding:0 1em .9em;line-height:1.6}
+.toc-m li{margin:.45em 0}
+
+/* ---------- text ---------- */
+section{margin:0}
+h2{display:flex;align-items:baseline;gap:.6em;font-size:1.38rem;line-height:1.45;margin:3.1em 0 .9em;font-weight:700;word-break:auto-phrase}
+section:first-of-type h2{margin-top:.2em}
+h2 .fl{flex:none;display:inline-grid;place-items:center;min-width:2em;height:1.6em;padding:0 .35em;background:var(--panel);color:var(--lamp);border-radius:4px;font-size:.8em;font-variant-numeric:tabular-nums;line-height:1}
+h3{font-size:1.06rem;line-height:1.5;margin:2.2em 0 .6em;font-weight:700;word-break:auto-phrase}
+p{margin:0 0 1.1em}
+ul,ol{margin:0 0 1.2em;padding-left:1.5em}
+li{margin:.4em 0}
+li > ul{margin:.3em 0 .3em}
+strong{font-weight:700}
+code{font-family:var(--mono);font-size:.9em;background:var(--faint);padding:.1em .35em;border-radius:3px;overflow-wrap:break-word}
+td code,th code{white-space:nowrap}
+table.io small{display:block;margin-top:.3em;font-size:.86em;font-weight:400;color:var(--steel)}
+@media (min-width:641px){table.io td:nth-child(2){width:31%}table.io td:nth-child(3){width:36%}}
+pre{margin:1.2em 0;background:var(--panel);color:#E8EDF2;padding:14px 16px;border-radius:6px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit;word-break:normal}
+a.r{font-size:.74em;vertical-align:super;line-height:0;text-decoration:none;margin-left:.08em;font-variant-numeric:tabular-nums}
+
+ol.verdict{list-style:none;padding:0;margin:0 0 1.4em;counter-reset:v}
+ol.verdict li{counter-increment:v;position:relative;padding-left:2.5em;margin:1.05em 0}
+ol.verdict li::before{content:counter(v);position:absolute;left:0;top:.18em;width:1.75em;height:1.75em;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.86em;line-height:1}
+
+.call{margin:1.4em 0;padding:.9em 1.1em;border-left:4px solid var(--vlm);background:var(--vlm-t);border-radius:0 6px 6px 0}
+.call.warn{border-left-color:var(--safe);background:var(--safe-t)}
+.call p:last-child{margin-bottom:0}
+
+/* ---------- tables ---------- */
+.tw{margin:1.3em 0;overflow-x:auto;background:var(--sheet);border:1px solid var(--line);border-radius:6px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.6}
+th,td{padding:.62em .8em;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+thead th{background:var(--faint);font-weight:700}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+tbody th{font-weight:700;background:transparent}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.num th,table.num td{white-space:nowrap}
+table.num thead th small{display:block;font-weight:400;font-size:.86em;color:var(--steel)}
+tr.grp th{background:var(--paper);font-size:.86em;padding:.4em .8em;color:var(--steel)}
+@media (max-width:640px){
+  table.num{font-size:.86rem}
+  table.num th,table.num td{padding:.55em .5em}
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  table.stack tbody tr{display:block;padding:.8em .9em;border-bottom:1px solid var(--line)}
+  table.stack tbody tr:last-child{border-bottom:0}
+  table.stack tbody th,table.stack tbody td{display:block;border:0;padding:.14em 0}
+  table.stack tbody tr > :first-child{font-weight:700;margin-bottom:.25em}
+  table.stack tbody td[data-l]::before{content:attr(data-l);font-size:.8em;font-weight:700;color:var(--steel);margin-right:.7em}
+}
+dl.models{margin:1.2em 0}
+dl.models dt{font-weight:700;margin-top:1.05em}
+dl.models dd{margin:.25em 0 0;padding-left:1em;border-left:3px solid var(--line)}
+.mk{font-weight:700;margin-right:.35em}
+.mk.a{color:var(--ctl)}.mk.b{color:var(--ui)}.mk.c{color:var(--safe)}
+.tnote{font-size:.86rem;color:var(--steel);line-height:1.65;margin:-.6em 0 1.4em}
+
+/* ---------- figures ---------- */
+.fig{margin:1.9em 0}
+.fig .cv{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:14px 12px}
+.fig svg{display:block;width:100%;max-width:500px;height:auto;margin:0 auto}
+.fig figcaption{font-size:.86rem;line-height:1.65;color:var(--steel);margin-top:.65em}
+.fig text{font-family:var(--sans);fill:var(--ink);font-size:13px}
+.fig text.h{font-weight:700}
+.fig text.s{font-size:11.5px;fill:var(--steel)}
+.fig text.tv{fill:var(--vlm)}
+.fig text.tc{fill:var(--ctl)}
+.fig text.to{fill:#2E7D32}
+.fig text.tl{fill:var(--lamp)}
+@media (max-width:560px){
+  .fig{margin-left:-12px;margin-right:-12px}
+  .fig .cv{padding:12px 4px;border-radius:0;border-left:0;border-right:0}
+  .fig figcaption{padding:0 12px}
+}
+.eq{margin:1.2em 0;font-family:var(--mono);background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.85em 1em;overflow-x:auto;white-space:pre;line-height:1.75;font-size:.88rem}
+
+/* ---------- refs / footer ---------- */
+ol.refs{font-size:.86rem;line-height:1.6;padding-left:2em}
+ol.refs li{margin:.55em 0;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);background:var(--sheet);padding:22px 0 30px;font-size:.84rem;color:var(--steel)}
+footer p{margin:0}
+
+@media print{
+  body{background:#fff}
+  .toc,.toc-m,.crumb{display:none}
+  .page{display:block}
+  pre{white-space:pre-wrap}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="crumb"><a href="../">検討資料の一覧へ</a></p>
+    <h1>画像と言語の指示で、移動ロボットをエレベーターに乗り降りさせる</h1>
+    <p class="lead">「扉が開いたら中に入って」「中に入ったら180度旋回して」「再び扉が開いたら出て」。この3つを文字で指示し、カメラとオドメトリだけで実行するためのソフトウェア構成を検討した。2026年11月10日時点の資料で、対象は正常系のみ。実装はこれから行う。</p>
+
+    <div class="strip">
+      <figure class="act">
+        <svg viewBox="0 0 200 240" role="img" aria-label="出発階の平面図。扉が開き、乗場にいるロボットがかごの中央へ進む。">
+          <defs><marker id="h1a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#00796B"/></marker></defs>
+          <rect x="38" y="16" width="124" height="106" fill="#fff"/>
+          <path d="M38 122V16H162V122" fill="none" stroke="#18222D" stroke-width="5"/>
+          <path d="M2 122H65M135 122H198" stroke="#18222D" stroke-width="5"/>
+          <rect x="33" y="127" width="32" height="6" fill="#56626E"/><rect x="135" y="127" width="32" height="6" fill="#56626E"/>
+          <circle cx="100" cy="68" r="8" fill="none" stroke="#3949AB" stroke-width="3"/><circle cx="100" cy="68" r="2.5" fill="#3949AB"/>
+          <path d="M100 160V88" fill="none" stroke="#00796B" stroke-width="3.5" stroke-dasharray="7 5" marker-end="url(#h1a)"/>
+          <g transform="translate(100 190)">
+            <path d="M0 -20L-30 -64H30Z" fill="#3949AB" opacity=".16"/>
+            <rect x="-17" y="-20" width="34" height="40" rx="7" fill="#18222D"/>
+            <path d="M0 -14l6.5 10h-13z" fill="#F2A900"/>
+          </g>
+          <rect x="150" y="206" width="42" height="26" rx="4" fill="#1B232C"/>
+          <text x="171" y="225.5" text-anchor="middle" font-size="18" font-weight="700" fill="#F2A900">1F</text>
+        </svg>
+        <figcaption><b>「扉が開いたら中に入って」</b>VLM が「扉が開いた」と答えたら、かごの床を指差してもらい、その点まで走る。</figcaption>
+      </figure>
+
+      <figure class="act">
+        <svg viewBox="0 0 200 240" role="img" aria-label="かごの中の平面図。ロボットがその場で180度旋回し、閉まりかけた扉の方を向く。">
+          <defs><marker id="h2a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#00796B"/></marker></defs>
+          <rect x="38" y="16" width="124" height="106" fill="#fff"/>
+          <path d="M38 122V16H162V122" fill="none" stroke="#18222D" stroke-width="5"/>
+          <path d="M2 122H65M135 122H198" stroke="#18222D" stroke-width="5"/>
+          <rect x="65" y="119" width="23" height="6" fill="#56626E"/><rect x="112" y="119" width="23" height="6" fill="#56626E"/>
+          <path d="M100 30A38 38 0 0 1 100 106" fill="none" stroke="#00796B" stroke-width="3.5" stroke-dasharray="7 5" marker-end="url(#h2a)"/>
+          <g transform="translate(100 68) rotate(180)">
+            <path d="M0 -20L-26 -56H26Z" fill="#3949AB" opacity=".16"/>
+            <rect x="-17" y="-20" width="34" height="40" rx="7" fill="#18222D"/>
+            <path d="M0 -14l6.5 10h-13z" fill="#F2A900"/>
+          </g>
+          <rect x="150" y="206" width="42" height="26" rx="4" fill="#1B232C"/>
+          <text x="171" y="225.5" text-anchor="middle" font-size="18" font-weight="700" fill="#F2A900">1F</text>
+        </svg>
+        <figcaption><b>「中に入ったら180度旋回して」</b>オドメトリで向きを測りながら180°回り、扉の方を向く。</figcaption>
+      </figure>
+
+      <figure class="act">
+        <svg viewBox="0 0 200 240" role="img" aria-label="到着階の平面図。扉が再び開き、かごの中のロボットが乗場へ出る。">
+          <defs><marker id="h3a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#00796B"/></marker></defs>
+          <rect x="38" y="16" width="124" height="106" fill="#fff"/>
+          <path d="M38 122V16H162V122" fill="none" stroke="#18222D" stroke-width="5"/>
+          <path d="M2 122H65M135 122H198" stroke="#18222D" stroke-width="5"/>
+          <rect x="33" y="127" width="32" height="6" fill="#56626E"/><rect x="135" y="127" width="32" height="6" fill="#56626E"/>
+          <circle cx="100" cy="194" r="8" fill="none" stroke="#3949AB" stroke-width="3"/><circle cx="100" cy="194" r="2.5" fill="#3949AB"/>
+          <path d="M100 96V174" fill="none" stroke="#00796B" stroke-width="3.5" stroke-dasharray="7 5" marker-end="url(#h3a)"/>
+          <g transform="translate(100 62) rotate(180)">
+            <path d="M0 -20L-30 -64H30Z" fill="#3949AB" opacity=".16"/>
+            <rect x="-17" y="-20" width="34" height="40" rx="7" fill="#18222D"/>
+            <path d="M0 -14l6.5 10h-13z" fill="#F2A900"/>
+          </g>
+          <rect x="150" y="206" width="42" height="26" rx="4" fill="#1B232C"/>
+          <text x="171" y="225.5" text-anchor="middle" font-size="18" font-weight="700" fill="#F2A900">3F</text>
+        </svg>
+        <figcaption><b>「再び扉が開いたら出て」</b>扉が一度閉じたことを確かめた後の「開いた」で発進し、扉の外の床まで走る。</figcaption>
+      </figure>
+    </div>
+  </div>
+</header>
+
+<div class="wrap page">
+
+  <nav class="toc" aria-label="目次">
+    <ol>
+      <li><a href="#conclusion"><span class="fl">▲</span>結論</a></li>
+      <li><a href="#s1"><span class="fl">1</span>要求と前提</a></li>
+      <li><a href="#s2"><span class="fl">2</span>何が難しいか</a></li>
+      <li><a href="#s3"><span class="fl">3</span>VLM か VLA か</a></li>
+      <li><a href="#s4"><span class="fl">4</span>ソフトウェア構成</a></li>
+      <li><a href="#s5"><span class="fl">5</span>各部の設計</a></li>
+      <li><a href="#s6"><span class="fl">6</span>流れと時間予算</a></li>
+      <li><a href="#s7"><span class="fl">7</span>VLM の候補</a></li>
+      <li><a href="#s8"><span class="fl">8</span>リスクと対策</a></li>
+      <li><a href="#s9"><span class="fl">9</span>進め方</a></li>
+      <li><a href="#s10"><span class="fl">10</span>確認したいこと</a></li>
+      <li><a href="#refs"><span class="fl">▼</span>参考文献</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <details class="toc-m">
+      <summary>目次</summary>
+      <ul>
+        <li><a href="#conclusion">結論</a></li>
+        <li><a href="#s1">1　要求と前提</a></li>
+        <li><a href="#s2">2　このタスクは何が難しいか</a></li>
+        <li><a href="#s3">3　VLM か VLA か</a></li>
+        <li><a href="#s4">4　提案するソフトウェア構成</a></li>
+        <li><a href="#s5">5　各部の設計</a></li>
+        <li><a href="#s6">6　正常系の流れと時間予算</a></li>
+        <li><a href="#s7">7　VLM の候補と計算資源</a></li>
+        <li><a href="#s8">8　リスクと対策</a></li>
+        <li><a href="#s9">9　進め方</a></li>
+        <li><a href="#s10">10　確認したいこと</a></li>
+        <li><a href="#refs">参考文献</a></li>
+      </ul>
+    </details>
+
+    <!-- ============================================================ -->
+    <section id="conclusion">
+      <h2>結論</h2>
+      <ol class="verdict">
+        <li><strong>VLM を使う。VLA は今回は使わない。</strong>VLM の仕事は「指示を手順に分ける」「扉が開いたかを答える」「進む先を画像の上で指差す」の3つに絞る。車輪を動かすのは、オドメトリで閉ループ制御する小さなスキル（旋回・直進・点への移動）に任せる。</li>
+        <li><strong>このタスクの難しさは「どう動くか」ではなく「いつ動くか」にある。</strong>動きは直進と旋回だけで、オドメトリ制御の方が正確にできる。一方、「扉が開いた」には画像の意味の理解が要り、「再び」は過去を覚えていないと判定できない。前者は VLM が追加学習なしで答えられ、後者は状態をモデルの外に持てば済む。</li>
+        <li><strong>エレベーター専用のコードは書かない。</strong>扉・かご・手順の知識は、言語指示と VLM から来る。コードに置くのは汎用のスキルと「条件が成り立つまで待つ」仕組みだけにする。</li>
+        <li><strong>VLM はロボットの上で動かす。</strong>かごの中では通信が不安定になりうるので、外部の API に頼らない。Jetson AGX Orin では 2B〜8B 級の VLM が1回あたり 0.1〜1 秒ほどで応答する見込みがある（NVIDIA の公表値からの概算。実機で要実測）。</li>
+        <li><strong>最初の作業は机上評価。</strong>対象エレベーターの画像を撮り、扉の判定と指差しの精度、応答時間を測ってからロボットを動かす。大きなリスクは2つで、「扉が開いている間に通過を始められるか」と「距離センサがなく衝突を避けられないこと」。</li>
+      </ol>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s1">
+      <h2><span class="fl">1</span>要求と前提</h2>
+
+      <h3>要求の整理</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>要求</th><th>設計での受け止め</th></tr></thead>
+          <tbody>
+            <tr><td>画像と言語指示でタスクを実行する</td><td>言語から手順を作り、画像で「いつ」と「どこへ」を決める</td></tr>
+            <tr><td>移動ロボット向け</td><td>出力は並進と旋回の速度指令。差動二輪を想定する</td></tr>
+            <tr><td>エレベーターの乗り降り（3つの指示）</td><td>「条件が成り立ったら動作する」という手順の列として扱う</td></tr>
+            <tr><td>正常系のみ。指定階以外では止まらない</td><td>階数は読まない。乗った後の最初の「閉→開」を到着とみなす</td></tr>
+            <tr><td>センサはカメラとオドメトリだけ</td><td>距離はカメラの幾何（床面への投影）とオドメトリから作る。障害物までの距離は測れない</td></tr>
+            <tr><td>指示はキーボードか Web UI から文字列で</td><td>Web UI を主にし、コマンドラインからも同じ指示文を渡せるようにする</td></tr>
+            <tr><td>VLM か VLA を使う</td><td>VLM を使う（3章）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>用語: <strong>VLM</strong> は画像と文章を入れると文章を返すモデル、<strong>VLA</strong> は画像と文章を入れるとロボットの行動を返すモデル。<strong>かご</strong>はエレベーターの箱、<strong>乗場</strong>は各階の扉の前を指す。</p>
+
+      <h3>対象にする正常系</h3>
+      <ol>
+        <li>ロボットは乗場で、扉の正面およそ1 m の位置に、扉を向いて止まっている。</li>
+        <li>人が Web UI に3つの指示を入力し、開始する。</li>
+        <li>扉が開く。ロボットはかごに入り、180°旋回して扉の方を向く。</li>
+        <li>扉が閉まり、かごが目的の階へ動く。途中の階には止まらない。</li>
+        <li>扉が開く。ロボットは乗場へ出て止まる。</li>
+      </ol>
+      <p>エレベーターを呼ぶ操作と行先階の登録は、人か設備の側で行う。かごの中は無人で、障害物はないものとする。扉の前までの移動、ボタンの操作、階数の確認、他の乗客への対応は対象外とした。</p>
+
+      <h3>置いた仮定</h3>
+      <ul>
+        <li>ロボットは差動二輪で、その場で旋回できる。</li>
+        <li>カメラは前向きの単眼カメラ1台で、床が写る向きに付いている。画像は 10 Hz 程度で得られる。</li>
+        <li>オドメトリは車輪の回転から求めた移動量と向き。</li>
+        <li>計算機はロボットに載せた Jetson AGX Orin クラス（JetPack 6 系）。走行中は外部ネットワークに出ない。</li>
+        <li>ミドルウェアは ROS 2。</li>
+        <li>数値例では、かごを 13 人乗りの規格寸法（幅 160 cm、奥行き 135 cm、出入口の幅 90 cm）<a class="r" href="#r17">[17]</a>として計算した。</li>
+      </ul>
+      <p>仮定が違えば構成の一部が変わる。確かめたい点は<a href="#s10">10章</a>にまとめた。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s2">
+      <h2><span class="fl">2</span>このタスクは何が難しいか</h2>
+
+      <h3>指示を「いつ」と「何を」に分ける</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>指示</th><th>いつ</th><th>何を</th></tr></thead>
+          <tbody>
+            <tr><td>扉が開いたら中に入って</td><td>扉が開いたと見えたとき</td><td>かごの中の目標点まで進む</td></tr>
+            <tr><td>中に入ったら180度旋回して</td><td>前の動作が終わったとき</td><td>その場で180°回る</td></tr>
+            <tr><td>再び扉が開いたら出て</td><td>扉が一度閉じ、もう一度開いたとき</td><td>扉の外の目標点まで進む</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>「何を」は直進と旋回しかない。難しさは「いつ」の列と、それを支える周辺に集まっている。</p>
+
+      <h3>5つの難所</h3>
+      <ol>
+        <li><strong>「いつ」は画像の意味の理解である。</strong>扉の見え方は機種、材質、照明で変わる。判定の規則を手で書くと、対象ごとに作り直しになる。事前学習済みの VLM に「この扉は開いているか」と尋ねるだけで開閉を認識する方法は、エレベーターの扉を含む対象について、追加学習なしで実ロボットを使って試されている<a class="r" href="#r4">[4]</a><a class="r" href="#r5">[5]</a>。画像と文の照合だけを行う CLIP でも、エレベーターの扉の開閉を評価用の画像の 95〜100% で正しく見分けたという小規模な報告がある<a class="r" href="#r20">[20]</a>。</li>
+        <li><strong>「再び」は1枚の画像では決まらない。</strong>図2の A と B では、どちらもロボットの正面に開いた扉が見える。A はまだ出発階、B は到着階で、見分けるには「その間に扉が閉じた」という履歴が要る。現在の画像だけから行動を決める方式は、ここで必ず詰まる。</li>
+        <li><strong>「どれだけ」は幾何の問題である。</strong>180°はオドメトリで測れる。どこまで進むかは、画像の上の点を床面に投影すれば距離に直せる（<a href="#s5-3">5.3節</a>）。どちらにも学習は要らない。</li>
+        <li><strong>扉には締切がある。</strong>扉が開いている時間は限られ、機種と設定で決まる。判定が遅いと乗り損ねる（<a href="#s6">6章</a>）。</li>
+        <li><strong>距離センサがない。</strong>人や物までの距離を測れないので、衝突の回避は保証できない。速度、距離、時間の上限で守るしかない（<a href="#s5-6">5.6節</a>）。</li>
+      </ol>
+
+      <figure class="fig">
+        <div class="cv">
+        <svg viewBox="0 0 400 452" role="img" aria-labelledby="f2t f2d">
+          <title id="f2t">扉の状態、ロボットの動作、判定の時間変化</title>
+          <desc id="f2d">時間は上から下へ流れる。扉は閉、開（出発階）、閉（昇降中）、開（到着階）と変わる。ロボットは待機、進入、旋回、待機、退出と進む。旋回が終わった時点 A と到着した時点 B では、どちらも開いた扉が見える。A では発進せず、扉が閉じたことを記録した後の B で発進する。</desc>
+          <defs><marker id="f2a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#56626E"/></marker></defs>
+
+          <text class="h" x="74" y="20" text-anchor="middle">扉</text>
+          <text class="h" x="182" y="20" text-anchor="middle">ロボット</text>
+          <text class="h" x="326" y="20" text-anchor="middle">開いているかの判定</text>
+
+          <text class="s" x="20" y="20" text-anchor="middle">時間</text>
+          <path d="M20 30V438" stroke="#56626E" stroke-width="1.5" marker-end="url(#f2a)"/>
+
+          <!-- door -->
+          <rect x="44" y="34" width="60" height="62" fill="#DDE3E8"/>
+          <text class="h" x="74" y="70" text-anchor="middle">閉</text>
+          <rect x="44" y="96" width="60" height="122" fill="#DFF0E0"/>
+          <text class="h to" x="74" y="150" text-anchor="middle">開</text>
+          <text class="s" x="74" y="168" text-anchor="middle">出発階</text>
+          <rect x="44" y="218" width="60" height="112" fill="#DDE3E8"/>
+          <text class="h" x="74" y="270" text-anchor="middle">閉</text>
+          <text class="s" x="74" y="288" text-anchor="middle">昇降中</text>
+          <rect x="44" y="330" width="60" height="106" fill="#DFF0E0"/>
+          <text class="h to" x="74" y="378" text-anchor="middle">開</text>
+          <text class="s" x="74" y="396" text-anchor="middle">到着階</text>
+          <path d="M44 96H104M44 218H104M44 330H104" stroke="#fff" stroke-width="2"/>
+
+          <!-- robot -->
+          <rect x="118" y="34" width="128" height="62" fill="#E6EAEE"/>
+          <text x="182" y="70" text-anchor="middle">扉の前で待機</text>
+          <rect x="118" y="96" width="128" height="56" fill="#E0F2F1"/>
+          <text class="h tc" x="182" y="129" text-anchor="middle">かごへ進入</text>
+          <rect x="118" y="152" width="128" height="44" fill="#E0F2F1"/>
+          <text class="h tc" x="182" y="179" text-anchor="middle">180°旋回</text>
+          <rect x="118" y="196" width="128" height="134" fill="#E6EAEE"/>
+          <text x="182" y="268" text-anchor="middle">扉を向いて待機</text>
+          <rect x="118" y="330" width="128" height="70" fill="#E0F2F1"/>
+          <text class="h tc" x="182" y="370" text-anchor="middle">扉の外へ退出</text>
+          <rect x="118" y="400" width="128" height="36" fill="#E6EAEE"/>
+          <text x="182" y="423" text-anchor="middle">完了</text>
+          <path d="M118 96H246M118 152H246M118 196H246M118 330H246M118 400H246" stroke="#fff" stroke-width="2"/>
+
+          <!-- judge -->
+          <rect x="262" y="42" width="34" height="19" rx="9.5" fill="#DDE3E8"/><text class="s" x="279" y="55.5" text-anchor="middle">no</text>
+          <rect x="262" y="66" width="34" height="19" rx="9.5" fill="#DDE3E8"/><text class="s" x="279" y="79.5" text-anchor="middle">no</text>
+          <path d="M252 96H394" stroke="#3949AB" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text class="h tv" x="262" y="114">yes×2 → 発進</text>
+
+          <rect x="262" y="126" width="130" height="58" rx="4" fill="none" stroke="#C9D1D9" stroke-dasharray="4 3"/>
+          <text class="s" x="327" y="159" text-anchor="middle">動作中は判定しない</text>
+
+          <path d="M380 207V343" stroke="#8A5A00" stroke-width="1.5"/>
+          <text x="262" y="211.5">yes だが待つ</text>
+          <circle cx="380" cy="207" r="10" fill="#1B232C"/><text class="h tl" x="380" y="211.5" text-anchor="middle">A</text>
+
+          <path d="M252 218H366" stroke="#56626E" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text class="h" x="262" y="239">no×2 → 閉を記録</text>
+          <rect x="262" y="248" width="34" height="19" rx="9.5" fill="#DDE3E8"/><text class="s" x="279" y="261.5" text-anchor="middle">no</text>
+
+          <rect x="262" y="280" width="130" height="26" rx="4" fill="#FFF3D6" stroke="#8A5A00"/>
+          <text class="h" x="327" y="297.5" text-anchor="middle">A と B は同じ見え方</text>
+
+          <path d="M252 330H366" stroke="#3949AB" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text class="h tv" x="262" y="347.5">yes×2 → 発進</text>
+          <circle cx="380" cy="343" r="10" fill="#1B232C"/><text class="h tl" x="380" y="347.5" text-anchor="middle">B</text>
+        </svg>
+        </div>
+        <figcaption>図2　正常系の時間の流れ（上から下）。旋回が終わった時点 A と、到着して扉が開いた時点 B で、カメラには同じように開いた扉が写る。A で発進しないためには、「扉が閉じたのをまだ見ていない」という履歴を持つ必要がある。</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s3">
+      <h2><span class="fl">3</span>VLM か VLA か</h2>
+
+      <h3>3つの案</h3>
+      <ul>
+        <li><strong>案A　VLA だけで動かす。</strong>画像と指示文から速度指令までを1つのモデルで出す。</li>
+        <li><strong>案B　VLM とスキルを組み合わせる。</strong>VLM は理解（計画、判定、指差し）に専念し、動作はオドメトリ制御のスキルが担う。</li>
+        <li><strong>案C　VLM と VLA を組み合わせる。</strong>案B のうち「目標まで走る」部分を VLA に置き換える。</li>
+      </ul>
+
+      <h3>比較</h3>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>観点</th><th>案A　VLA だけ</th><th>案B　VLM＋スキル</th><th>案C　VLM＋VLA</th></tr></thead>
+          <tbody>
+            <tr><th>扉が開くまで待つ</th><td data-l="案A"><span class="mk b">△</span>待機を含む教示データで学習すれば可能</td><td data-l="案B"><span class="mk a">◎</span>yes / no の問いに追加学習なしで答える</td><td data-l="案C"><span class="mk a">◎</span>案B と同じ</td></tr>
+            <tr><th>「再び」を扱う</th><td data-l="案A"><span class="mk c">×</span>現在の画像だけで決める型は、図2の A と B を区別できない</td><td data-l="案B"><span class="mk a">◎</span>実行器が履歴を持つ</td><td data-l="案C"><span class="mk a">◎</span>案B と同じ</td></tr>
+            <tr><th>3つの指示を順に進める</th><td data-l="案A"><span class="mk c">×</span>進み具合を管理する仕組みが外に要る</td><td data-l="案B"><span class="mk a">◎</span>計画として明示する</td><td data-l="案C"><span class="mk a">◎</span>案B と同じ</td></tr>
+            <tr><th>180°旋回する</th><td data-l="案A"><span class="mk b">△</span>角度を保証しにくい</td><td data-l="案B"><span class="mk a">◎</span>オドメトリで閉ループ制御</td><td data-l="案C"><span class="mk a">◎</span>旋回はスキルのまま</td></tr>
+            <tr><th>追加の学習データ</th><td data-l="案A"><span class="mk c">×</span>対象エレベーターでの教示走行と微調整が要る</td><td data-l="案B"><span class="mk a">◎</span>不要。ゼロショットで始められる</td><td data-l="案C"><span class="mk b">△</span>VLA の側に微調整が要る可能性</td></tr>
+            <tr><th>ロボット上の計算</th><td data-l="案A"><span class="mk b">△</span>大きなモデルを数 Hz で回し続ける</td><td data-l="案B"><span class="mk a">○</span>1〜2 Hz の判定と軽い制御</td><td data-l="案C"><span class="mk c">×</span>2つのモデルが常駐する</td></tr>
+            <tr><th>失敗の原因を追う</th><td data-l="案A"><span class="mk c">×</span>出力は速度だけで、理由が残らない</td><td data-l="案B"><span class="mk a">◎</span>計画、判定、指差しが文字で残る</td><td data-l="案C"><span class="mk a">○</span>上位の判断は追える</td></tr>
+            <tr><th>人や物を避けて走る</th><td data-l="案A"><span class="mk a">○</span>学習していれば見ながら避ける</td><td data-l="案B"><span class="mk c">×</span>発進前の確認しかできない</td><td data-l="案C"><span class="mk a">○</span>VLA が担う</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>判断</h3>
+      <div class="call">
+        <p><strong>案B を採る。</strong>正常系に必要なことはすべて案B で足り、追加の学習データが要らない。弱点である「人や物を避けて走る」は正常系の範囲外で、必要になった時点で案C へ広げられる。</p>
+      </div>
+      <p>根拠は3つある。</p>
+      <ol>
+        <li><strong>案A は単体では成立しない。</strong>主流の VLA は、現在の観測と指示から次の行動を決める作りになっており、履歴に依存する課題に弱いことが繰り返し指摘されている<a class="r" href="#r8">[8]</a><a class="r" href="#r9">[9]</a>。ナビゲーション用の OmniVLA も、7B 級の大型モデルが観測として使うのは現在の画像で、学習に使われた言語指示は「X へ向かう」型の物体到達が中心である。著者らも、言語条件付きナビゲーションには改善の余地が残ると結んでいる<a class="r" href="#r1">[1]</a>。過去の画像を入力に加えるナビゲーション用 VLA もあるが（NaVILA<a class="r" href="#r2">[2]</a> など）、学習しているのは経路の指示に従う課題で、出来事を待ってから動く課題ではない。昇降の間じゅう「扉は一度閉じた」を覚えている保証もない。手順を管理し「扉が開いた」を判定する上位の仕組みは、VLA を使う場合でも結局要る。</li>
+        <li><strong>正常系の走行に VLA の強みが効く場面がない。</strong>残る選択は、走る部分をスキルにするか（案B）VLA にするか（案C）である。正常系の走行は「1〜2 m の直進」と「その場旋回」だけで、見ながら避ける、地形に合わせるといった VLA の強みが出ない。逆に VLA を入れると、微調整のデータと常駐する計算資源が要る。</li>
+        <li><strong>「上位は VLM、下位は別の制御器」という分担は、研究でも製品でも広く採られている。</strong>NaVILA は VLM に「75 cm 前進」のような中間レベルの行動を言葉で出させ、低位の方策がそれを実行する<a class="r" href="#r2">[2]</a>。VAMOS は VLM に画像の上の経路を出させ、床面に投影して使う<a class="r" href="#r3">[3]</a>。BUMBLE は、エレベーターの利用を含むスキル群を VLM が選んで呼び出す<a class="r" href="#r6">[6]</a>。建物内ナビゲーションの研究でも、上位の判断は VLM、エレベーターの乗り降りは単純な行動プリミティブという分担が採られている<a class="r" href="#r7">[7]</a>。そこでは扉の開きを深度のしきい値で検知しているが、本件は深度を使えないので、その役を VLM の判定に置き換える。Gemini Robotics ER 2 も、VLA やナビゲーション API を道具として呼び出す上位モデルとして提供されている<a class="r" href="#r10">[10]</a>。VLA の研究の側でも、遅い大型モデルと速い小型モデルに分ける構成が出ている。OmniVLA を土台にした AsyncVLA は、大型の VLA を外部の計算機で動かし、ロボットの上では約 100 分の 1 の大きさの方策が最新の画像を見て行動を直す<a class="r" href="#r21">[21]</a>。</li>
+      </ol>
+
+      <h3>VLM にどこまで任せるか</h3>
+      <p>案B の中にも幅がある。VLM に毎回「次に何をするか」を選ばせる作り（BUMBLE<a class="r" href="#r6">[6]</a> など）と、最初に計画を1回作らせ、実行中は yes / no と指差しだけを尋ねる作りである。本件は後者を採る。</p>
+      <ul>
+        <li><strong>応答が速い。</strong>実行中の問いが短く、答えも数トークンで済む。扉の締切に対して有利になる（<a href="#s6">6章</a>）。</li>
+        <li><strong>履歴をモデルの外に置ける。</strong>「再び」を、モデルの記憶ではなく実行器の状態で判定できる。</li>
+        <li><strong>動く前に確かめられる。</strong>計画の全体を人が読み、承認してから走らせられる。</li>
+      </ul>
+      <p>VLM に任せる仕事を増やすほど、失敗の原因も VLM に寄る。BUMBLE の実験では、70 回の試行の平均成功率が 47.1% で、失敗の多くは VLM の判断の誤りだった<a class="r" href="#r6">[6]</a>。課題の難しさが違うので数字をそのまま比べることはできないが、VLM に頼む仕事を絞る理由にはなる。想定外の状況で VLM に計画を作り直させる拡張は、正常系が通った後に考える。</p>
+
+      <h3>VLA を後から足す道</h3>
+      <p>案B の「点へ移動」スキルは、入力が目標点、出力が速度指令という単純な口を持つ。OmniVLA のように2次元の姿勢をゴールとして受け取れる VLA<a class="r" href="#r1">[1]</a> は、この口にそのまま入る。VLM が「どこへ」を決め、VLA が「どう避けながら」を担う形になる。人がいるかごへの進入など、正常系の外へ広げるときに差し替える。</p>
+      <p>差し替えるときの制約は、ロボットの上で動くことである。AsyncVLA は通信の遅れが最大6秒あっても走れることを示したが<a class="r" href="#r21">[21]</a>、大型モデルを外部に置く構成なので、かごの中で通信が切れる本件にはそのままでは合わない。ロボットの上だけで動かすなら、小型版の OmniVLA-edge（約 5,000 万パラメータ）が候補になる。ただし言語の理解は大型版に大きく劣ると報告されているので<a class="r" href="#r1">[1]</a>、目標点を渡す使い方に限る。</p>
+      <p>案B で走らせたログ（画像、手順ごとの指示文、速度指令）は、そのまま言語ラベル付きの教示データになる。VLA を微調整する段階で使える。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s4">
+      <h2><span class="fl">4</span>提案するソフトウェア構成</h2>
+      <p>上の層ほど遅くて賢く、下の層ほど速くて単純にする。層の間は文字か数値でつなぎ、各層を単独で試験し、差し替えられるようにする。</p>
+
+      <figure class="fig">
+        <div class="cv">
+        <svg viewBox="0 0 400 580" role="img" aria-labelledby="f3t f3d">
+          <title id="f3t">ソフトウェア構成</title>
+          <desc id="f3d">上から順に、Web UI とキーボード、ローカル VLM（計画、判定、指差しの3役）、task_executor、skill_server、safety_gate、ロボット（カメラ、台車、オドメトリ）。指示文は UI から VLM へ、計画と判定結果は VLM から実行器へ、スキル呼び出しは実行器からスキルへ、速度指令は安全ゲートを通って台車へ流れる。カメラの画像は VLM へ、オドメトリは skill_server へ戻る。</desc>
+          <defs><marker id="f3a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#18222D"/></marker></defs>
+
+          <rect x="40" y="8" width="320" height="58" rx="6" fill="#FFF3D6" stroke="#8A5A00" stroke-width="1.5"/>
+          <text class="h" x="200" y="32" text-anchor="middle">Web UI・キーボード</text>
+          <text class="s" x="200" y="52" text-anchor="middle">指示文の入力、計画の承認、監視、停止</text>
+
+          <path d="M120 66V97" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="128" y="87">指示文</text>
+          <path d="M280 100V69" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="288" y="87">計画・進捗・映像</text>
+
+          <rect x="28" y="100" width="344" height="116" rx="6" fill="#E8EAF6" stroke="#3949AB" stroke-width="1.5"/>
+          <text class="h tv" x="40" y="123">ローカル VLM（ロボット上で推論）</text>
+          <rect x="40" y="134" width="100" height="70" rx="4" fill="#fff" stroke="#3949AB"/>
+          <text class="h" x="90" y="157" text-anchor="middle">計画</text>
+          <text class="s" x="90" y="176" text-anchor="middle">指示文→手順</text>
+          <text class="s" x="90" y="193" text-anchor="middle">開始時に1回</text>
+          <rect x="150" y="134" width="100" height="70" rx="4" fill="#fff" stroke="#3949AB"/>
+          <text class="h" x="200" y="157" text-anchor="middle">判定</text>
+          <text class="s" x="200" y="176" text-anchor="middle">条件→yes / no</text>
+          <text class="s" x="200" y="193" text-anchor="middle">1〜2 Hz</text>
+          <rect x="260" y="134" width="100" height="70" rx="4" fill="#fff" stroke="#3949AB"/>
+          <text class="h" x="310" y="157" text-anchor="middle">指差し</text>
+          <text class="s" x="310" y="176" text-anchor="middle">対象→画素</text>
+          <text class="s" x="310" y="193" text-anchor="middle">必要なとき</text>
+
+          <path d="M120 216V245" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="128" y="236">計画・判定・点</text>
+          <path d="M280 248V219" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="288" y="236">条件文・対象</text>
+
+          <rect x="40" y="248" width="320" height="60" rx="6" fill="#fff" stroke="#18222D" stroke-width="2"/>
+          <text class="h" x="200" y="273" text-anchor="middle">task_executor</text>
+          <text class="s" x="200" y="293" text-anchor="middle">手順を1つずつ進める。履歴と時間切れを管理</text>
+
+          <path d="M120 308V339" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="128" y="329">スキル呼び出し</text>
+          <path d="M280 342V311" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="288" y="329">結果</text>
+
+          <rect x="40" y="342" width="320" height="60" rx="6" fill="#E0F2F1" stroke="#00796B" stroke-width="1.5"/>
+          <text class="h" x="200" y="367" text-anchor="middle">skill_server（20〜50 Hz）</text>
+          <text class="s" x="200" y="387" text-anchor="middle">旋回・直進・点へ移動をオドメトリで制御</text>
+
+          <path d="M200 402V431" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="208" y="422">速度指令</text>
+
+          <rect x="40" y="434" width="320" height="56" rx="6" fill="#FCE8E6" stroke="#B3261E" stroke-width="1.5"/>
+          <text class="h" x="200" y="458" text-anchor="middle">safety_gate（50 Hz）</text>
+          <text class="s" x="200" y="477" text-anchor="middle">上限、信号の途絶の監視、停止</text>
+
+          <path d="M200 490V523" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="208" y="511">制限済みの速度指令</text>
+
+          <rect x="40" y="526" width="96" height="44" rx="4" fill="#E6EAEE" stroke="#56626E"/>
+          <text class="h" x="88" y="553" text-anchor="middle">カメラ</text>
+          <rect x="152" y="526" width="96" height="44" rx="4" fill="#E6EAEE" stroke="#56626E"/>
+          <text class="h" x="200" y="553" text-anchor="middle">台車</text>
+          <rect x="264" y="526" width="96" height="44" rx="4" fill="#E6EAEE" stroke="#56626E"/>
+          <text class="h" x="312" y="553" text-anchor="middle">オドメトリ</text>
+
+          <path d="M40 548H12V158H25" fill="none" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="17" y="236">画像</text>
+          <path d="M360 548H388V372H363" fill="none" stroke="#18222D" stroke-width="1.6" marker-end="url(#f3a)"/>
+          <text class="s" x="383" y="422" text-anchor="end">位置と向き</text>
+        </svg>
+        </div>
+        <figcaption>図3　提案する構成。黄は人との接点、青は VLM、緑はオドメトリ制御、赤は安全、灰色はロボット本体。VLM は1つのモデルを3つの役割で使う。</figcaption>
+      </figure>
+
+      <h3>ノードの一覧</h3>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>ノード</th><th>役割</th><th>動く頻度</th></tr></thead>
+          <tbody>
+            <tr><td><code>web_ui</code></td><td>指示文の入力、計画の表示と承認、映像と判定の表示、停止</td><td data-l="頻度">人の操作に応じて</td></tr>
+            <tr><td><code>task_planner</code></td><td>指示文を計画（JSON）に変える。VLM を1回呼ぶ</td><td data-l="頻度">タスク開始時に1回</td></tr>
+            <tr><td><code>task_executor</code></td><td>計画を1手順ずつ実行する。条件待ち、履歴、時間切れを管理</td><td data-l="頻度">10 Hz</td></tr>
+            <tr><td><code>vlm_perception</code></td><td>画像と条件文から yes / no を得る。対象の記述から画像の上の点を得る</td><td data-l="頻度">判定は 1〜2 Hz、指差しは必要なとき</td></tr>
+            <tr><td><code>skill_server</code></td><td>旋回、直進、点への移動をオドメトリで閉ループ制御する</td><td data-l="頻度">20〜50 Hz</td></tr>
+            <tr><td><code>safety_gate</code></td><td>速度・距離・時間の上限、信号の途絶の監視、停止</td><td data-l="頻度">50 Hz</td></tr>
+            <tr><td><code>vlm_server</code></td><td>ローカル VLM の推論サーバ（ROS の外、HTTP）</td><td data-l="頻度">呼ばれたとき</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>各ノードは ROS 2 のノードとして作り、スキルはアクション、判定と指差しはサービスにする。VLM は OpenAI 互換の HTTP API を持つ推論サーバ（vLLM や llama.cpp など）として別プロセスで動かす。こうしておくと、モデルを入れ替えてもノードの側は変わらない。</p>
+      <p>ロボット本体との接点は3つに絞る。カメラ画像（<code>sensor_msgs/Image</code>）、オドメトリ（<code>nav_msgs/Odometry</code>）、速度指令（<code>geometry_msgs/Twist</code>）である。</p>
+      <p>すべてロボットの上の計算機で動かす。制御の周期を守る必要がある <code>skill_server</code> と <code>safety_gate</code> は C++、HTTP と JSON を扱う <code>task_planner</code>、<code>vlm_perception</code>、<code>web_ui</code> は Python で書くのが扱いやすい。VLM の推論サーバはコンテナを分け、ROS 2 のノードとは HTTP だけでつなぐ。</p>
+
+      <h3>ノード間のインターフェース</h3>
+      <div class="tw">
+        <table class="stack io">
+          <thead><tr><th>名前と型</th><th>流れ</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td><code>/camera/image_raw</code><small>トピック sensor_msgs/Image</small></td><td data-l="流れ">カメラ → vlm_perception、web_ui</td><td data-l="内容">カメラ画像</td></tr>
+            <tr><td><code>/camera/camera_info</code><small>トピック sensor_msgs/CameraInfo</small></td><td data-l="流れ">カメラ → skill_server</td><td data-l="内容">内部パラメータ。床面への投影に使う</td></tr>
+            <tr><td><code>/odom</code><small>トピック nav_msgs/Odometry</small></td><td data-l="流れ">台車 → skill_server、safety_gate</td><td data-l="内容">位置、向き、速度</td></tr>
+            <tr><td><code>/cmd_vel_raw</code><small>トピック geometry_msgs/Twist</small></td><td data-l="流れ">skill_server → safety_gate</td><td data-l="内容">制限をかける前の速度指令</td></tr>
+            <tr><td><code>/cmd_vel</code><small>トピック geometry_msgs/Twist</small></td><td data-l="流れ">safety_gate → 台車</td><td data-l="内容">制限済みの速度指令</td></tr>
+            <tr><td><code>/task/plan</code><small>サービス（独自の型）</small></td><td data-l="流れ">web_ui → task_planner</td><td data-l="内容">指示文を渡し、計画の JSON を受け取る</td></tr>
+            <tr><td><code>/task/execute</code><small>アクション（独自の型）</small></td><td data-l="流れ">web_ui → task_executor</td><td data-l="内容">承認済みの計画を渡す。進捗と結果が返る</td></tr>
+            <tr><td><code>/vlm/check</code><small>サービス（独自の型）</small></td><td data-l="流れ">task_executor → vlm_perception</td><td data-l="内容">条件文を渡し、yes / no、使った画像の撮影時刻、所要時間を受け取る</td></tr>
+            <tr><td><code>/vlm/point</code><small>サービス（独自の型）</small></td><td data-l="流れ">skill_server → vlm_perception</td><td data-l="内容">対象の記述を渡し、画素の座標と、使った画像の撮影時刻を受け取る</td></tr>
+            <tr><td><code>/skill/rotate</code><small>アクション（独自の型）。スキルごとに1つ</small></td><td data-l="流れ">task_executor → skill_server</td><td data-l="内容">引数を渡す。進み具合と結果が返る</td></tr>
+            <tr><td><code>/safety/stop</code><small>サービス std_srvs/Trigger</small></td><td data-l="流れ">web_ui → safety_gate</td><td data-l="内容">停止の要求</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>トピックの名前は、台車の既存の構成に合わせて読み替える。判定と指差しの応答には、使った画像の撮影時刻を必ず含める。古い画像での判定を捨てるためと、指差しを正しい位置へ直すためである（<a href="#s5-3">5.3節</a>）。</p>
+
+      <h3>コードに書くもの、書かないもの</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>コードに書く（汎用）</th><th>書かない（指示文と VLM に任せる）</th></tr></thead>
+          <tbody>
+            <tr><td>旋回、直進、点への移動</td><td>「扉」「エレベーター」「かご」という対象の知識</td></tr>
+            <tr><td>条件が成り立つまで待つ。一度成り立たないのを見てから、成り立つのを待つ</td><td>扉が開いているかを見分ける規則</td></tr>
+            <tr><td>時間切れ、上限、停止</td><td>手順の順番と、各手順で使うスキルの選択</td></tr>
+            <tr><td>画素から床面の点への投影</td><td>進む先がどこか</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>この線引きを守れば、「前の台車が動いたら2 m 進んで」のような別の指示も同じコードで扱える見込みがある。どこまで通用するかは実験で確かめる。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s5">
+      <h2><span class="fl">5</span>各部の設計</h2>
+
+      <h3 id="s5-1">5.1　指示文から計画へ</h3>
+      <p><code>task_planner</code> は、指示文、現在のカメラ画像、スキルの一覧、計画の書式を VLM に渡し、JSON の計画を受け取る。プロンプトにエレベーターの説明は入れない。</p>
+      <p>計画の1手順は「いつ（<code>when</code>）」「何を（<code>do</code>）」「時間切れ（<code>timeout_s</code>）」の3つで表す。「いつ」には次の3種類を用意する。</p>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>種類</th><th>意味</th><th>今回の指示での使いどころ</th></tr></thead>
+          <tbody>
+            <tr><td><code>now</code></td><td>前の手順が終わったらすぐ</td><td data-l="使いどころ">「中に入ったら」。前の手順の完了が、中に入ったことに当たる</td></tr>
+            <tr><td><code>when_true</code></td><td>条件が成り立つと確定したら</td><td data-l="使いどころ">「扉が開いたら」</td></tr>
+            <tr><td><code>after_false_then_true</code></td><td>一度成り立たないのを確かめた後で、成り立つと確定したら</td><td data-l="使いどころ">「再び扉が開いたら」</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>3つの指示から期待する計画は次のとおり。</p>
+<pre><code>{
+ "steps": [
+  {
+   "instruction": "扉が開いたら中に入って",
+   "when": {
+    "type": "when_true",
+    "condition": "Elevator door is fully open."
+   },
+   "do": {
+    "skill": "go_to_visual_target",
+    "target": "center of the elevator car floor"
+   },
+   "timeout_s": 120
+  },
+  {
+   "instruction": "中に入ったら180度旋回して",
+   "when": { "type": "now" },
+   "do": {
+    "skill": "rotate",
+    "angle_deg": 180
+   },
+   "timeout_s": 20
+  },
+  {
+   "instruction": "再び扉が開いたら出て",
+   "when": {
+    "type": "after_false_then_true",
+    "condition": "Elevator door is fully open."
+   },
+   "do": {
+    "skill": "go_to_visual_target",
+    "target": "hallway floor 1 m past the door"
+   },
+   "timeout_s": 300
+  }
+ ]
+}</code></pre>
+      <ul>
+        <li>出力は JSON スキーマで縛る。推論サーバの構造化出力の機能を使う<a class="r" href="#r18">[18]</a>。スキルの引数は範囲を検査する（距離は 3 m 以下、など）。</li>
+        <li>条件文と対象の記述は英語で書かせる。小型の VLM は英語の方が安定すると見込むためで、机上評価で確かめる。</li>
+        <li>計画は実行の前に Web UI に表示し、人が承認してから走らせる。VLM の解釈違いを、動く前に止められる。</li>
+        <li>指示文に距離や角度を直接書いてもよい。「扉が開いたら 1.7 m 前進して」と書けば、計画の動作は <code>move_straight</code> になり、指差しを使わない。現場ごとの数値を、コードではなく指示文に置ける。</li>
+      </ul>
+
+      <h3 id="s5-2">5.2　条件の判定</h3>
+      <p><code>vlm_perception</code> は、最新の画像1枚と条件文を VLM に渡し、<code>yes</code> か <code>no</code> だけを受け取る。</p>
+      <ul>
+        <li>答えは yes / no の2択に縛る。推論サーバの構造化出力で選択肢を固定できる<a class="r" href="#r18">[18]</a>。出力が短いほど応答が速い（<a href="#s7">7章</a>）。</li>
+        <li>同じ答えが続けて N 回（初期値は2回）そろって、初めて確定とする。1回の誤答では発進しない。推論サーバがトークンの確率を返せるなら、yes の確率をしきい値で切る方法もある。どちらが誤りと遅れを減らせるかは、机上評価で比べる。</li>
+        <li><code>after_false_then_true</code> は、<code>no</code> の確定を見た後の <code>yes</code> の確定で成り立つ。図2の A では発進せず、B で発進する。</li>
+        <li>推論している間に届いた画像は捨て、常に最新の1枚を使う。古い画像で判定しない。</li>
+        <li>画像、条件文、答え、所要時間はすべて保存する。机上評価と、後の学習データに使う。</li>
+      </ul>
+      <p>条件文の言い回しは結果に効く。かごの中では扉までが近く、画角によっては扉の面しか写らない（水平画角 56°のカメラで扉まで 0.7 m のとき、写る幅は約 0.74 m で、扉の幅より狭い）。「扉が開いている」より「扉の向こうに廊下が見える」の方が答えやすい可能性がある。言い回しは机上評価で選び、計画を作るプロンプトの書き方の指針に反映する。</p>
+      <p>判定の遅れを減らす工夫として、画像に大きな変化があった瞬間に追加で問い合わせる方法がある。これも対象を選ばない汎用の仕組みで実現できる。</p>
+
+      <h3 id="s5-3">5.3　指差しから走行目標へ</h3>
+      <p>「中に入って」の進む先は、VLM に画像の上で指差してもらう。対象の記述（例: かごの床の中央）に対して、VLM は画素の座標 (u, v) を返す。Qwen3-VL 系は、点や矩形を 0〜1000 の相対座標で出力できる<a class="r" href="#r11">[11]</a>。</p>
+      <p>床の上の点であれば、カメラの高さと向きが分かっていれば、画素から距離に直せる。</p>
+
+      <figure class="fig">
+        <div class="cv">
+        <svg viewBox="0 0 400 192" role="img" aria-labelledby="f4t f4d">
+          <title id="f4t">画素から床面の点への投影</title>
+          <desc id="f4d">ロボットを横から見た図。高さ h にあるカメラから、指差した画素を通る視線が、水平から角度アルファだけ下を向いて伸び、距離 d の床の点に当たる。d は h を tan アルファで割った値になる。</desc>
+          <path d="M8 150H392" stroke="#18222D" stroke-width="2"/>
+          <rect x="28" y="112" width="52" height="30" rx="6" fill="#18222D"/>
+          <circle cx="40" cy="143" r="7" fill="#56626E"/><circle cx="68" cy="143" r="7" fill="#56626E"/>
+          <path d="M66 112V66" stroke="#18222D" stroke-width="3"/>
+          <rect x="58" y="52" width="20" height="14" rx="2" fill="#3949AB"/>
+          <path d="M70 59H256" stroke="#56626E" stroke-width="1.2" stroke-dasharray="5 4"/>
+          <text class="s" x="262" y="63">水平</text>
+          <path d="M70 59L310 150" stroke="#3949AB" stroke-width="2.5"/>
+          <path d="M122 59A52 52 0 0 1 118.6 77.4" fill="none" stroke="#18222D" stroke-width="1.3"/>
+          <text x="130" y="76" font-style="italic">α</text>
+          <circle cx="310" cy="150" r="7" fill="#fff" stroke="#3949AB" stroke-width="3"/>
+          <text class="h tv" x="322" y="140">指差した点</text>
+          <path d="M16 59V150M11 59H21M11 150H21" stroke="#18222D" stroke-width="1.2"/>
+          <text x="22" y="100" font-style="italic">h</text>
+          <path d="M70 172H310M70 167V177M310 167V177" stroke="#18222D" stroke-width="1.2"/>
+          <text x="190" y="188" text-anchor="middle"><tspan font-style="italic">d</tspan> ＝ <tspan font-style="italic">h</tspan> ÷ tan <tspan font-style="italic">α</tspan></text>
+        </svg>
+        </div>
+        <figcaption>図4　床面への投影。カメラの高さ h と、指差した画素が水平から何度下にあるか（α）で、床の点までの距離 d が決まる。</figcaption>
+      </figure>
+
+      <p>カメラの内部パラメータを fx, fy, cx, cy、床からの高さを h、俯角を θ、ロボット中心からカメラまでの前後の距離を xc とすると、ロボットから見た床の点 (X, Y) は次の式で求まる。X は前方、Y は左を正とする。</p>
+<div class="eq">a = (u − cx) / fx
+b = (v − cy) / fy
+s = h / (sin θ + b cos θ)
+X = xc + s (cos θ − b sin θ)
+Y = − s a</div>
+      <p>s の分母が正のときだけ有効で、これは画素が地平線より下にあることを意味する。得た (X, Y) をオドメトリ座標の目標点に直し、そこまで走る。目標をオドメトリ座標で持つので、近づいて目標が視野の下へ外れても走り切れる。走行中に指差しを繰り返して目標を更新すれば、近づくほど誤差が減る。画像の上の経路を床面へ投影して使う考え方は、VAMOS でも採られている<a class="r" href="#r3">[3]</a>。</p>
+      <p>オドメトリ座標へ直すときは、指差しに使った画像を撮った時刻のロボットの位置を使う。推論の間もロボットは進むので、応答が返った時点の位置で直すと、推論時間と速度の積だけ目標が奥へずれる（0.5 秒、0.3 m/s なら 15 cm）。そのために <code>skill_server</code> はオドメトリの履歴を短く保持する。tf2 を使っていれば、撮影時刻を指定して変換を引ける。</p>
+      <p>誤差の目安を計算した。カメラの高さ 0.5 m、俯角 15°、焦点距離 600 画素（640×480 画素、水平画角およそ 56°、垂直画角およそ 44°に相当）で、指差しが 10 画素ずれた場合の値である。この取り付けでは、床は約 0.7 m 先から写る。</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th class="n">目標までの<br>距離</th><th class="n">奥行き方向の<br>ずれ</th><th class="n">横方向の<br>ずれ</th></tr></thead>
+          <tbody>
+            <tr><td class="n">1.0 m</td><td class="n">約 4 cm</td><td class="n">約 2 cm</td></tr>
+            <tr><td class="n">1.5 m</td><td class="n">約 8 cm</td><td class="n">約 3 cm</td></tr>
+            <tr><td class="n">2.0 m</td><td class="n">約 14 cm</td><td class="n">約 3 cm</td></tr>
+            <tr><td class="n">3.0 m</td><td class="n">約 31 cm</td><td class="n">約 5 cm</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>ずれは指差しの誤差に比例する。扉の通過で効く横方向は小さい。奥行き方向は距離の2乗で増えるが、近づきながら更新すれば抑えられる。VLM の指差しが実際に何画素ずれるかは、机上評価で測る。</p>
+      <p>止まる位置の余裕も見ておく。奥行き 135 cm のかごの中央に、たとえば長さ 60 cm のロボットを止めると、前後の余裕は約 37 cm ずつになる。1.7 m 先の目標は、10 画素のずれで約 10 cm、30 画素のずれで 30 cm 前後ずれる。発進の前に1回指差すだけで止まる位置を決めるのは危うく、近づきながらの更新を前提にする。</p>
+      <p>指差しの結果は、走る前に3点を検査する。点が返っていること、点が地平線より下にあること、目標までの距離が上限（初期値 3 m）以内であること。どれかを満たさなければ、走らずに指差しをやり直す。</p>
+      <p>かごに特有の注意がある。車椅子に対応したかごでは、入口の正面の壁（奥の壁）に鏡を設け、その下端を床から 40 cm 程度にするという整備基準がある<a class="r" href="#r17">[17]</a>。壁や扉が光沢のある金属であることも多い。VLM が鏡に映った床を指差すと、目標が奥の壁の先に置かれてしまう。指差した点が実際の床の上にあるかを VLM にもう一度尋ねる、目標までの距離に上限をかける、の2つで防ぎ、机上評価で確かめる。</p>
+      <p>必要な較正は、カメラの内部パラメータと、床からの高さ、俯角の3つで、一度測れば済む。</p>
+
+      <h3 id="s5-4">5.4　スキル</h3>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>スキル</th><th>引数</th><th>終わりの条件</th><th>使う情報</th></tr></thead>
+          <tbody>
+            <tr><td><code>rotate</code></td><td data-l="引数">角度</td><td data-l="終わり">オドメトリの向きが目標に達する</td><td data-l="使う情報">オドメトリ</td></tr>
+            <tr><td><code>move_straight</code></td><td data-l="引数">距離</td><td data-l="終わり">オドメトリの走行距離が目標に達する</td><td data-l="使う情報">オドメトリ</td></tr>
+            <tr><td><code>go_to_visual_target</code></td><td data-l="引数">対象の記述</td><td data-l="終わり">目標点に着く</td><td data-l="使う情報">指差し、床面への投影、オドメトリ</td></tr>
+            <tr><td><code>wait</code></td><td data-l="引数">秒数</td><td data-l="終わり">時間が過ぎる</td><td data-l="使う情報">なし</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><code>go_to_visual_target</code> は、指差し、床面への投影、目標の方を向く、向きを保って直進、到着、の順に進む。経路計画は入れない。正常系では進路に障害物がない前提のためである。</p>
+      <p>速度の上限は、初期値として並進 0.3 m/s、旋回 0.8 rad/s とする。この値で 180°の旋回は加減速を含めて約5秒、1.7 m の走行は約6秒かかる。</p>
+
+      <h3 id="s5-5">5.5　実行器</h3>
+      <p><code>task_executor</code> は、計画を上から順に進める小さな状態機械である。各手順は「条件待ち」「動作中」「完了」と進み、時間切れか異常で「中止」に移る。中止では停止し、Web UI に理由を表示する。</p>
+      <p>実行器が持つ状態は、現在の手順、条件の履歴（成り立たないのを見たか）、スキルの結果、開始時刻である。状態をモデルの外に置くことで、「再び」のような履歴に依存する条件を確実に扱える。</p>
+      <p>1つ前提を置いている。旋回が終わるまでの時間が、扉が閉じてから目的の階で再び開くまでの最短時間より短いことである。旋回は約5秒で終わる。戸閉、昇降、戸開には1階分でも10秒程度はかかると見込んでおり、正常系では成り立つはずだが、対象のエレベーターで実測して確かめる。</p>
+
+      <h3 id="s5-6">5.6　安全ゲート</h3>
+      <p><code>skill_server</code> の出力は、必ず <code>safety_gate</code> を通してから台車に渡す。</p>
+      <ul>
+        <li>速度の上限と、1回のスキルで動ける距離と時間の上限をかける。</li>
+        <li>カメラ画像、オドメトリ、VLM の応答のどれかが途絶えたら停止する。</li>
+        <li>Web UI の停止ボタンと、物理的な非常停止を受け付ける。</li>
+        <li>発進の直前に「進路に人や物がないか」を VLM に確認し、問題なしと答えたときだけ発進する。</li>
+      </ul>
+      <div class="call warn">
+        <p><strong>カメラとオドメトリだけでは、走行中に現れた人や物を検知して止まる保証がない。</strong>実験は低速で行い、かごの中を無人にし、非常停止を手にした人が立ち会う前提で計画する。接触を検知するバンパは要求の範囲外だが、追加を勧める。</p>
+      </div>
+
+      <h3 id="s5-7">5.7　Web UI</h3>
+      <p>ロボットの上で Web サーバを動かし、同じ LAN にある PC やスマートフォンのブラウザから使う。画面には次のものを置く。</p>
+      <ul>
+        <li>指示文の入力欄</li>
+        <li>生成された計画（手順ごと）と、承認のボタン</li>
+        <li>カメラ映像。指差した点と判定の結果を重ねて表示する</li>
+        <li>現在の手順と経過時間</li>
+        <li>停止ボタン</li>
+        <li>VLM とのやり取りのログ</li>
+      </ul>
+      <p>キーボードだけで使う場合は、同じ指示文をコマンドラインから渡す。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s6">
+      <h2><span class="fl">6</span>正常系の流れと時間予算</h2>
+
+      <h3>流れ</h3>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>段階</th><th>起きること</th><th>時間の目安</th></tr></thead>
+          <tbody>
+            <tr><td>準備</td><td>指示を入力する。VLM が計画を作り、人が承認する</td><td data-l="目安">数秒と確認の時間</td></tr>
+            <tr><td>待機</td><td>扉の前で、条件の判定を 1〜2 Hz で繰り返す</td><td data-l="目安">扉が開くまで</td></tr>
+            <tr><td>進入</td><td>判定が確定する。指差しで目標を決め、かごの中央へ約 1.7 m 走る</td><td data-l="目安">約 8〜9 秒</td></tr>
+            <tr><td>旋回</td><td>180°回って扉の方を向く</td><td data-l="目安">約 5 秒</td></tr>
+            <tr><td>待機</td><td>扉が閉じたことを記録し、再び開くのを待つ</td><td data-l="目安">昇降の間</td></tr>
+            <tr><td>退出</td><td>判定が確定する。指差しで目標を決め、扉の外へ約 1.7 m 走る</td><td data-l="目安">約 8〜9 秒</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>1.7 m は、待機位置から敷居までの 1.0 m と、敷居からかごの中央までの約 0.7 m（奥行き 135 cm の半分）を足した値である。</p>
+
+      <h3>時間予算</h3>
+      <p>扉が全開になってから、ロボットの先端が敷居に届くまでの時間を見積もった。</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>要素</th><th class="n">時間</th></tr></thead>
+          <tbody>
+            <tr><td>判定の確定（2 Hz で2回一致、推論 0.3〜0.9 秒）</td><td class="n">約 1〜2 秒</td></tr>
+            <tr><td>指差しと目標の計算</td><td class="n">約 0.5〜1 秒</td></tr>
+            <tr><td>敷居までの 1.0 m を 0.3 m/s で走る</td><td class="n">約 3.5 秒</td></tr>
+            <tr><th>合計</th><th class="n">約 5〜6.5 秒</th></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>この合計が、対象のエレベーターで扉が開いている時間より短くなければならない。参考として、米国の ADA 基準は、全開の保持を最低3秒（かごの中からの呼び）、乗場からの呼びでは到着の通知から戸閉の開始まで最低5秒と定めている<a class="r" href="#r15">[15]</a>。これに照らすと、初期値のままの 5〜6.5 秒では間に合わないおそれが大きい。日本の対象機で実測したうえで、次の手段で縮める。</p>
+      <ul>
+        <li>待機位置を扉に近づける（敷居の手前 0.5 m 程度）。そのためには、1 m ほど先の床がカメラに写る必要がある。高さ 0.5 m に水平に付けた垂直画角 44°のカメラでは、床は約 1.25 m 先からしか写らない。俯角を 15°付ければ約 0.7 m 先から写る。足りなければ広角のものにする。</li>
+        <li>判定と指差しを1回の問い合わせにまとめる（開いていれば床の点を返し、閉じていれば何も返さない）。</li>
+        <li>走行速度を上げる（0.5 m/s 程度）。</li>
+        <li>条件を「全開」ではなく「通れる幅まで開いた」にする。扉が開き切るまでの時間を走行に使える。条件文を変えるだけで試せるが、開く途中の扉へ向かって走ることになるので、判定が安定することを机上評価で確かめてから使う。</li>
+        <li>開いたと確定した時刻を覚えておき、発進までに決めた秒数を超えたら、その回の乗車を見送る。秒数は実測した時間から決める。</li>
+        <li>最初の実験では、人が「開」ボタンを押して扉を保持する。</li>
+      </ul>
+      <p>はじめの3つを入れると、判定の確定に約 1〜2 秒、0.5 m の走行に約 1.5 秒で、合計は約 2.5〜3.5 秒まで縮む見込みである。</p>
+      <p>扉の側にも備えはある。ADA 基準は、閉まりかけた扉が人や物に遮られたら止まって開き直す装置を求めており、接触を必要としない方式で、遮られている間は少なくとも 20 秒有効であることとしている<a class="r" href="#r15">[15]</a>。日本の機種にも、戸が閉まる間に出入口の赤外線ビームで人や物を検知するセンサを標準で備えるものがある<a class="r" href="#r16">[16]</a>。ただしこれは最後の砦であり、設計の上では当てにしない。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s7">
+      <h2><span class="fl">7</span>VLM の候補と計算資源</h2>
+      <p>選ぶ条件は4つある。ロボットの上で動くこと、yes / no を安定して答えること、画像の上の点を返せること、応答が1秒以内に収まること。</p>
+
+      <h3>候補</h3>
+      <dl class="models">
+        <dt>Qwen3-VL（2B / 4B / 8B）</dt>
+        <dd>点と矩形の出力を公式に備える<a class="r" href="#r11">[11]</a>。ライセンスは Apache 2.0。2025年10月の公開で、候補の中では古い世代に当たる。</dd>
+        <dt>Cosmos-Reason2（2B / 8B）</dt>
+        <dd>Qwen3-VL の構造を基に、物理世界とロボット向けのデータで追加学習したモデル。点と矩形を出力できる。Jetson AGX Orin（JetPack 6）で動かす公式の手順がある<a class="r" href="#r12">[12]</a>。ライセンスは NVIDIA Open Model License。重みは FP8 で 2B が約 5 GB、8B が約 17 GB。</dd>
+        <dt>Qwen3.5（2B / 4B / 9B）</dt>
+        <dd>2026年3月の公開。全モデルが画像入力に対応し、4B と 9B は画像の推論ベンチマークで Qwen3-VL 8B を上回る<a class="r" href="#r13">[13]</a>。ライセンスは Apache 2.0。指差しの精度は未確認。</dd>
+        <dt>Gemma 4（E2B / E4B）</dt>
+        <dd>エッジ向けのモデル。Jetson 用の llama.cpp コンテナが用意されている<a class="r" href="#r19">[19]</a>。指差しの精度は未確認。</dd>
+        <dt>参考: Gemini Robotics ER 2</dt>
+        <dd>ロボット向け上位モデルの現行版<a class="r" href="#r10">[10]</a>。クラウドで提供されるため、ロボットの上では使わない。机上評価で「強いモデルならどこまでできるか」を測る物差しにする。</dd>
+      </dl>
+
+      <h3>Jetson AGX Orin での応答時間の見込み</h3>
+      <p>NVIDIA が公表している実行時の性能<a class="r" href="#r14">[14]</a>から、1回の問い合わせにかかる時間を概算した。測定条件は Jetson AGX Orin 64GB、TensorRT Edge-LLM 0.10.0、JetPack 7.2、INT4 量子化、画像1枚を含む約 290 トークンの入力である。</p>
+      <div class="tw">
+        <table class="num">
+          <thead><tr><th>規模</th><th class="n">短い答え<small>5トークン</small></th><th class="n">長めの答え<small>20トークン</small></th><th class="n">GPU メモリ<small>公表値</small></th></tr></thead>
+          <tbody>
+            <tr class="grp"><th colspan="4">Qwen3-VL</th></tr>
+            <tr><td>2B</td><td class="n">約 0.13 秒</td><td class="n">約 0.28 秒</td><td class="n">4.6 GB</td></tr>
+            <tr><td>4B</td><td class="n">約 0.23 秒</td><td class="n">約 0.51 秒</td><td class="n">6.1 GB</td></tr>
+            <tr><td>8B</td><td class="n">約 0.39 秒</td><td class="n">約 0.85 秒</td><td class="n">9.0 GB</td></tr>
+            <tr class="grp"><th colspan="4">Qwen3.5</th></tr>
+            <tr><td>2B</td><td class="n">約 0.20 秒</td><td class="n">約 0.38 秒</td><td class="n">4.8 GB</td></tr>
+            <tr><td>4B</td><td class="n">約 0.34 秒</td><td class="n">約 0.65 秒</td><td class="n">6.5 GB</td></tr>
+            <tr><td>9B</td><td class="n">約 0.50 秒</td><td class="n">約 1.04 秒</td><td class="n">9.8 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">応答時間は、下の表の公表値から「画像の符号化＋入力の処理＋生成」を単純に足した、この資料での概算。</p>
+      <div class="tw">
+        <table class="num">
+          <thead><tr><th>規模</th><th class="n">画像の符号化<small>ミリ秒</small></th><th class="n">入力の処理<small>ミリ秒</small></th><th class="n">生成の速さ<small>トークン/秒</small></th></tr></thead>
+          <tbody>
+            <tr class="grp"><th colspan="4">Qwen3-VL</th></tr>
+            <tr><td>2B</td><td class="n">36.2</td><td class="n">45.7</td><td class="n">98.9</td></tr>
+            <tr><td>4B</td><td class="n">36.5</td><td class="n">105.7</td><td class="n">54.7</td></tr>
+            <tr><td>8B</td><td class="n">53.0</td><td class="n">178.3</td><td class="n">32.1</td></tr>
+            <tr class="grp"><th colspan="4">Qwen3.5</th></tr>
+            <tr><td>2B</td><td class="n">34.3</td><td class="n">106.7</td><td class="n">83.2</td></tr>
+            <tr><td>4B</td><td class="n">34.3</td><td class="n">197.5</td><td class="n">47.3</td></tr>
+            <tr><td>9B</td><td class="n">49.7</td><td class="n">275.3</td><td class="n">27.9</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">NVIDIA の公表値<a class="r" href="#r14">[14]</a>。</p>
+      <ul>
+        <li>yes / no の短い答えなら、8B〜9B 級でも 0.5 秒前後に収まる見込みがある。1〜2 Hz の判定は現実的といえる。</li>
+        <li>メモリは 8B〜9B 級でも 10 GB 程度である。判定用の小さいモデルと、計画・指差し用の大きいモデルを同時に載せる余地がある。</li>
+        <li>この値は TensorRT Edge-LLM と JetPack 7.2 での測定である。JetPack 6 系では vLLM か llama.cpp を使うことになり、値は変わる。</li>
+        <li>公表値の画像は約 265 トークン分である。高い解像度で渡すとトークンが増え、その分遅くなる。判定は低い解像度、指差しは高い解像度、と使い分ける余地がある。</li>
+        <li>Qwen3.5 や Cosmos-Reason2 が持つ思考（推論の過程を出力する）モードは、判定では切る。出力が長くなり、応答が遅れるためである。</li>
+      </ul>
+
+      <h3>JetPack 6 系と vLLM での参考値</h3>
+      <p>想定している JetPack 6 系に近い条件の公表値が2つある。</p>
+      <ul>
+        <li>Embedl は、Jetson 用の vLLM 0.14.0 で動かした Cosmos-Reason2-2B について、Jetson AGX Orin での測定値を公表している<a class="r" href="#r22">[22]</a>。4 ビットに量子化した版（W4A16）は、画像1枚の入力で最初のトークンまで約 56 ミリ秒、以後は1トークンあたり約 12 ミリ秒。量子化前は約 58 ミリ秒と約 24 ミリ秒である。5 トークンの答えなら、量子化版で約 0.1 秒の計算になる。</li>
+        <li>同じ量子化版を Jetson AGX Orin 64GB（JetPack 6.2.2）で動かした利用者は、1フレームあたりおよそ 0.5〜0.8 秒と報告している<a class="r" href="#r23">[23]</a>。問いと出力の長さは書かれていない。</li>
+      </ul>
+      <p>条件によって数倍の開きがある。対象の画像と実際の問いで測るまでは、判定1回を 0.3〜0.9 秒と見ておく（<a href="#s6">6章</a>の時間予算はこの幅で計算した）。</p>
+      <p>同じ報告には注意点もある。Jetson AI Lab の手順は FP8 の重みを使うが<a class="r" href="#r12">[12]</a>、AGX Orin では FP8 版の出力が崩れ、W4A16 版に替えて正常になったという<a class="r" href="#r23">[23]</a>。モデルを載せたら、最初に短い問いで出力が正しいことを確かめる。</p>
+
+      <h3>進め方</h3>
+      <p>まず 8B 級のモデル1つ（Qwen3-VL-8B か Cosmos-Reason2-8B）で、計画、判定、指差しのすべてを試す。判定の遅れが時間予算に収まらなければ、判定だけを 2B〜4B に分ける。どれを使うかは机上評価の結果で決める。</p>
+      <p>コードを書く前の当たりは、NVIDIA の Live VLM WebUI で付けられる。カメラの映像を推論サーバへ流し、問いへの答えをブラウザに表示する道具である<a class="r" href="#r12">[12]</a>。扉の前にカメラを置いて「Is the elevator door open?」と尋ねれば、判定の感触がその場で分かる。</p>
+      <p>ロボットが外部ネットワークに出られない場合、コンテナとモデルの重みは別の PC で取得し、持ち込む。</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s8">
+      <h2><span class="fl">8</span>リスクと対策</h2>
+      <div class="tw">
+        <table class="stack">
+          <thead><tr><th>リスク</th><th>起きること</th><th>対策</th></tr></thead>
+          <tbody>
+            <tr><th>扉が開いている時間に間に合わない</th><td data-l="起きること">乗り損ねる。通過の途中で扉が閉まり始める</td><td data-l="対策">扉が開いている時間を実測する。待機位置を近づける。判定と指差しを1回にまとめる。最初は人が「開」を保持する</td></tr>
+            <tr><th>VLM が扉の状態を誤る</th><td data-l="起きること">閉じた扉へ発進する。開いても動かない</td><td data-l="対策">2回一致で確定する。発進の直前に、別の問いで進路を確認する。条件文は机上評価で選ぶ。開かないときは時間切れで中止する</td></tr>
+            <tr><th>指差しがずれる</th><td data-l="起きること">扉の枠や壁に寄る</td><td data-l="対策">発進の前に目標へ正対する。走行中に指差しを繰り返して補正する</td></tr>
+            <tr><th>鏡や光沢面に指差しが引かれる</th><td data-l="起きること">目標が奥の壁の先に置かれ、壁へ向かって走る</td><td data-l="対策">指差した点が床の上にあるかを確認する。目標までの距離に上限をかける。机上評価に鏡のあるかごを含める</td></tr>
+            <tr><th>人や物を検知できない</th><td data-l="起きること">接触する</td><td data-l="対策">低速、立会い、無人のかご、非常停止。バンパの追加を勧める</td></tr>
+            <tr><th>旋回中に扉の変化を見逃す</th><td data-l="起きること">降り損ねる</td><td data-l="対策">旋回の時間が、戸閉から再び開くまでの最短時間より短いことを実測で確かめる</td></tr>
+            <tr><th>同じ階でもう一度扉が開く</th><td data-l="起きること">出発階で降りてしまう</td><td data-l="対策">正常系の範囲外。広げるときに、階数表示の読み取りを条件に加える</td></tr>
+            <tr><th>計画の解釈が違う</th><td data-l="起きること">意図しない動作をする</td><td data-l="対策">実行の前に人が計画を承認する。スキーマと引数の範囲を検査する</td></tr>
+            <tr><th>敷居の段差や溝で車輪が滑る</th><td data-l="起きること">オドメトリがずれる</td><td data-l="対策">敷居は直進で越える。オドメトリは短い距離だけに使い、指差しで補正する</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s9">
+      <h2><span class="fl">9</span>進め方</h2>
+
+      <h3>段階0　机上評価（ロボットは動かさない）</h3>
+      <ul>
+        <li>最初に Live VLM WebUI（<a href="#s7">7章</a>）で、対象の扉を前にして判定の感触を見る。</li>
+        <li>待機位置とかごの中の2か所から、扉の開閉をそれぞれ10回以上撮る。照明と時間帯を変える。</li>
+        <li>候補のモデルと条件文の言い回しを変え、判定の遅れと誤った確定の回数を数える。</li>
+        <li>床に目印を置き、指差しを床面に投影した位置と実測との差を測る。奥の壁に鏡があるかごでも試す。</li>
+        <li>扉が開いている時間と、戸閉から次に開くまでの時間を測る。</li>
+      </ul>
+      <p>合格の目安: 扉が閉じている間の誤った <code>yes</code> の確定が0回。全開から確定までが 1.5 秒以内。1.7 m 先の指差しで横のずれが 10 cm 以内。</p>
+
+      <h3>段階1　最小の構成で通す</h3>
+      <ul>
+        <li>判定は VLM、動作はオドメトリの直進と旋回だけにする。進む距離は設定値で与え、ロボットは扉の正面に置く。</li>
+        <li>計画は 5.1節の JSON をそのまま読み込む。計画の生成は次の段階で入れる。</li>
+      </ul>
+      <p>合格の目安: 3つの指示の通し実行が、続けて5回成功する。</p>
+
+      <h3>段階2　提案した構成にする</h3>
+      <ul>
+        <li>計画の生成と承認の画面、指差しと床面投影による目標点、ログの保存を入れる。</li>
+        <li>初期位置をずらして試す（横に ±20 cm、向きに ±10°）。</li>
+      </ul>
+      <p>合格の目安: 同じ指示文から10回続けて、5.1節と同じ構造の計画が得られる。通し実行が10回のうち9回以上成功する。扉を通るときの横のずれが 10 cm 以内。</p>
+
+      <h3>段階3　正常系の外へ広げる</h3>
+      <ul>
+        <li>かごに人がいる場合の待機と中止、階数表示の読み取り。</li>
+        <li>「点へ移動」スキルの VLA への差し替え、集めたログでの微調整。</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="s10">
+      <h2><span class="fl">10</span>確認したいこと</h2>
+      <ul>
+        <li><strong>カメラ:</strong> 画角、解像度、取り付けの高さと俯角。床が何 m 先から写るか。</li>
+        <li><strong>ロボット:</strong> 幅と長さ、その場旋回ができるか、バンパの有無。</li>
+        <li><strong>計算機:</strong> Jetson AGX Orin のメモリ容量と JetPack の版、同時に動かす他の処理。</li>
+        <li><strong>対象のエレベーター:</strong> 出入口の幅、かごの奥行き、扉が開いている時間、扉の材質（鏡面、窓付きなど）。</li>
+        <li><strong>待機位置までの移動:</strong> 誰がロボットを扉の前まで運ぶか。この資料は、扉の正面に置かれた状態から始めている。</li>
+        <li><strong>実験の体制:</strong> 立会い、非常停止の手段、エレベーターを占有できる時間帯。</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="refs">
+      <h2>参考文献</h2>
+      <ol class="refs">
+        <li id="r1">N. Hirose, C. Glossop, D. Shah, S. Levine, "OmniVLA: An Omni-Modal Vision-Language-Action Model for Robot Navigation," 2025. <a href="https://arxiv.org/abs/2509.19480">arXiv:2509.19480</a></li>
+        <li id="r2">A.-C. Cheng et al., "NaVILA: Legged Robot Vision-Language-Action Model for Navigation," RSS 2025. <a href="https://arxiv.org/abs/2412.04453">arXiv:2412.04453</a></li>
+        <li id="r3">M. Guaman Castro et al., "VAMOS: A Hierarchical Vision-Language-Action Model for Capability-Modulated and Steerable Navigation," 2025. <a href="https://arxiv.org/abs/2510.20818v1">arXiv:2510.20818</a></li>
+        <li id="r4">K. Kawaharazuka et al., "Robotic Environmental State Recognition with Pre-Trained Vision-Language Models and Black-Box Optimization," Advanced Robotics, 2024. <a href="https://arxiv.org/abs/2409.17519">arXiv:2409.17519</a></li>
+        <li id="r5">K. Kawaharazuka et al., "Robotic Applications of Pre-Trained Vision-Language Models to Various Recognition Behaviors," 2023. <a href="https://arxiv.org/pdf/2303.05674">arXiv:2303.05674</a></li>
+        <li id="r6">R. Shah et al., "BUMBLE: Unifying Reasoning and Acting with Vision-Language Models for Building-wide Mobile Manipulation," 2024. <a href="https://arxiv.org/abs/2410.06237">arXiv:2410.06237</a></li>
+        <li id="r7">B. Chandaka, G. X. Wang et al., "Human-like Navigation in a World Built for Humans," CoRL 2025. <a href="https://arxiv.org/abs/2509.21189">arXiv:2509.21189</a></li>
+        <li id="r8">J. Sun et al., "TempoFit: Plug-and-Play Layer-Wise Temporal KV Memory for Long-Horizon Vision-Language-Action Manipulation," 2026. <a href="https://arxiv.org/abs/2603.07647">arXiv:2603.07647</a></li>
+        <li id="r9">H. Shi et al., "MemoryVLA: Perceptual-Cognitive Memory in Vision-Language-Action Models for Robotic Manipulation," 2025. <a href="https://arxiv.org/abs/2508.19236">arXiv:2508.19236</a></li>
+        <li id="r10">Google, "Introducing Gemini Robotics ER 2," 2026年7月30日. <a href="https://blog.google/innovation-and-ai/models-and-research/google-deepmind/gemini-robotics-er-2/">blog.google</a></li>
+        <li id="r11">Qwen3-VL のリポジトリと技術報告。<a href="https://github.com/qwenlm/qwen3-vl">github.com/QwenLM/Qwen3-VL</a>、<a href="https://arxiv.org/pdf/2511.21631">arXiv:2511.21631</a></li>
+        <li id="r12">NVIDIA Cosmos-Reason2。<a href="https://github.com/nvidia-cosmos/cosmos-reason2">github.com/nvidia-cosmos/cosmos-reason2</a>、<a href="https://huggingface.co/nvidia/Cosmos-Reason2-2B">モデルカード</a>、<a href="https://www.jetson-ai-lab.com/tutorials/cosmos-reason2-vlm">Jetson AI Lab の手順</a>（Live VLM WebUI の使い方を含む）</li>
+        <li id="r13">Artificial Analysis, "Qwen3.5 small models: Everything you need to know," 2026年3月5日. <a href="https://artificialanalysis.ai/articles/qwen3-5-small-models">artificialanalysis.ai</a></li>
+        <li id="r14">NVIDIA, "TensorRT Edge-LLM: Performance Benchmarks"（v0.10.0、Jetson AGX Orin 64GB の実行時性能）. <a href="https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html">nvidia.github.io</a></li>
+        <li id="r15">U.S. Access Board, "Guide to the ADA Accessibility Standards, Chapter 4: Elevators and Platform Lifts." <a href="https://www.access-board.gov/ada/guides/chapter-4-elevators-and-platform-lifts/">access-board.gov</a></li>
+        <li id="r16">M. Kouketsu, T. Masuda, M. Shikai, "Safety of Doors for “AXIEZ” Mitsubishi Standard Elevators," 三菱電機技報, Vol. 79, No. 10, 2005. <a href="https://www.giho.mitsubishielectric.co.jp/giho/pdf/2005/0510105.pdf">giho.mitsubishielectric.co.jp</a></li>
+        <li id="r17">長野県の公開資料（エレベーターの整備基準の解説。JIS の 13 人乗りのかご寸法と、鏡の設置位置を記載）. <a href="https://www.pref.nagano.lg.jp/kenchiku/kurashi/sumai/shisaku/machizukuri/shikokisoku/documents/1-04.pdf">pref.nagano.lg.jp</a></li>
+        <li id="r18">vLLM, "Structured Outputs"（v0.14.0 の文書）. <a href="https://docs.vllm.ai/en/v0.14.0/features/structured_outputs/">docs.vllm.ai</a></li>
+        <li id="r19">NVIDIA, "Bringing AI Closer to the Edge and On-Device with Gemma 4," 2026年4月. <a href="https://developer.nvidia.com/blog/bringing-ai-closer-to-the-edge-and-on-device-with-gemma-4/">developer.nvidia.com</a>、<a href="https://www.jetson-ai-lab.com/models/gemma4-e4b">Jetson AI Lab の Gemma 4 E4B</a></li>
+        <li id="r20">K. Kawaharazuka et al., "Robotic State Recognition with Image-to-Text Retrieval Task of Pre-Trained Vision-Language Model and Black-Box Optimization," 2024. <a href="https://arxiv.org/abs/2410.22707">arXiv:2410.22707</a></li>
+        <li id="r21">N. Hirose, C. Glossop, D. Shah, S. Levine, "AsyncVLA: An Asynchronous VLA for Fast and Robust Navigation on the Edge," 2026. <a href="https://arxiv.org/abs/2602.13476">arXiv:2602.13476</a></li>
+        <li id="r22">Embedl, "Cosmos-Reason2-2B-W4A16" のモデルカード（Jetson での測定値を記載）. <a href="https://huggingface.co/embedl/Cosmos-Reason2-2B-W4A16">huggingface.co</a></li>
+        <li id="r23">NVIDIA Developer Forums, "[Guide] Running Cosmos Reason2 on AGX Orin + JetPack 6.2.2 from Ubuntu 24," 2026年3月. <a href="https://forums.developer.nvidia.com/t/guide-running-cosmos-reason2-on-agx-orin-jetpack-6-2-2-from-ubuntu-24-fp8-sm-8-7-fix-included/364471">forums.developer.nvidia.com</a></li>
+      </ol>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>2026年11月10日作成。<a href="https://github.com/mamoru1126/physical_ai_for_mobile_robot">mamoru1126/physical_ai_for_mobile_robot</a></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  if(!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var secs = Object.keys(map).map(function(id){ return document.getElementById(id); }).filter(Boolean);
+  var current = null;
+  function set(id){
+    if(current === id) return;
+    current = id;
+    links.forEach(function(a){ a.removeAttribute('aria-current'); });
+    if(map[id]) map[id].setAttribute('aria-current','true');
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) set(e.target.id); });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+  secs.forEach(function(s){ io.observe(s); });
+  set(secs[0].id);
+})();
+</script>
+</body>
+</html>

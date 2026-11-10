@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>車輪型移動ロボットで VLM を使った研究例</title>
+<meta name="description" content="車輪型の移動ロボットに VLM（視覚言語モデル）を使った研究 14 件を、VLM の使い方で5つに分けて整理した資料。">
+<style>
+:root{
+  --paper:#F2F4F6; --sheet:#FFFFFF; --ink:#18222D; --steel:#56626E; --line:#C9D1D9; --faint:#E6EAEE;
+  --panel:#1B232C; --lamp:#F2A900;
+  --vlm:#3949AB; --vlm-t:#E8EAF6;
+  --ctl:#00796B; --ctl-t:#E0F2F1;
+  --ui:#8A5A00; --ui-t:#FFF3D6;
+  --safe:#B3261E; --safe-t:#FCE8E6;
+  --sans:"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP","Noto Sans CJK JP",sans-serif;
+  --mono:"BIZ UDGothic",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:20px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.85}
+a{color:var(--vlm);text-underline-offset:.2em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--lamp);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{background:var(--sheet);border-bottom:1px solid var(--line);padding:24px 0 36px}
+.crumb{margin:0 0 22px;font-size:.86rem}
+h1{font-size:clamp(1.55rem,5.4vw,2.5rem);line-height:1.42;margin:0 0 .65em;font-weight:700;letter-spacing:.01em;word-break:auto-phrase;text-wrap:balance;max-width:21em}
+.lead{max-width:41em;margin:0 0 30px}
+.strip{display:grid;gap:18px}
+.act{margin:0;display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:center}
+.act svg{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--faint)}
+.act figcaption{font-size:.9rem;line-height:1.65}
+.act figcaption b{display:block;margin-bottom:.2em}
+@media (min-width:760px){
+  .strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+  .act{display:block}
+  .act svg{max-width:250px}
+  .act figcaption{margin-top:12px;max-width:19em}
+}
+
+/* ---------- page grid ---------- */
+.page{padding-top:26px;padding-bottom:72px}
+main{min-width:0;max-width:41rem}
+.toc{display:none}
+@media (min-width:1000px){
+  .page{display:grid;grid-template-columns:200px minmax(0,1fr);gap:60px;align-items:start}
+  .toc{display:block;position:sticky;top:24px;font-size:.88rem;line-height:1.5}
+  .toc-m{display:none}
+}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:.65em;align-items:center;padding:.34em 0;color:var(--steel);text-decoration:none}
+.toc a:hover{color:var(--ink)}
+.toc .fl{flex:none;display:inline-grid;place-items:center;width:2em;height:1.55em;border-radius:3px;background:#DDE3E8;color:#7A8792;font-size:.8em;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;transition:background .2s,color .2s}
+.toc a[aria-current="true"]{color:var(--ink);font-weight:700}
+.toc a[aria-current="true"] .fl{background:var(--panel);color:var(--lamp)}
+@media (prefers-reduced-motion:reduce){.toc .fl{transition:none}}
+.toc-m{margin:0 0 1.6em;border:1px solid var(--line);border-radius:6px;background:var(--sheet);font-size:.92rem}
+.toc-m summary{padding:.7em 1em;cursor:pointer;font-weight:700}
+.toc-m ul{list-style:none;margin:0;padding:0 1em .9em;line-height:1.6}
+.toc-m li{margin:.45em 0}
+
+/* ---------- text ---------- */
+section{margin:0}
+h2{display:flex;align-items:baseline;gap:.6em;font-size:1.38rem;line-height:1.45;margin:3.1em 0 .9em;font-weight:700;word-break:auto-phrase}
+section:first-of-type h2{margin-top:.2em}
+h2 .fl{flex:none;display:inline-grid;place-items:center;min-width:2em;height:1.6em;padding:0 .35em;background:var(--panel);color:var(--lamp);border-radius:4px;font-size:.8em;font-variant-numeric:tabular-nums;line-height:1}
+h3{font-size:1.06rem;line-height:1.5;margin:2.2em 0 .6em;font-weight:700;word-break:auto-phrase}
+p{margin:0 0 1.1em}
+ul,ol{margin:0 0 1.2em;padding-left:1.5em}
+li{margin:.4em 0}
+li > ul{margin:.3em 0 .3em}
+strong{font-weight:700}
+code{font-family:var(--mono);font-size:.9em;background:var(--faint);padding:.1em .35em;border-radius:3px;overflow-wrap:break-word}
+td code,th code{white-space:nowrap}
+table.io small{display:block;margin-top:.3em;font-size:.86em;font-weight:400;color:var(--steel)}
+@media (min-width:641px){table.io td:nth-child(2){width:31%}table.io td:nth-child(3){width:36%}}
+pre{margin:1.2em 0;background:var(--panel);color:#E8EDF2;padding:14px 16px;border-radius:6px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit;word-break:normal}
+a.r{font-size:.74em;vertical-align:super;line-height:0;text-decoration:none;margin-left:.08em;font-variant-numeric:tabular-nums}
+
+ol.verdict{list-style:none;padding:0;margin:0 0 1.4em;counter-reset:v}
+ol.verdict li{counter-increment:v;position:relative;padding-left:2.5em;margin:1.05em 0}
+ol.verdict li::before{content:counter(v);position:absolute;left:0;top:.18em;width:1.75em;height:1.75em;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.86em;line-height:1}
+
+.call{margin:1.4em 0;padding:.9em 1.1em;border-left:4px solid var(--vlm);background:var(--vlm-t);border-radius:0 6px 6px 0}
+.call.warn{border-left-color:var(--safe);background:var(--safe-t)}
+.call p:last-child{margin-bottom:0}
+
+/* ---------- tables ---------- */
+.tw{margin:1.3em 0;overflow-x:auto;background:var(--sheet);border:1px solid var(--line);border-radius:6px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.6}
+th,td{padding:.62em .8em;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+thead th{background:var(--faint);font-weight:700}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+tbody th{font-weight:700;background:transparent}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.num th,table.num td{white-space:nowrap}
+table.num thead th small{display:block;font-weight:400;font-size:.86em;color:var(--steel)}
+tr.grp th{background:var(--paper);font-size:.86em;padding:.4em .8em;color:var(--steel)}
+@media (max-width:640px){
+  table.num{font-size:.86rem}
+  table.num th,table.num td{padding:.55em .5em}
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  table.stack tbody tr{display:block;padding:.8em .9em;border-bottom:1px solid var(--line)}
+  table.stack tbody tr:last-child{border-bottom:0}
+  table.stack tbody th,table.stack tbody td{display:block;border:0;padding:.14em 0}
+  table.stack tbody tr > :first-child{font-weight:700;margin-bottom:.25em}
+  table.stack tbody td[data-l]::before{content:attr(data-l);font-size:.8em;font-weight:700;color:var(--steel);margin-right:.7em}
+}
+dl.models{margin:1.2em 0}
+dl.models dt{font-weight:700;margin-top:1.05em}
+dl.models dd{margin:.25em 0 0;padding-left:1em;border-left:3px solid var(--line)}
+.mk{font-weight:700;margin-right:.35em}
+.mk.a{color:var(--ctl)}.mk.b{color:var(--ui)}.mk.c{color:var(--safe)}
+.tnote{font-size:.86rem;color:var(--steel);line-height:1.65;margin:-.6em 0 1.4em}
+
+/* ---------- figures ---------- */
+.fig{margin:1.9em 0}
+.fig .cv{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:14px 12px}
+.fig svg{display:block;width:100%;max-width:500px;height:auto;margin:0 auto}
+.fig figcaption{font-size:.86rem;line-height:1.65;color:var(--steel);margin-top:.65em}
+.fig text{font-family:var(--sans);fill:var(--ink);font-size:13px}
+.fig text.h{font-weight:700}
+.fig text.s{font-size:11.5px;fill:var(--steel)}
+.fig text.tv{fill:var(--vlm)}
+.fig text.tc{fill:var(--ctl)}
+.fig text.to{fill:#2E7D32}
+.fig text.tl{fill:var(--lamp)}
+@media (max-width:560px){
+  .fig{margin-left:-12px;margin-right:-12px}
+  .fig .cv{padding:12px 4px;border-radius:0;border-left:0;border-right:0}
+  .fig figcaption{padding:0 12px}
+}
+.eq{margin:1.2em 0;font-family:var(--mono);background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.85em 1em;overflow-x:auto;white-space:pre;line-height:1.75;font-size:.88rem}
+
+/* ---------- refs / footer ---------- */
+ol.refs{font-size:.86rem;line-height:1.6;padding-left:2em}
+ol.refs li{margin:.55em 0;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);background:var(--sheet);padding:22px 0 30px;font-size:.84rem;color:var(--steel)}
+footer p{margin:0}
+
+@media print{
+  body{background:#fff}
+  .toc,.toc-m,.crumb{display:none}
+  .page{display:block}
+  pre{white-space:pre-wrap}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="crumb"><a href="../">検討資料の一覧へ</a></p>
+    <h1>車輪型移動ロボットで VLM を使った研究例</h1>
+    <p class="lead" style="margin-bottom:0">車輪で走る移動ロボットに VLM（画像と文章を入れると文章を返すモデル）を使い、実機で確かめた研究を 14 件選び、VLM に何をさせているかで5つに分けた。2026年11月10日時点の整理で、網羅的な調査ではない。機体、センサ、数値は各論文の記載による。</p>
+  </div>
+</header>
+
+<div class="wrap page">
+  <nav class="toc" aria-label="目次"><ol>
+<li><a href="#conclusion"><span class="fl">▲</span>結論</a></li>
+<li><a href="#s1"><span class="fl">1</span>対象と分け方</a></li>
+<li><a href="#s2"><span class="fl">2</span>地図に言葉を埋める</a></li>
+<li><a href="#s3"><span class="fl">3</span>行き先を選ばせる</a></li>
+<li><a href="#s4"><span class="fl">4</span>画像の上で経路を選ばせる</a></li>
+<li><a href="#s5"><span class="fl">5</span>状態やコストを答えさせる</a></li>
+<li><a href="#s6"><span class="fl">6</span>行動を出すよう学習する</a></li>
+<li><a href="#s7"><span class="fl">7</span>横断して見えること</a></li>
+<li><a href="#s8"><span class="fl">8</span>エレベーター課題への示唆</a></li>
+<li><a href="#refs"><span class="fl">▼</span>参考文献</a></li>
+  </ol></nav>
+
+  <main>
+    <details class="toc-m"><summary>目次</summary><ul>
+<li><a href="#conclusion">結論</a></li>
+<li><a href="#s1">対象と分け方</a></li>
+<li><a href="#s2">地図に言葉を埋める</a></li>
+<li><a href="#s3">行き先を選ばせる</a></li>
+<li><a href="#s4">画像の上で経路を選ばせる</a></li>
+<li><a href="#s5">状態やコストを答えさせる</a></li>
+<li><a href="#s6">行動を出すよう学習する</a></li>
+<li><a href="#s7">横断して見えること</a></li>
+<li><a href="#s8">エレベーター課題への示唆</a></li>
+<li><a href="#refs">参考文献</a></li>
+    </ul></details>
+
+    <section id="conclusion">
+      <h2>結論</h2>
+      <ol class="verdict">
+        <li><strong>VLM の使い方は5通りに分かれる。</strong>地図に言葉を埋める、行き先を選ばせる、画像の上で経路を選ばせる、状態やコストを答えさせる、行動そのものを出すよう学習する、の5つである。</li>
+        <li><strong>追加学習なしの研究は、VLM を「判断」に使い、走行は別の仕組みに任せている。</strong>走行を担うのは、画像ゴール型の方策、トポロジカルグラフ、局所プランナなどである。VLM に速度指令を直接出させているのは、走行データで学習した研究だけだった。</li>
+        <li><strong>共通の課題は応答の遅さである。</strong>クラウドの大型モデルは1回に 2〜30 秒かかる。事前に計算する、必要なときだけ尋ねる、小型の方策と組む、といった対処が研究ごとに入っている。</li>
+        <li><strong>カメラだけで走る例は少ない。</strong>14 件のうち、走行時のセンサが RGB カメラだけなのは Mobility VLA、NaVid、LeLaN、OmniVLA 系に限られる。VLM を追加学習なしで使う研究の多くは、LiDAR か深度カメラで障害物回避を補っている。</li>
+        <li><strong>ロボット上で動く例は 0.05〜0.8 秒で応答している。</strong>LeLaN は Jetson Orin で1行動 約 0.054 秒、CANVAS は AGX Orin で 0.4〜0.8 秒である。</li>
+      </ol>
+    </section>
+
+    <section id="s1">
+      <h2><span class="fl">1</span>対象と分け方</h2>
+      <p>選んだ条件は3つある。車輪型の台車（差動二輪、全方向、4輪操舵、車輪型の移動マニピュレータ）で実機実験をしていること、VLM か CLIP 系の視覚言語モデルを使っていること、移動に関わる課題であること。BUMBLE と CANVAS は台車の形式が本文に書かれていないが、速度指令で動く移動ロボットなので含めた。脚式だけで確かめた研究（NaVILA など）は外した。</p>
+      <div class="tw"><table>
+        <thead><tr><th>分け方</th><th>VLM の出力</th><th>該当する研究</th></tr></thead>
+        <tbody>
+          <tr><td>地図に言葉を埋める</td><td>画像や地図の各点の特徴</td><td>LM-Nav、VLMaps</td></tr>
+          <tr><td>行き先を選ばせる</td><td>目標のフレーム、目印、スキル</td><td>Mobility VLA、ReasonNav、BUMBLE</td></tr>
+          <tr><td>画像の上で経路を選ばせる</td><td>画像の上の番号や経路</td><td>CoNVOI、VAMOS</td></tr>
+          <tr><td>状態やコストを答えさせる</td><td>yes / no、振る舞いの文</td><td>Kawaharazuka ら、VLM-Social-Nav</td></tr>
+          <tr><td>行動を出すよう学習する</td><td>行動の文、経由点、速度</td><td>NaVid、LeLaN、CANVAS、OmniVLA、AsyncVLA</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="s2">
+      <h2><span class="fl">2</span>地図に言葉を埋める</h2>
+      <p>先に環境を走って画像や地図を作り、そこに視覚言語モデルの特徴を結び付けておく。指示が来たら、言葉で地図を引いて目的地を決める。走行中に VLM を呼ばないので、応答の遅さが問題にならない。代わりに、事前の走行と地図が要る。</p>
+<div class="tw"><table class="stack"><thead><tr><th>研究</th><th>機体とセンサ</th><th>VLM の役割</th><th>学習と応答時間</th></tr></thead><tbody>
+<tr><td>LM-Nav（2022）<a class="r" href="#r1">[1]</a></td><td data-l="機体">Clearpath Jackal。前後の広角 RGB カメラ、GPS、車輪エンコーダ、IMU</td><td data-l="役割">GPT-3 が指示文から目印を抜き出し、CLIP が目印を走行済みの画像に結び付ける。走行は画像ゴール型の方策 ViNG</td><td data-l="学習">3つのモデルとも追加学習なし。LLM と VLM の処理は外部の計算機で事前に実行</td></tr>
+<tr><td>VLMaps（2023）<a class="r" href="#r2">[2]</a></td><td data-l="機体">Toyota HSR。RGB-D カメラと RTAB-Map による自己位置</td><td data-l="役割">事前学習済みの視覚言語特徴を3次元の地図に埋め込み、「椅子と箱の間」のような言葉で地図上の位置を引く</td><td data-l="学習">追加学習なし。実機では 20 個の目標のうち 10 個に到達</td></tr>
+</tbody></table></div>
+      <p>LM-Nav は、追加学習なしの3つのモデルだけで、最長 800 m 先の目標まで屋外を走った<a class="r" href="#r1">[1]</a>。VLMaps の実機での失敗は、深度の誤差による地図の乱れと、走行の誤差が原因だった<a class="r" href="#r2">[2]</a>。</p>
+    </section>
+
+    <section id="s3">
+      <h2><span class="fl">3</span>行き先を選ばせる</h2>
+      <p>VLM に「次にどこへ行くか」「次に何をするか」を選ばせ、そこまでの走行は既存のナビゲーションに任せる。VLM の常識や文字を読む力がそのまま効く使い方である。</p>
+<div class="tw"><table class="stack"><thead><tr><th>研究</th><th>機体とセンサ</th><th>VLM の役割</th><th>学習と応答時間</th></tr></thead><tbody>
+<tr><td>Mobility VLA（2024）<a class="r" href="#r3">[3]</a></td><td data-l="機体">車輪型の移動マニピュレータ。RGB カメラのみ</td><td data-l="役割">Gemini 1.5 Pro に建物の案内動画と指示を渡し、目的地に当たる動画のフレームを選ばせる。そこまでの走行はトポロジカルグラフ上の古典的な方策</td><td data-l="学習">追加学習なし。VLM への問い合わせは1回 10〜30 秒、下位の走行は1ステップ約 0.19 秒</td></tr>
+<tr><td>ReasonNav（2025）<a class="r" href="#r4">[4]</a></td><td data-l="機体">AgileX Ranger Mini 2.0（4輪操舵）。2D・3D LiDAR、RealSense D455</td><td data-l="役割">GPT-4.1 が扉・案内板・人・エレベーターなどの目印から次に向かう先を選ぶ。案内板を読む、人に尋ねるといった行動も選ぶ</td><td data-l="学習">追加学習なし。実機は 12 回中 7 回成功</td></tr>
+<tr><td>BUMBLE（2024）<a class="r" href="#r5">[5]</a></td><td data-l="機体">移動マニピュレータ（台車の形式は本文に記載なし）。RGB-D カメラ、LiDAR</td><td data-l="役割">GPT-4o が、移動・把持・扉を開ける・エレベーターを使うなどのスキルと引数を毎回選ぶ</td><td data-l="学習">追加学習なし。70 回の試行で平均成功率 47.1%</td></tr>
+</tbody></table></div>
+      <p>Mobility VLA は、箱を手に「これはどこへ返せばよいか」と尋ねるような、画像と言葉が混ざった指示を扱った<a class="r" href="#r3">[3]</a>。ReasonNav はエレベーターにも乗るが、扉が開いたことは深度の値のしきい値で検知しており、VLM には尋ねていない<a class="r" href="#r4">[4]</a>。BUMBLE の失敗の多くは VLM の判断の誤りで、衝突、物の取り違え、エレベーターのボタンの押し間違いが挙がっている<a class="r" href="#r5">[5]</a>。</p>
+    </section>
+
+    <section id="s4">
+      <h2><span class="fl">4</span>画像の上で経路を選ばせる</h2>
+      <p>VLM は距離を数値で答えるのが苦手なので、画像の上の位置を選ばせ、幾何の計算で実世界の位置に直す。選択肢を画像に描き込む方法と、経路を直接出すよう微調整する方法がある。</p>
+<div class="tw"><table class="stack"><thead><tr><th>研究</th><th>機体とセンサ</th><th>VLM の役割</th><th>学習と応答時間</th></tr></thead><tbody>
+<tr><td>CoNVOI（2024）<a class="r" href="#r6">[6]</a></td><td data-l="機体">TurtleBot と Spot。RGB カメラと局所の占有地図</td><td data-l="役割">障害物のない領域に番号を重ねた画像を GPT-4V か Gemini に見せ、「歩道の上を走る」などの文に合う番号を選ばせて参照経路にする</td><td data-l="学習">追加学習なし。状況が変わらない間は経路を延長し、問い合わせを減らす</td></tr>
+<tr><td>VAMOS（2025）<a class="r" href="#r7">[7]</a></td><td data-l="機体">Spot（脚）と UW Hound（車輪）</td><td data-l="役割">微調整した VLM が画像の上に経路の候補を出す。床面に投影した後、機体ごとのアフォーダンスモデルが走れる経路を選ぶ</td><td data-l="学習">VLM を実走行データで微調整。アフォーダンスモデルはシミュレーションで学習</td></tr>
+</tbody></table></div>
+      <p>CoNVOI は、走れる場所だけに番号を振ることで、VLM の注意を走行可能な領域に絞っている。場面が屋内か横断歩道かといった文脈の判定には、軽いモデルを別に使う<a class="r" href="#r6">[6]</a>。VAMOS は、同じ VLM を脚式と車輪型で使い回し、機体の違いは小さなアフォーダンスモデルの差し替えで吸収した<a class="r" href="#r7">[7]</a>。</p>
+    </section>
+
+    <section id="s5">
+      <h2><span class="fl">5</span>状態やコストを答えさせる</h2>
+      <p>VLM に経路は決めさせず、場面についての短い答えだけを求める。答えは、行動の分岐やプランナのコストとして使う。出力が短いので、5つの中では遅さの影響を受けにくい。</p>
+<div class="tw"><table class="stack"><thead><tr><th>研究</th><th>機体とセンサ</th><th>VLM の役割</th><th>学習と応答時間</th></tr></thead><tbody>
+<tr><td>Kawaharazuka ら（2024）<a class="r" href="#r8">[8]</a></td><td data-l="機体">Fetch。RGB カメラ</td><td data-l="役割">「扉は開いているか」のような問いへの yes / no、または画像と文の類似度で、環境の状態を認識する。巡回中の分岐に使う</td><td data-l="学習">追加学習なし。使う文の重みだけを少数の画像で最適化</td></tr>
+<tr><td>VLM-Social-Nav（2025）<a class="r" href="#r9">[9]</a></td><td data-l="機体">TurtleBot 2。Velodyne VLP16、ZED 2i カメラ</td><td data-l="役割">GPT-4V に場面を見せて望ましい振る舞いを答えさせ、局所プランナのコストに加える</td><td data-l="学習">追加学習なし。応答は 2〜3 秒。YOLO が人や扉を検出したときだけ問い合わせる</td></tr>
+</tbody></table></div>
+      <p>Kawaharazuka らは、扉、透明な扉、蛇口の水、照明などの状態を、対象ごとのプログラムや学習なしに1つの枠組みで認識した<a class="r" href="#r8">[8]</a>。VLM-Social-Nav は、すれ違いや交差点、狭い戸口の4場面で、成功率を 27% 以上改善したと報告している<a class="r" href="#r9">[9]</a>。</p>
+    </section>
+
+    <section id="s6">
+      <h2><span class="fl">6</span>行動を出すよう学習する</h2>
+      <p>VLM を土台に、走行データで行動を出すよう学習する。VLA と呼ばれるものの多くがここに入る。地図や別のプランナが要らなくなる代わりに、学習データと計算資源が要る。</p>
+<div class="tw"><table class="stack"><thead><tr><th>研究</th><th>機体とセンサ</th><th>VLM の役割</th><th>学習と応答時間</th></tr></thead><tbody>
+<tr><td>NaVid（2024）<a class="r" href="#r10">[10]</a></td><td data-l="機体">TurtleBot 4。単眼 RGB の動画のみ（地図・オドメトリ・深度なし）</td><td data-l="役割">動画と指示文から「前進 75 cm」「左へ 30°」のような数量付きの行動を文字で出す</td><td data-l="学習">約 51 万件の走行サンプルで学習。1行動に 1.2〜1.5 秒。実機は 200 件の指示で約 66%</td></tr>
+<tr><td>LeLaN（2024）<a class="r" href="#r11">[11]</a></td><td data-l="機体">車輪型ロボットと Unitree Go1。単眼 RGB のみ</td><td data-l="役割">VLM は学習データ作りに使う。動画の物体に説明文を付け、「X へ向かう」方策を学習する</td><td data-l="学習">ラベルなしの動画から学習。Jetson Orin 上で1行動 約 0.054 秒</td></tr>
+<tr><td>CANVAS（2025）<a class="r" href="#r12">[12]</a></td><td data-l="機体">機体名は記載なし。前方カメラ、LiDAR、オドメトリ</td><td data-l="役割">地図上の手書きの線と指示文、カメラ画像から、次の経由点を4つ出す</td><td data-l="学習">シミュレーションでの人の走行 48 時間分を模倣学習。AGX Orin 上で 0.4〜0.8 秒。実機の成功率 69%</td></tr>
+<tr><td>OmniVLA（2025）<a class="r" href="#r13">[13]</a></td><td data-l="機体">10 種の機体のデータで学習。RGB カメラ</td><td data-l="役割">7B 級の VLA が、言語・位置・画像のどれで与えた目標にも速度指令を出す</td><td data-l="学習">約 9,500 時間で学習。言語指示の成功率は 0.73。推論は外部の GPU</td></tr>
+<tr><td>AsyncVLA（2026）<a class="r" href="#r14">[14]</a></td><td data-l="機体">OmniVLA と同系の実機</td><td data-l="役割">大型の VLA は外部の計算機、約 100 分の 1 の小型方策がロボット上で最新の画像を見て行動を直す</td><td data-l="学習">両者を合わせて微調整。通信の遅れが最大6秒でも走行</td></tr>
+</tbody></table></div>
+      <p>NaVid は RGB の動画だけで指示に従うが、1行動に1秒以上かかるため、動いては止まる走り方になる<a class="r" href="#r10">[10]</a>。LeLaN は VLM をロボットに載せず、データのラベル付けにだけ使うことで、推論を速くした<a class="r" href="#r11">[11]</a>。OmniVLA の著者らは、言語による指示にはまだ改善の余地があると結んでいる<a class="r" href="#r13">[13]</a>。</p>
+    </section>
+
+    <section id="s7">
+      <h2><span class="fl">7</span>横断して見えること</h2>
+      <h3>遅さへの対処</h3>
+      <div class="tw"><table>
+        <thead><tr><th>対処</th><th>例</th></tr></thead>
+        <tbody>
+          <tr><td>走る前に計算しておく</td><td>LM-Nav、VLMaps、Mobility VLA（目標の決定）</td></tr>
+          <tr><td>必要なときだけ尋ねる</td><td>VLM-Social-Nav（検出器が合図）、CoNVOI（状況が変わるまで経路を延長）</td></tr>
+          <tr><td>遅い上位と速い下位に分ける</td><td>Mobility VLA、ReasonNav、VAMOS、AsyncVLA</td></tr>
+          <tr><td>小さいモデルにする</td><td>LeLaN、CANVAS-S（約 0.7B）</td></tr>
+        </tbody>
+      </table></div>
+      <h3>センサ</h3>
+      <p>追加学習なしで VLM を使う研究は、障害物回避を LiDAR や深度カメラに任せているものが多い（ReasonNav、BUMBLE、CoNVOI、VLM-Social-Nav、VLMaps）。カメラだけで走る研究は、障害物回避を含めて学習した方策を持つ（NaVid、LeLaN、OmniVLA）か、事前に撮った動画から作ったグラフの上を走る（Mobility VLA）。</p>
+      <h3>成功率</h3>
+      <p>建物の中を長く移動する課題では、実機の成功率は 5〜7 割にとどまる（BUMBLE 47.1%、ReasonNav 12 回中 7 回、NaVid 約 66%、CANVAS 69%）。課題も条件も違うので比べることはできないが、VLM に任せる範囲が広い研究ほど、失敗の原因が VLM の判断に寄る傾向が読み取れる。</p>
+    </section>
+
+    <section id="s8">
+      <h2><span class="fl">8</span>エレベーター課題への示唆</h2>
+      <p><a href="../elevator-task/">エレベーターの乗り降りの検討</a>で採った構成は、5章の「状態やコストを答えさせる」と4章の「画像の上で経路を選ばせる」の組み合わせに当たる。</p>
+      <ul>
+        <li><strong>扉の判定を VLM に尋ねる方法には先例がある。</strong>Kawaharazuka らが車輪型の Fetch で確かめている<a class="r" href="#r8">[8]</a>。一方、ReasonNav は同じ判定を深度で済ませており<a class="r" href="#r4">[4]</a>、深度が使えない条件で VLM に置き換える点は、本件で確かめる部分になる。</li>
+        <li><strong>画像の上の点を床面に投影する方法も先例がある。</strong>VAMOS と CoNVOI が使っている<a class="r" href="#r6">[6]</a><a class="r" href="#r7">[7]</a>。ただし CoNVOI は占有地図で走れる領域を先に絞っており、カメラだけの本件では、指差した点が床の上にあるかの確認を自前で入れる必要がある。</li>
+        <li><strong>カメラだけで障害物を避ける追加学習なしの例は、今回の 14 件にはなかった。</strong>正常系に絞り、低速と立会いで補うという前提は、先行研究から見ても妥当である。</li>
+        <li><strong>応答時間は、ロボット上で 0.4〜0.8 秒という実績がある。</strong>CANVAS が AGX Orin で出している<a class="r" href="#r12">[12]</a>。yes / no だけを尋ねる本件は出力が短く、これより速くできる余地がある。</li>
+      </ul>
+    </section>
+
+    <section id="refs">
+      <h2>参考文献</h2>
+      <ol class="refs">
+<li id="r1">D. Shah, B. Osiński, B. Ichter, S. Levine, "LM-Nav: Robotic Navigation with Large Pre-Trained Models of Language, Vision, and Action," 2022. <a href="https://arxiv.org/pdf/2207.04429">arXiv:2207.04429</a></li>
+<li id="r2">C. Huang, O. Mees, A. Zeng, W. Burgard, "Visual Language Maps for Robot Navigation," ICRA 2023. <a href="https://arxiv.org/pdf/2210.05714">arXiv:2210.05714</a></li>
+<li id="r3">H.-T. L. Chiang et al., "Mobility VLA: Multimodal Instruction Navigation with Long-Context VLMs and Topological Graphs," CoRL 2024. <a href="https://arxiv.org/pdf/2407.07775">arXiv:2407.07775</a></li>
+<li id="r4">B. Chandaka, G. X. Wang et al., "Human-like Navigation in a World Built for Humans," CoRL 2025. <a href="https://arxiv.org/abs/2509.21189">arXiv:2509.21189</a></li>
+<li id="r5">R. Shah et al., "BUMBLE: Unifying Reasoning and Acting with Vision-Language Models for Building-wide Mobile Manipulation," 2024. <a href="https://arxiv.org/abs/2410.06237">arXiv:2410.06237</a></li>
+<li id="r6">A. J. Sathyamoorthy et al., "CoNVOI: Context-aware Navigation using Vision Language Models in Outdoor and Indoor Environments," IROS 2024. <a href="https://arxiv.org/abs/2403.15637">arXiv:2403.15637</a></li>
+<li id="r7">M. Guaman Castro et al., "VAMOS: A Hierarchical Vision-Language-Action Model for Capability-Modulated and Steerable Navigation," 2025. <a href="https://arxiv.org/abs/2510.20818v1">arXiv:2510.20818</a></li>
+<li id="r8">K. Kawaharazuka et al., "Robotic Environmental State Recognition with Pre-Trained Vision-Language Models and Black-Box Optimization," Advanced Robotics, 2024. <a href="https://arxiv.org/abs/2409.17519">arXiv:2409.17519</a></li>
+<li id="r9">D. Song et al., "VLM-Social-Nav: Socially Aware Robot Navigation through Scoring using Vision-Language Models," IEEE RA-L, 2025. <a href="https://arxiv.org/pdf/2404.00210">arXiv:2404.00210</a></li>
+<li id="r10">J. Zhang et al., "NaVid: Video-based VLM Plans the Next Step for Vision-and-Language Navigation," RSS 2024. <a href="https://arxiv.org/abs/2402.15852v3">arXiv:2402.15852</a></li>
+<li id="r11">N. Hirose et al., "LeLaN: Learning A Language-Conditioned Navigation Policy from In-the-Wild Videos," CoRL 2024. <a href="https://arxiv.org/abs/2410.03603">arXiv:2410.03603</a></li>
+<li id="r12">S. Choi et al., "CANVAS: Commonsense-Aware Navigation System for Intuitive Human-Robot Interaction," ICRA 2025. <a href="https://arxiv.org/pdf/2410.01273">arXiv:2410.01273</a></li>
+<li id="r13">N. Hirose, C. Glossop, D. Shah, S. Levine, "OmniVLA: An Omni-Modal Vision-Language-Action Model for Robot Navigation," 2025. <a href="https://arxiv.org/abs/2509.19480">arXiv:2509.19480</a></li>
+<li id="r14">N. Hirose, C. Glossop, D. Shah, S. Levine, "AsyncVLA: An Asynchronous VLA for Fast and Robust Navigation on the Edge," 2026. <a href="https://arxiv.org/abs/2602.13476">arXiv:2602.13476</a></li>
+      </ol>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>2026年11月10日作成。<a href="https://github.com/mamoru1126/physical_ai_for_mobile_robot">mamoru1126/physical_ai_for_mobile_robot</a></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  if(!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var secs = Object.keys(map).map(function(id){ return document.getElementById(id); }).filter(Boolean);
+  var current = null;
+  function set(id){
+    if(current === id) return;
+    current = id;
+    links.forEach(function(a){ a.removeAttribute('aria-current'); });
+    if(map[id]) map[id].setAttribute('aria-current','true');
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) set(e.target.id); });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+  secs.forEach(function(s){ io.observe(s); });
+  set(secs[0].id);
+})();
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 
 | 日付 | 資料 | ファイル |
 | --- | --- | --- |
+| 2026-11-10 | 車輪型移動ロボットで VLM を使った研究例 | [docs/vlm-wheeled-survey/index.html](docs/vlm-wheeled-survey/index.html) |
 | 2026-11-10 | 画像と言語の指示で、移動ロボットをエレベーターに乗り降りさせる（ソフトウェア構成の検討） | [docs/elevator-task/index.html](docs/elevator-task/index.html) |
 
 資料は静的な HTML で、ビルドは要らない。
@@ -25,4 +26,5 @@
 index.html                    docs/ へ転送するだけのページ
 docs/index.html               検討資料の一覧
 docs/elevator-task/index.html エレベーター乗り降りの検討資料
+docs/vlm-wheeled-survey/index.html 車輪型移動ロボットの VLM 研究例
 ```

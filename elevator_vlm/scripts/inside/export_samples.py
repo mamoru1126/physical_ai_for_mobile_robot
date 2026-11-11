@@ -6,7 +6,7 @@
 正解は、記録に添えてあるシミュレータの真値（各記録の ctx）から決める. VLM の答えは使わないので、
 モック VLM で通した記録でも、本物の VLM で動かした記録でも使える.
 
-  判定: 場所（乗場 / かごの中）× 階 × 扉の様子（全閉 / 途中 / 全開）ごとに、数枚ずつ取る.
+  判定: 場所（乗場 / かごの中 / かごの中で扉の近く）× 階 × 扉の様子（全閉 / 途中 / 全開）ごとに、数枚ずつ取る.
         正解は「全開のときだけ yes」. 切り替わりの前後の1枚は、画像と真値の時刻のずれがあるので取らない.
   指差し: 発進の前（ロボットが止まっていて、扉が開き切っているとき）の指差しを、場所 × 階ごとに取る.
         正解は、次に向かうはずの場所（乗場からはかごの中央、かごの中からは乗場の 1 m 先）.
@@ -20,7 +20,10 @@ import shutil
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-PLACE_JA = {"hall": "乗場", "car": "かごの中"}
+# 場所の分類. かごの中は、扉までの近さで2つに分ける: 近くからは、開き切った扉が画面の外に出るので、見え方が違う
+PLACE_JA = {"hall": "乗場", "car": "かごの中", "car_near": "かごの中（扉の近く）"}
+PLACES = ("hall", "car", "car_near")
+NEAR_DOOR_M = 0.65                   # ロボットの中心から敷居までがこれより近ければ「扉の近く」（かごの中央は 0.78 m）
 DOOR_JA = {"closed": "全閉", "partial": "途中", "open": "全開"}
 DOORS = ("closed", "partial", "open")
 
@@ -49,7 +52,9 @@ def truth_of(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 def place_of(ctx: Dict[str, Any]) -> Tuple[str, int]:
     """（場所, 階）. かごの中にいて昇降中のときは、階を 0 とする."""
     if ctx.get("robot_in_car"):
-        return "car", int(ctx.get("floor") or 0)
+        ahead = ctx.get("door_ahead_m")
+        near = ahead is not None and 0.0 < float(ahead) < NEAR_DOOR_M
+        return ("car_near" if near else "car"), int(ctx.get("floor") or 0)
     return "hall", int(ctx.get("robot_floor") or 0)
 
 
@@ -106,7 +111,7 @@ def select(events: List[Dict[str, Any]], per_category: int = 2) -> List[Dict[str
     groups: Dict[Tuple[str, int, str], List[Dict[str, Any]]] = {}
     for s in labelled_checks(events):
         groups.setdefault((s["place"], s["floor"], s["door"]), []).append(s)
-    for key in sorted(groups, key=lambda k: (k[0], k[1], DOORS.index(k[2]))):
+    for key in sorted(groups, key=lambda k: (PLACES.index(k[0]), k[1], DOORS.index(k[2]))):
         group = groups[key]
         if key[2] == "partial":
             group = sorted(group, key=lambda s: s["door_ratio"])
@@ -114,7 +119,7 @@ def select(events: List[Dict[str, Any]], per_category: int = 2) -> List[Dict[str
     points: Dict[Tuple[str, int], List[Dict[str, Any]]] = {}
     for s in labelled_points(events):
         points.setdefault((s["place"], s["floor"]), []).append(s)
-    for key in sorted(points):
+    for key in sorted(points, key=lambda k: (PLACES.index(k[0]), k[1])):
         samples.extend(_spread(points[key], per_category))
     return samples
 

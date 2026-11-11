@@ -225,5 +225,94 @@
     "goal_left_m": 0.071,
     "door_ahead_m": 0.723,
     "file": "point_car_f3_27.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 0,
+    "door": "closed",
+    "door_ratio": 0.0,
+    "file": "check_car_near_f0_closed_28.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 1,
+    "door": "closed",
+    "door_ratio": 0.0,
+    "file": "check_car_near_f1_closed_29.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 1,
+    "door": "partial",
+    "door_ratio": 0.42,
+    "file": "check_car_near_f1_partial42_30.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 1,
+    "door": "partial",
+    "door_ratio": 0.7,
+    "file": "check_car_near_f1_partial70_31.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 3,
+    "door": "partial",
+    "door_ratio": 0.3,
+    "file": "check_car_near_f3_partial30_32.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 3,
+    "door": "partial",
+    "door_ratio": 0.58,
+    "file": "check_car_near_f3_partial58_33.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 1,
+    "door": "open",
+    "door_ratio": 1.0,
+    "file": "check_car_near_f1_open_34.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 1,
+    "door": "open",
+    "door_ratio": 1.0,
+    "file": "check_car_near_f1_open_35.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 3,
+    "door": "open",
+    "door_ratio": 1.0,
+    "file": "check_car_near_f3_open_36.jpg"
+  },
+  {
+    "kind": "check",
+    "place": "car_near",
+    "floor": 3,
+    "door": "open",
+    "door_ratio": 1.0,
+    "file": "check_car_near_f3_open_37.jpg"
+  },
+  {
+    "kind": "point",
+    "place": "car_near",
+    "floor": 3,
+    "goal_ahead_m": 1.536,
+    "goal_left_m": 0.073,
+    "door_ahead_m": 0.536,
+    "file": "point_car_near_f3_38.jpg"
   }
 ]

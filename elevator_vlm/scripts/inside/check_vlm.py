@@ -62,7 +62,8 @@ def desk_eval(cfg, vlm: VlmClient) -> None:
     checks = [s for s in samples if s["kind"] == "check"]
     points = [s for s in samples if s["kind"] == "point"]
     frames = {s["path"]: eval_phrases.frame_of(s["path"]) for s in samples}
-    targets = {place: list((phrases.get("targets") or {}).get(place, []))[:1] for place in eval_phrases.PLACES}
+    targets = {place: list((phrases.get("targets") or {}).get(place, []))[:1]
+               for place in eval_phrases.TARGET_PLACES}
     cond = eval_phrases.eval_conditions(cfg, vlm, list(phrases.get("conditions", []))[:1],
                                         [cfg.perception.check_prompt], checks, frames, 4)
     targ = eval_phrases.eval_targets(cfg, vlm, targets, points, frames, 4)

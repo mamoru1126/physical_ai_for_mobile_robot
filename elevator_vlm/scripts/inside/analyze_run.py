@@ -7,6 +7,7 @@
 出すもの:
   - VLM が作った計画（条件文と目標の言い回し）
   - 手順ごとの条件待ち: 判定の回数、答えの並び、真値（場所 × 扉の様子）ごとの yes / no の数、食い違い
+    （扉の様子が切り替わる前後の1枚と、全開との境目は、食い違いに数えない）
   - 指差し: 床の上の位置（前・左）と、正解の場所とのずれ、敷居の先の距離
   - 終わり方: 実行系の報告と、真値による成否
   - 気づいた点（食い違いから機械的に拾ったもの）
@@ -21,7 +22,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from export_samples import DOOR_JA, DOORS, PLACE_JA, load_events, place_of, truth_of  # noqa: E402
+from export_samples import DOOR_JA, DOORS, PLACE_JA, PLACES, load_events, place_of, truth_of  # noqa: E402
 
 # 指差しの目標が「通り抜けた」と言える、敷居の先の距離 [m]（ロボットの半分の長さ 0.25 m + 余裕）
 EXIT_MIN_BEYOND_M = 0.45
@@ -133,30 +134,37 @@ class Analysis:
             return
         self.out("     真値との突き合わせ（正解は「全開のときだけ yes」）")
         table: Dict[Any, Dict[str, List[float]]] = {}
-        for c, t in truths:
+        wrongs: Dict[Any, List[float]] = {}
+        for i, (c, t) in enumerate(truths):
             key = (place_of(t)[0], t["door"])
-            table.setdefault(key, {"yes": [], "no": [], "?": []})[c.get("answer") or "?"].append(
-                float(t.get("door_ratio") or 0.0))
-        for key in sorted(table, key=lambda k: (k[0] != "hall", DOORS.index(k[1]))):
+            answer = c.get("answer") or "?"
+            ratio = float(t.get("door_ratio") or 0.0)
+            table.setdefault(key, {"yes": [], "no": [], "?": []})[answer].append(ratio)
+            # 扉の様子が切り替わる前後の1枚は、画像と真値の時刻のずれがあるので、食い違いに数えない
+            near = [truths[j][1]["door"] for j in (i - 1, i + 1) if 0 <= j < len(truths)]
+            expected = None if any(d != t["door"] for d in near) else expected_yes(t)
+            if expected is not None and answer in ("yes", "no") and (answer == "yes") != expected:
+                wrongs.setdefault(key, []).append(ratio)
+        for key in sorted(table, key=lambda k: (PLACES.index(k[0]), DOORS.index(k[1]))):
             row = table[key]
             parts = []
             for ans in ("yes", "no", "?"):
                 if row[ans]:
                     detail = f"（開き {pct(row[ans])}）" if key[1] == "partial" else ""
                     parts.append(f"{ans} {len(row[ans])}{detail}")
-            wrong_yes = [r for r in row["yes"] if key[1] == "closed" or r <= NEARLY_OPEN_RATIO]
-            wrong = len(row["no"]) if key[1] == "open" else len(wrong_yes)
+            wrong_ratios = wrongs.get(key, [])
+            wrong = len(wrong_ratios)
             self.out(f"       {PLACE_JA[key[0]]}・{DOOR_JA[key[1]]}: " + "、".join(parts)
                      + (f"   ← 食い違い {wrong}" if wrong else ""))
             place = PLACE_JA[key[0]]
-            if key[1] == "open" and len(row["no"]) >= 2:
-                self.note(f"{place}で、扉が全開なのに no と答えています（{len(row['no'])} 回）. 近くからは開いた扉が"
+            if key[1] == "open" and wrong >= 2:
+                self.note(f"{place}で、扉が全開なのに no と答えています（{wrong} 回）. 近くからは開いた扉が"
                           "画面の外に出るので、条件文が「扉が見えていること」を前提にしていないか確かめてください")
-            if key[1] == "partial" and wrong_yes:
-                self.note(f"{place}で、扉が動いている途中（開き {pct(wrong_yes)}）に yes と答えています. "
+            if key[1] == "partial" and wrong:
+                self.note(f"{place}で、扉が動いている途中（開き {pct(wrong_ratios)}）に yes と答えています. "
                           "閉まりかけの扉に向かって発進するおそれがあります. 条件文に「完全に開いている」ことを入れてください")
-            if key[1] == "closed" and row["yes"]:
-                self.note(f"{place}で、扉が全閉なのに yes と答えています（{len(row['yes'])} 回）")
+            if key[1] == "closed" and wrong:
+                self.note(f"{place}で、扉が全閉なのに yes と答えています（{wrong} 回）")
         for m in marks:
             t = truth_of(m.get("_last_check") or {})
             if m["kind"] == "condition_confirmed" and t is not None:
@@ -205,7 +213,7 @@ class Analysis:
             beyond = g["ahead_m"] - t["door_ahead_m"]
             text += f"。敷居の先 {beyond:.2f} m"
             if not brief:
-                if place == "car" and beyond < EXIT_MIN_BEYOND_M:
+                if place != "hall" and beyond < EXIT_MIN_BEYOND_M:
                     text += "   ← 近すぎる"
                     self.note(f"降りるときの目標が敷居に近すぎます（敷居の先 {beyond:.2f} m. ロボットが出入口に残ります）. "
                               "目標の言い回しに「出入口の約 1 m 先」を入れてください")

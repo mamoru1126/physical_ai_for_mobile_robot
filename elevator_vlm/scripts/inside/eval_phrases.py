@@ -6,7 +6,7 @@
   python3 scripts/inside/eval_phrases.py --run /runs/<名前>  # 指定した記録の画像も足す
 
 比べるもの:
-  判定: 候補の条件文 × システムプロンプト（guided / basic）ごとに、場所（乗場 / かごの中）× 扉の様子
+  判定: 候補の条件文 × システムプロンプト（guided / basic）ごとに、場所（乗場 / かごの中 / かごの中で扉の近く）× 扉の様子
         （全閉 / 途中 / 全開）の画像へ問いかけ、「全開のときだけ yes」と答えられた数を数える.
   指差し: 候補の目標ごとに、指差した点が床のどこに当たるかを出し、正解の場所と比べる.
 
@@ -37,9 +37,11 @@ from elevator_task.core.geometry import CameraModel, pixel_to_ground  # noqa: E4
 from elevator_task.core.perception import CHECK_SYSTEMS, Perception  # noqa: E402
 from elevator_task.core.robot_io import Frame, RobotIO  # noqa: E402
 from elevator_task.core.vlm_client import VlmClient  # noqa: E402
-from export_samples import DOOR_JA, DOORS, PLACE_JA, load_events, select  # noqa: E402
+from export_samples import DOOR_JA, DOORS, PLACE_JA, PLACES, load_events, select  # noqa: E402
 
-PLACES = ("hall", "car")
+TARGET_PLACES = ("hall", "car")      # 目標の候補は、乗場から（乗る）と、かごの中から（降りる）の2組
+PLACE_SHORT = {"hall": "乗場", "car": "かご", "car_near": "近く"}
+DOOR_SHORT = {"closed": "閉", "partial": "途", "open": "開"}
 LATERAL_TOL_M = 0.25                 # 目標の左右のずれの許容
 
 
@@ -69,7 +71,7 @@ def load_samples(samples_dir: str, runs: List[str], per_category: int) -> List[D
 def plan_phrases(run: str) -> Tuple[List[str], Dict[str, List[str]]]:
     """記録の中の計画（VLM が作ったもの、読み込んだもの）から、条件文と目標を拾う."""
     conditions: List[str] = []
-    targets: Dict[str, List[str]] = {"hall": [], "car": []}
+    targets: Dict[str, List[str]] = {p: [] for p in TARGET_PLACES}
     for e in load_events(run):
         if e.get("kind") not in ("plan_ready", "plan_loaded"):
             continue
@@ -141,7 +143,7 @@ def eval_targets(cfg, vlm: VlmClient, targets: Dict[str, List[str]], points: Lis
         items = [p for p in points if p["place"] == place]
         if not items:
             continue
-        for phrase in targets.get(place, []):
+        for phrase in targets.get("hall" if place == "hall" else "car", []):
             def ask(item: Dict[str, Any], phrase=phrase, place=place) -> Dict[str, Any]:
                 frame = frames[item["path"]]
                 res = perception.point(phrase, frame=frame)
@@ -190,7 +192,8 @@ def report(model: str, checks: List[Dict[str, Any]], points: List[Dict[str, Any]
                  + f"）、指差し {len(points)} 枚")
     if cond:
         lines.append("")
-        lines.append("判定の条件文（正解は「全開のときだけ yes」. 数字は 正解 / 枚数）")
+        lines.append("判定の条件文（正解は「全開のときだけ yes」. 数字は 正解 / 枚数. 閉 = 全閉、途 = 途中、開 = 全開、"
+                     "近く = かごの中で扉の近く）")
         phrases = []
         for r in cond:
             if r["phrase"] not in phrases:
@@ -200,14 +203,14 @@ def report(model: str, checks: List[Dict[str, Any]], points: List[Dict[str, Any]
             for r in (x for x in cond if x["phrase"] == phrase):
                 cells = []
                 for place in PLACES:
-                    part = [f"{DOOR_JA[d]} {r['by_category'][f'{place}/{d}'][0]}/{r['by_category'][f'{place}/{d}'][1]}"
+                    part = [f"{DOOR_SHORT[d]}{r['by_category'][f'{place}/{d}'][0]}/{r['by_category'][f'{place}/{d}'][1]}"
                             for d in DOORS if f"{place}/{d}" in r["by_category"]]
                     if part:
-                        cells.append(f"{PLACE_JA[place]}: " + " ".join(part))
+                        cells.append(f"{PLACE_SHORT[place]} " + " ".join(part))
                 rate = 100.0 * r["correct"] / r["total"] if r["total"] else 0.0
-                lat = f"、平均 {r['latency_s']:.2f} 秒" if r["latency_s"] else ""
+                lat = f" {r['latency_s']:.2f}秒" if r["latency_s"] else ""
                 lines.append(f"     {r['system']:<6} " + " ｜ ".join(cells)
-                             + f" ｜ 合計 {r['correct']}/{r['total']}（{rate:.0f}%）{lat}")
+                             + f" ｜ 計 {r['correct']}/{r['total']}（{rate:.0f}%）{lat}")
         ranked = sorted(cond, key=lambda r: (-r["correct"], r["latency_s"] or 0.0))
         lines.append("")
         lines.append("合計の高い順（上位 3）")
@@ -272,11 +275,11 @@ def main() -> int:
     with open(opts.phrases or os.path.join(opts.samples, "phrases.json"), encoding="utf-8") as f:
         phrases = json.load(f)
     conditions: List[str] = list(phrases.get("conditions", []))
-    targets: Dict[str, List[str]] = {p: list((phrases.get("targets") or {}).get(p, [])) for p in PLACES}
+    targets: Dict[str, List[str]] = {p: list((phrases.get("targets") or {}).get(p, [])) for p in TARGET_PLACES}
     for run in runs:
         extra_conditions, extra_targets = plan_phrases(run)
         conditions += [c for c in extra_conditions if c not in conditions]
-        for place in PLACES:
+        for place in TARGET_PLACES:
             targets[place] += [t for t in extra_targets[place] if t not in targets[place]]
 
     samples = load_samples(opts.samples, runs, opts.per_category)
@@ -288,7 +291,7 @@ def main() -> int:
     frames = {s["path"]: frame_of(s["path"]) for s in samples}
     systems = sorted(CHECK_SYSTEMS, reverse=True) if opts.system == "both" else [opts.system]
     calls = len(conditions) * len(systems) * len(checks) + sum(
-        len(targets[p]) * sum(1 for x in points if x["place"] == p) for p in PLACES)
+        len(targets["hall" if x["place"] == "hall" else "car"]) for x in points)
     print(f"VLM サーバ: {cfg.vlm.base_url}（{info}）  問いかけ {calls} 回. しばらくかかります…", flush=True)
     t0 = time.monotonic()
     cond = eval_conditions(cfg, vlm, conditions, systems, checks, frames, opts.workers) if checks else []

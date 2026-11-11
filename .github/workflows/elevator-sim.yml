@@ -32,7 +32,7 @@ jobs:
       - name: End-to-end run in Gazebo with the mock VLM (software rendering)
         run: |
           mkdir -p elevator_vlm/runs
-          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=120 \
+          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e LAUNCH_LOG_LINES=120 \
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
 
       # 扉を長く開けておく場合: 旋回が終わっても出発階の扉が開いている（検討資料の図2の A）.
@@ -41,8 +41,11 @@ jobs:
       - name: End-to-end run with a long door-open time (must not leave at the boarding floor)
         run: |
           docker run --rm -e RENDER=xvfb -e DOOR_HOLD_S=16 -e PLAN_FILE=/workspace/samples/plan_closeup.json \
-            -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=60 \
+            -e LAUNCH_LOG_LINES=60 \
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
+
+      # 机上評価用の画像（samples/）を撮り直すときは、上の2つに -e PRINT_SAMPLES=true を足す.
+      # 正解つきの画像が base64 でログに出る（SAMPLE_BEGIN 〜 SAMPLE_END）
 
       - name: Upload run records
         if: always()

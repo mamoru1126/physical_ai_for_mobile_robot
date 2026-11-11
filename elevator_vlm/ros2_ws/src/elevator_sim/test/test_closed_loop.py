@@ -320,9 +320,12 @@ def test_closeup_plan_stops_short_in_the_car_and_still_succeeds(make_stack, tmp_
     assert not world.door_contact and world.logic.reopen_count == 0
     stack.events.close()
     samples = module.select(module.load_events(run_dir))
-    close = [s for s in samples if s["kind"] == "point" and s["place"] == "car"]
-    assert close and close[0]["door_ahead_m"] == pytest.approx(0.55, abs=0.05)     # 敷居まで 0.55 m（かごの中央なら 0.78 m）
-    assert {("car", 1, "open"), ("car", 3, "open")} <= {(s["place"], s["floor"], s.get("door")) for s in samples}
+    # 敷居まで 0.55 m（かごの中央なら 0.78 m）. 画像は「かごの中（扉の近く）」に分類される
+    close = [s for s in samples if s["kind"] == "point" and s["place"] == "car_near"]
+    assert close and close[0]["door_ahead_m"] == pytest.approx(0.55, abs=0.05)
+    assert {("car_near", 1, "open"), ("car_near", 3, "open")} <= {(s["place"], s["floor"], s.get("door"))
+                                                                  for s in samples}
+    assert not any(s["place"] == "car" for s in samples)
 
 
 def test_analysis_agrees_with_truth_for_a_perfect_vlm(make_stack, tmp_path):
@@ -346,7 +349,7 @@ def test_analysis_flags_the_answers_of_the_first_real_run(make_stack, tmp_path):
     # 最初の実験の VLM の答え方（DoorViewVlm）を入れると、分析がその食い違いを拾う
     module = load_script("analyze_run")
     run_dir = str(tmp_path / "run")
-    world = FakeWorld(ElevatorConfig(door_hold_s=12.0))
+    world = FakeWorld(ElevatorConfig(door_hold_s=20.0))        # 旋回が終わっても、しばらく扉が開いている
     stack = make_stack(world, run_dir=run_dir, mock_cls=DoorViewVlm)
     with open(os.path.join(TASK_PKG, "plans", "elevator_expected.json"), encoding="utf-8") as f:
         data = json.load(f)
@@ -411,7 +414,7 @@ def test_phrase_evaluation_tallies_answers_by_place_and_door_state(make_stack, t
     assert by_place["car"]["results"][0]["beyond_m"] == pytest.approx(0.235, abs=0.05)
     assert by_place["hall"]["ok"] == 0 and by_place["car"]["ok"] == 0
     text = module.report("canned", checks, points, cond, targ)
-    assert "[C1] X is open." in text and "合計の高い順" in text and "[T2] b" in text and "かごの中: 全閉 0/" in text
+    assert "[C1] X is open." in text and "合計の高い順" in text and "[T2] b" in text and "かご 閉0/" in text
 
 
 def test_recheck_before_departure_catches_a_door_that_closed_while_pointing(make_stack):

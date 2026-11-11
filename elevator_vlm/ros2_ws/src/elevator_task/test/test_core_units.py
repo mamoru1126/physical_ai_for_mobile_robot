@@ -187,3 +187,36 @@ def test_config_typos_are_errors(tmp_path):
     path.write_text(json.dumps({"skills": {"max_linear": "fast"}}), encoding="utf-8")
     with pytest.raises(config_mod.ConfigError):
         config_mod.load_config(str(path), env={})
+
+
+# -- プロキシ ---------------------------------------------------------------
+def test_local_requests_bypass_proxy(monkeypatch):
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from elevator_task.core.http_util import is_local, urlopen
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    # 存在しないプロキシを設定しても、127.0.0.1 宛ては直接つながる
+    for name in ("http_proxy", "HTTP_PROXY"):
+        monkeypatch.setenv(name, "http://127.0.0.1:9")
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_address[1]}/", timeout=5) as resp:
+            assert resp.read() == b"ok"
+    finally:
+        server.shutdown()
+    assert is_local("http://localhost:8000/v1") and is_local("http://[::1]:8000") and is_local("http://127.0.0.2/")
+    assert not is_local("http://192.168.0.10:8000/v1") and not is_local("https://huggingface.co")

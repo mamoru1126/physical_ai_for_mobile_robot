@@ -27,6 +27,7 @@ from elevator_task.core.planner import make_plan
 from elevator_task.core.runtime import TaskRuntime
 from elevator_task.core.skills import SkillConfig, Skills
 from elevator_task.core.vlm_client import VlmConfig
+from elevator_task.core.http_util import urlopen
 from elevator_task.core.webui import WebUI
 
 TASK_PKG = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "elevator_task")
@@ -271,7 +272,7 @@ def _http(url, body=None):
     data = None if body is None else json.dumps(body).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="GET" if body is None else "POST",
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=10) as resp:
+    with urlopen(req, timeout=10) as resp:
         return resp.read()
 
 

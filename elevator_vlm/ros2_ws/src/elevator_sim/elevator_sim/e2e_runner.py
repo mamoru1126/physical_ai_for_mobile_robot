@@ -23,6 +23,8 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from elevator_task.core.http_util import urlopen
+
 SNAPSHOT_EVENTS = ("condition_confirmed", "condition_false_confirmed", "skill_end", "target_set")
 
 
@@ -63,7 +65,7 @@ class E2ERunner(Node):
 
     # -- HTTP ---------------------------------------------------------------
     def _get(self, path: str, timeout: float = 5.0) -> bytes:
-        with urllib.request.urlopen(self.ui_url + path, timeout=timeout) as resp:
+        with urlopen(self.ui_url + path, timeout=timeout) as resp:
             return resp.read()
 
     def _state(self, since: int = 0) -> Dict[str, Any]:
@@ -72,7 +74,7 @@ class E2ERunner(Node):
     def _post(self, path: str, body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         req = urllib.request.Request(self.ui_url + path, data=json.dumps(body or {}).encode("utf-8"),
                                      method="POST", headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=10.0) as resp:
+        with urlopen(req, timeout=10.0) as resp:
             out = json.loads(resp.read().decode("utf-8"))
         self._log(f"POST {path} → {out}")
         return out

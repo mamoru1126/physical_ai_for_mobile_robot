@@ -14,6 +14,8 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from .http_util import urlopen
+
 
 class VlmError(RuntimeError):
     """VLM サーバとの通信、または返答の読み取りに失敗した."""
@@ -78,7 +80,7 @@ class VlmClient:
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {self.cfg.api_key}"})
         t0 = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=self.cfg.timeout_s) as resp:
+            with urlopen(req, timeout=self.cfg.timeout_s) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:500]
@@ -107,7 +109,7 @@ class VlmClient:
         url = self.cfg.base_url.rstrip("/") + "/models"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {self.cfg.api_key}"})
         try:
-            with urllib.request.urlopen(req, timeout=min(self.cfg.timeout_s, 5.0)) as resp:
+            with urlopen(req, timeout=min(self.cfg.timeout_s, 5.0)) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             names = [m.get("id", "?") for m in data.get("data", [])] if isinstance(data, dict) else []
             return True, ", ".join(names) or "ok"

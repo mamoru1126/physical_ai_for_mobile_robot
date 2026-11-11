@@ -6,13 +6,16 @@ import sys
 import time
 import urllib.request
 
+DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 base = os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8000/v1").rstrip("/")
 timeout_s = float(sys.argv[1]) if len(sys.argv) > 1 else 3600.0
 t0 = time.monotonic()
 print(f"VLM サーバ（{base}）の起動を待っています. 経過は別の端末で  docker compose logs -f vlm  で見られます")
 while True:
     try:
-        with urllib.request.urlopen(base + "/models", timeout=5) as resp:
+        opener = DIRECT if ("127.0.0.1" in base or "localhost" in base) else urllib.request.build_opener()
+        with opener.open(base + "/models", timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         names = [m.get("id") for m in data.get("data", [])]
         print(f"\n起動しました（{time.monotonic() - t0:.0f} 秒）. モデル: {names}")

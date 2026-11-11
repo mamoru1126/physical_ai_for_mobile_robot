@@ -3,6 +3,7 @@ name: elevator-sim
 # エレベーター課題のシミュレーション環境（elevator_vlm/）の確認.
 #   1. Docker イメージをビルドする（単体テスト、擬似世界での通し試験、ノードの import の確認を含む）
 #   2. Gazebo を画面なし・ソフトウェア描画で起動し、モック VLM で3つの指示を通しで実行する
+#      （ふつうの場合と、扉を長く開けておく場合の2回）
 # 本物の VLM（GPU が要る）はここでは動かさない.
 
 on:
@@ -31,7 +32,14 @@ jobs:
       - name: End-to-end run in Gazebo with the mock VLM (software rendering)
         run: |
           mkdir -p elevator_vlm/runs
-          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e LAUNCH_LOG_LINES=120 \
+          docker run --rm -e RENDER=xvfb -e PRINT_IMAGES=true -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=120 \
+            -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
+
+      # 扉を長く開けておく場合: 旋回が終わっても出発階の扉が開いている（検討資料の図2の A）.
+      # 「再び」は、閉じたのを見た後の「開いた」でだけ成り立つので、出発階で降りてはいけない
+      - name: End-to-end run with a long door-open time (must not leave at the boarding floor)
+        run: |
+          docker run --rm -e RENDER=xvfb -e DOOR_HOLD_S=16 -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=60 \
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
 
       - name: Upload run records

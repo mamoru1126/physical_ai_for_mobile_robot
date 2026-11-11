@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Dict, List, Optional
 
 from .events import EventLog
@@ -33,6 +34,9 @@ class ExecutorConfig:
     yes_threshold: float = 0.0       # 0 より大きければ、yes の確率がこの値以上のときだけ yes とみなす
     pre_departure_check: bool = False  # 発進の直前に「進路に人や物がないか」を VLM に確かめる
     pre_departure_retries: int = 3
+    # 画像の中の場所へ向かう手順で、目標を決めた後、発進の直前に条件をもう一度確かめる.
+    # 条件の確定から発進までの間（指差しの推論の間）に扉が閉まり始めた、という場合に発進しないため
+    recheck_before_departure: bool = True
 
 
 @dataclass
@@ -128,7 +132,11 @@ class TaskExecutor:
                     continue
             status.phase = PHASE_ACTING
             self.events.emit("skill_start", step=index, do=step.do.to_dict(), t=round(self.robot.now(), 3))
-            result: SkillResult = self.skills.run(step.do, deadline, confirmed_at=status.confirmed_at)
+            recheck = None
+            if step.when.type != WHEN_NOW and self.cfg.recheck_before_departure:
+                recheck = partial(self._recheck, index, step)
+            result: SkillResult = self.skills.run(step.do, deadline, confirmed_at=status.confirmed_at,
+                                                  recheck=recheck)
             self.events.emit("skill_end", step=index, ok=result.ok, message=result.message,
                              t=round(self.robot.now(), 3))
             status.message = result.message
@@ -192,6 +200,18 @@ class TaskExecutor:
             remaining = cfg.check_period_s - (self.robot.now() - t0)
             if remaining > 0.0:
                 self.robot.sleep(remaining)
+
+    def _recheck(self, index: int, step: Step) -> bool:
+        """発進の直前に、条件が今も成り立っているかを新しい画像で1回だけ確かめる."""
+        res = self.perception.check(step.when.condition, purpose="recheck")
+        answer = res.answer
+        if answer is True and self.cfg.yes_threshold > 0.0 and res.p_yes is not None:
+            answer = res.p_yes >= self.cfg.yes_threshold
+        if answer is True:
+            return True
+        self.events.emit("departure_recheck_failed", step=index, condition=step.when.condition,
+                         answer=None if answer is None else "no", t=round(self.robot.now(), 3))
+        return False
 
     def _path_clear(self, index: int, status: StepStatus, deadline: float) -> bool:
         for _ in range(max(self.cfg.pre_departure_retries, 1)):

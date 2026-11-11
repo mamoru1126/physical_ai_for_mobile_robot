@@ -79,6 +79,20 @@ class Referee:
         return (self.exited_wrong_floor_at is not None or self.left_behind_at is not None
                 or self.fell_at is not None)
 
+    def summary(self) -> str:
+        """成否を一言で（画面と記録に出す）."""
+        if self.fell_at is not None:
+            return "失敗: 昇降路に落ちました"
+        if self.exited_wrong_floor_at is not None:
+            return "失敗: 行先階ではない階で降りました"
+        if self.success:
+            return "成功: 行先階で降りました"
+        if self.left_behind_at is not None:
+            return "失敗: 乗る前にかごが出発しました"
+        stages = (("かごに入った", self.entered_car_at), ("扉の方を向いた", self.turned_at),
+                  ("行先階に着いた", self.rode_at), ("行先階で降りた", self.exited_dest_at))
+        return "未達成: " + " → ".join(f"{name} {'✓' if at is not None else '–'}" for name, at in stages)
+
     def result(self) -> Dict[str, Any]:
         p = self.p
 
@@ -89,6 +103,7 @@ class Referee:
         if self.max_x_in_car > -math.inf:
             back_margin = round(p.car_x1 - (self.max_x_in_car + self.half_length), 3)
         return {
+            "summary": self.summary(),
             "success": self.success,
             "failed": self.failed,
             "board_floor": self.board_floor,

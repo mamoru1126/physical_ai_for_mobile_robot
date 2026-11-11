@@ -16,7 +16,8 @@ import pytest
 from fake_world import FakeWorld, SimLatencyVlm, true_camera
 
 from elevator_sim.elevator_logic import OPEN, OPENING, ElevatorConfig
-from elevator_sim.mock_vlm import MockConfig, MockVlm, make_server
+from elevator_sim.mock_vlm import DOOR_CONDITION, TARGET_CAR, MockConfig, MockVlm, make_server
+from elevator_sim.world_params import door_ratio_at_robot, robot_in_car, view_state
 from elevator_task.core.config import DEFAULT_INSTRUCTIONS, WebConfig, load_config
 from elevator_task.core.events import EventLog
 from elevator_task.core.executor import ExecutorConfig, TaskExecutor
@@ -31,6 +32,39 @@ from elevator_task.core.http_util import urlopen
 from elevator_task.core.webui import WebUI
 
 TASK_PKG = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "elevator_task")
+SCRIPTS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))), "scripts", "inside")
+
+
+def load_script(name: str):
+    """scripts/inside/ のスクリプトをモジュールとして読み込む."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, os.path.join(SCRIPTS, name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def world_status(world: FakeWorld):
+    """シミュレーションで /elevator/state と /sim/referee に流れるものと同じ中身."""
+    state = world.logic.state()
+    state.update(view_state(world.wp, world.truth()))
+    return {"elevator": state, "referee": world.referee.result()}
+
+
+class DoorViewVlm(MockVlm):
+    """本物の VLM が「The door is open.」に返した答え方をまねる（最初の実験の記録から）.
+
+    扉のパネルが見えていて、すき間があるときに yes と答える. 乗場からは半分以上開いたら yes.
+    かごの中の近くからは、開き切ると扉が画面の外に出るので no、動いている途中だけ yes.
+    """
+
+    def _check(self, text: str) -> str:
+        truth = self._truth_fn()
+        ratio = door_ratio_at_robot(self.p, truth)
+        answer = (0.05 < ratio < 0.95) if robot_in_car(self.p, truth) else ratio >= 0.5
+        return json.dumps({"answer": "yes" if answer else "no"})
 
 
 @dataclass
@@ -52,15 +86,16 @@ def make_stack():
     servers = []
 
     def _make(world: FakeWorld, latency=0.3, noise=0.0, flip=0.0, seed=0, skill=None, executor=None,
-              run_dir=None) -> Stack:
-        mock = MockVlm(world.wp, MockConfig(latency_s=0.0, point_noise_px=noise, check_flip_prob=flip, seed=seed),
-                       world.truth, lambda: world.camera_true)
+              run_dir=None, mock_cls=MockVlm) -> Stack:
+        mock = mock_cls(world.wp, MockConfig(latency_s=0.0, point_noise_px=noise, check_flip_prob=flip, seed=seed),
+                        world.truth, lambda: world.camera_true)
         server = make_server(mock, "127.0.0.1", 0)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         servers.append(server)
         url = f"http://127.0.0.1:{server.server_address[1]}/v1"
         vlm = SimLatencyVlm(VlmConfig(base_url=url, model="mock-vlm"), world, latency)
         events = EventLog(run_dir, keep=100000)
+        events.context_fn = lambda: {"elevator": world_status(world)["elevator"]}      # 記録に真値を添える
         cancel = threading.Event()
         perception = Perception(world, vlm, PerceptionConfig(), events)
         skill_cfg = SkillConfig(**{"repoint_period_s": 0.0, **(skill or {})})
@@ -236,35 +271,156 @@ def test_condition_timeout_when_elevator_never_comes(make_stack):
     stack = make_stack(world)
     world.sleep(1.0)
     plan = parse_plan({"steps": [{"instruction": "扉が開いたら中に入って",
-                                  "when": {"type": "when_true", "condition": "Elevator door is fully open."},
-                                  "do": {"skill": "go_to_visual_target", "target": "center of the elevator car floor"},
+                                  "when": {"type": "when_true", "condition": DOOR_CONDITION},
+                                  "do": {"skill": "go_to_visual_target", "target": TARGET_CAR},
                                   "timeout_s": 20}]})
     result = stack.executor.run(plan)                                      # エレベーターを呼ばない
     assert not result.ok and "時間切れ" in result.message
     assert 20.0 <= world.t <= 23.0 and world.x == pytest.approx(-1.0)
 
 
-def test_export_labelled_samples_from_a_mock_run(make_stack, tmp_path):
-    # モック VLM で通した記録から、正解つきの画像の組（机上評価用）が作れる
-    import importlib.util
-
-    script = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__)))))), "scripts", "inside", "export_samples.py")
-    spec = importlib.util.spec_from_file_location("export_samples", script)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
+def test_export_labelled_samples_from_a_run(make_stack, tmp_path):
+    # 記録に添えた真値から、正解つきの画像の組（机上評価用）が作れる.
+    # 扉を長く開けておくと、かごの中から開いた扉を見ている画像（出発階）も取れる
+    module = load_script("export_samples")
     run_dir = str(tmp_path / "run")
-    world = FakeWorld()
+    world = FakeWorld(ElevatorConfig(door_hold_s=20.0))
     stack = make_stack(world, run_dir=run_dir)
     assert run_task(stack).ok
     stack.events.close()
     samples = module.select(module.load_events(run_dir))
-    checks = [(s["step"], s["expected"]) for s in samples if s["kind"] == "check"]
-    assert {(0, "no"), (0, "yes"), (2, "no"), (2, "yes")} <= set(checks)
-    points = [s for s in samples if s["kind"] == "point"]
-    assert [p["target"] for p in points] == ["center of the elevator car floor", "hallway floor 1 m past the door"]
+    checks = {(s["place"], s["floor"], s["door"]) for s in samples if s["kind"] == "check"}
+    assert {("hall", 1, "closed"), ("hall", 1, "open"), ("car", 1, "open"), ("car", 3, "open")} <= checks
+    assert any(place == "car" and door == "closed" for place, _, door in checks)
+    assert any(door == "partial" for _, _, door in checks)
+    assert all(0.15 <= s["door_ratio"] <= 0.85 for s in samples if s["kind"] == "check" and s["door"] == "partial")
+    points = {(s["place"], s["floor"]): s for s in samples if s["kind"] == "point"}
+    assert set(points) == {("hall", 1), ("car", 3)}
+    assert points[("hall", 1)]["goal_ahead_m"] == pytest.approx(1.0 + world.wp.car_center_x, abs=0.02)
+    assert points[("hall", 1)]["door_ahead_m"] == pytest.approx(1.0, abs=0.02)
+    assert points[("car", 3)]["goal_ahead_m"] == pytest.approx(world.wp.car_center_x + 1.0, abs=0.05)
     assert all(os.path.isfile(os.path.join(run_dir, s["image"])) for s in samples)
+    names = [module.file_name(s, i) for i, s in enumerate(samples)]
+    assert len(set(names)) == len(names)
+
+
+def test_analysis_agrees_with_truth_for_a_perfect_vlm(make_stack, tmp_path):
+    # 記録の分析: 真値どおりに答える VLM では、食い違いも、気づいた点も出ない
+    module = load_script("analyze_run")
+    run_dir = str(tmp_path / "run")
+    world = FakeWorld(ElevatorConfig(door_hold_s=20.0))
+    stack = make_stack(world, run_dir=run_dir)
+    assert run_task(stack).ok
+    stack.events.emit("status", task_ok=True, status=world_status(world))
+    stack.events.close()
+    analysis = module.Analysis(module.load_events(run_dir))
+    text = analysis.run(run_dir)
+    assert "食い違い" not in text and analysis.findings == [], text
+    assert "かごの中・全開" in text and "乗場・全閉" in text
+    assert "真値: 成功: 行先階で降りました" in text
+    assert "敷居の先 1.00 m" in text                       # 降りるときの目標
+
+
+def test_analysis_flags_the_answers_of_the_first_real_run(make_stack, tmp_path):
+    # 最初の実験の VLM の答え方（DoorViewVlm）を入れると、分析がその食い違いを拾う
+    module = load_script("analyze_run")
+    run_dir = str(tmp_path / "run")
+    world = FakeWorld(ElevatorConfig(door_hold_s=12.0))
+    stack = make_stack(world, run_dir=run_dir, mock_cls=DoorViewVlm)
+    with open(os.path.join(TASK_PKG, "plans", "elevator_expected.json"), encoding="utf-8") as f:
+        data = json.load(f)
+    for step in data["steps"]:
+        step["timeout_s"] = min(step["timeout_s"], 60)
+    run_task(stack, parse_plan(data))
+    stack.events.emit("status", task_ok=True, status=world_status(world))
+    stack.events.close()
+    analysis = module.Analysis(module.load_events(run_dir))
+    text = analysis.run(run_dir)
+    assert any("扉が全開なのに no" in f for f in analysis.findings), text
+    assert any("途中" in f and "yes" in f for f in analysis.findings), text
+    assert any("「一度閉じた」と確定" in f for f in analysis.findings), text
+
+
+def test_phrase_evaluation_tallies_answers_by_place_and_door_state(make_stack, tmp_path):
+    # 言い回しの比較（scripts/inside/eval_phrases.py）: 記録の画像を真値で分類し、答えの当たり外れを数える.
+    # ここでは、いつも yes と答え、いつも同じ点を指す VLM を使って、集計と報告の形だけを確かめる
+    from elevator_task.core.vlm_client import VlmClient, VlmReply
+
+    module = load_script("eval_phrases")
+    run_dir = str(tmp_path / "20260101_000000")
+    world = FakeWorld(ElevatorConfig(door_hold_s=20.0))
+    stack = make_stack(world, run_dir=run_dir)
+    stack.events.emit("plan_ready", plan={"steps": [
+        {"when": {"type": "when_true", "condition": "The door is open."},
+         "do": {"skill": "go_to_visual_target", "target": "floor inside the room"}},
+        {"when": {"type": "now"}, "do": {"skill": "rotate", "angle_deg": 180}},
+        {"when": {"type": "after_false_then_true", "condition": "The door is open."},
+         "do": {"skill": "go_to_visual_target", "target": "floor outside the room"}}]})
+    assert run_task(stack).ok
+    stack.events.close()
+    assert module.plan_phrases(run_dir) == (["The door is open."], {"hall": ["floor inside the room"],
+                                                                    "car": ["floor outside the room"]})
+
+    class Canned(VlmClient):
+        def chat(self, messages, max_tokens, schema_name=None, **kwargs):
+            # 点は画像の中央の少し下（床の上で、前 1.01 m）
+            text = '{"point_2d": [500, 700]}' if schema_name == "point_target" else '{"answer": "yes"}'
+            return VlmReply(text, 0.2)
+
+    cfg = load_config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config",
+                                   "task_sim.yaml"))
+    vlm = Canned(cfg.vlm)
+    samples = module.load_samples(str(tmp_path / "no_samples"), [run_dir], 2)
+    checks = [s for s in samples if s["kind"] == "check"]
+    points = [s for s in samples if s["kind"] == "point"]
+    frames = {s["path"]: module.frame_of(s["path"]) for s in samples}
+    cond = module.eval_conditions(cfg, vlm, ["X is open."], ["guided", "basic"], checks, frames, 2)
+    assert [r["system"] for r in cond] == ["guided", "basic"]
+    for r in cond:
+        by = r["by_category"]
+        assert by["hall/open"][0] == by["hall/open"][1] > 0 and by["car/open"][0] == by["car/open"][1] > 0
+        assert by["hall/closed"][0] == 0 and by["car/closed"][0] == 0          # いつも yes なので、全閉は全部外れ
+        assert r["correct"] == sum(1 for c in checks if c["door"] == "open") and r["total"] == len(checks)
+        assert {w["door"] for w in r["wrong"]} == {"closed", "partial"}
+    targ = module.eval_targets(cfg, vlm, {"hall": ["a"], "car": ["b"]}, points, frames, 2)
+    by_place = {r["place"]: r for r in targ}
+    # 乗場（敷居まで 1.0 m）からは敷居の上で、かごに入り切らない. かごの中央（敷居まで 0.78 m）からは
+    # 敷居の先 0.24 m で、出入口に残る. どちらも NG
+    assert by_place["hall"]["results"][0]["beyond_m"] == pytest.approx(0.01, abs=0.03)
+    assert by_place["car"]["results"][0]["beyond_m"] == pytest.approx(0.235, abs=0.05)
+    assert by_place["hall"]["ok"] == 0 and by_place["car"]["ok"] == 0
+    text = module.report("canned", checks, points, cond, targ)
+    assert "[C1] X is open." in text and "合計の高い順" in text and "[T2] b" in text and "かごの中: 全閉 0/" in text
+
+
+def test_recheck_before_departure_catches_a_door_that_closed_while_pointing(make_stack):
+    # 条件が確定した後、指差しの推論に時間がかかっている間に扉が閉まった.
+    # 発進の直前の確認があれば発進しない. なければ、閉まった扉に向かって走り出す
+    def run(recheck: bool):
+        world = FakeWorld(ElevatorConfig(door_hold_s=2.0, door_sensor=False))
+        stack = make_stack(world, executor={"recheck_before_departure": recheck})
+        chat = stack.vlm.chat
+
+        def slow_pointing(messages, *args, **kwargs):
+            reply = chat(messages, *args, **kwargs)
+            if kwargs.get("schema_name") == "point_target":
+                world.sleep(3.0)
+            return reply
+
+        stack.vlm.chat = slow_pointing
+        plan = parse_plan({"steps": [{"instruction": "扉が開いたら中に入って",
+                                      "when": {"type": "when_true", "condition": DOOR_CONDITION},
+                                      "do": {"skill": "go_to_visual_target", "target": TARGET_CAR},
+                                      "timeout_s": 25}]})
+        result = run_task(stack, plan)
+        return world, stack, result
+
+    world, stack, result = run(recheck=True)
+    assert "departure_recheck_failed" in stack.kinds()
+    assert not world.door_contact and world.x == pytest.approx(-1.0)          # 動いていない
+    assert not result.ok and "時間切れ" in result.message
+    world, stack, result = run(recheck=False)
+    assert world.door_contact
 
 
 # -- 実行系のまとめ役と Web UI（HTTP の API）を通した試験 -------------------------
@@ -294,7 +450,7 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
     cfg.log_dir = str(tmp_path)
     cfg.plan_dir = os.path.join(TASK_PKG, "plans")
     cfg.skills.repoint_period_s = 0.0
-    cfg.web = WebConfig(host="127.0.0.1", port=0, buttons=cfg.web.buttons)
+    cfg.web = WebConfig(host="127.0.0.1", port=0, buttons=cfg.web.buttons, status_topics=cfg.web.status_topics)
     hooks = {"stop": 0, "reset": 0}
 
     def stop_hook():
@@ -307,7 +463,8 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
 
     runtime = TaskRuntime(cfg, world, stop_hook=stop_hook, reset_hook=reset_hook,
                           triggers={"call": lambda: world.logic.call(world.t)},
-                          extra_jpeg=lambda name: runtime.overlay_jpeg() if name == "view" else None)
+                          extra_jpeg=lambda name: runtime.overlay_jpeg() if name == "view" else None,
+                          status_fn=lambda: world_status(world))
     ui = WebUI(runtime, cfg.web.host, cfg.web.port)
     ui.start()
     base = f"http://127.0.0.1:{ui.port}"
@@ -331,6 +488,10 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
         state = _wait(lambda: (lambda s: s if s["task_state"] != "running" else None)(
             json.loads(_http(base + "/api/state"))), timeout=120.0)
         assert state["task_state"] == "done", state["task_message"]
+        # シミュレーションの真値が画面に出ていて、終わり方の表示にも真値による成否が添えられている
+        assert [s["name"] for s in state["status"]] == ["elevator", "referee"]
+        assert state["status"][0]["data"]["door"] in ("closed", "partial", "open")
+        assert "成否の判定（真値）: 成功" in state["task_message"]
         assert [s["phase"] for s in state["executor"]["steps"]] == ["done", "done", "done"]
         world.sleep(1.0)
         assert world.referee.success, world.referee.result()
@@ -350,6 +511,16 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
         run_dir = state["run_dir"]
         assert os.path.isfile(os.path.join(run_dir, "events.jsonl"))
         assert len(os.listdir(os.path.join(run_dir, "images"))) >= 5
+        with open(os.path.join(run_dir, "events.jsonl"), encoding="utf-8") as f:
+            events = [json.loads(line) for line in f]
+        checks = [e for e in events if e["kind"] == "check"]
+        # 判定の記録には、設定で選んだ真値の項目だけが添えられる
+        assert checks and all(set(e["ctx"]) == {"elevator"} for e in checks)
+        assert {"door", "door_ratio", "robot_in_car", "goal_ahead_m"} <= set(checks[0]["ctx"]["elevator"])
+        assert "lift_vel" not in checks[0]["ctx"]["elevator"]
+        final = [e for e in events if e["kind"] == "status"]
+        assert len(final) == 1 and final[0]["task_ok"] and final[0]["status"]["referee"]["success"]
+        assert any(e["kind"] == "point_ground" for e in events)
     finally:
         runtime.close()
         ui.stop()

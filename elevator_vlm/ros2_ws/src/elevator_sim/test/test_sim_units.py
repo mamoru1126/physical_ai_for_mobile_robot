@@ -10,7 +10,9 @@ from fake_world import FakeWorld
 from elevator_sim import world_gen
 from elevator_sim.elevator_logic import CLOSING, IDLE, MOVING, OPEN, OPENING, ElevatorConfig, ElevatorLogic, lift_velocity
 from elevator_sim.mock_vlm import plan_from_instructions
-from elevator_sim.world_params import RobotParams, Truth, WorldParams, door_fully_open
+from elevator_sim.referee import Referee
+from elevator_sim.world_params import (RobotParams, Truth, WorldParams, door_fully_open, door_label,
+                                       door_ratio_at_robot, view_state)
 from elevator_task.core.config import load_config
 from elevator_task.core.plan import parse_plan
 
@@ -227,3 +229,48 @@ def test_mock_reports_missing_ground_truth_instead_of_answering_no():
         assert "answer" in client.chat(msg, max_tokens=8, schema_name="condition_check", schema={}).text
     finally:
         server.shutdown()
+
+
+# -- ロボットから見た様子の真値（画面の表示と、記録の分析に使う） ---------------------
+def test_view_state_describes_what_the_robot_faces():
+    p = WorldParams()
+    full = p.door_travel
+    closed = {1: 0.0, 2: 0.0, 3: 0.0}
+    # 乗場の待機位置. 扉は全閉. 次に向かうのはかごの中央、敷居までは 1 m
+    v = view_state(p, Truth(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, closed))
+    assert (v["robot_in_car"], v["robot_floor"], v["door"], v["door_ratio"]) == (False, 1, "closed", 0.0)
+    assert v["goal_ahead_m"] == pytest.approx(1.0 + p.car_center_x) and v["goal_left_m"] == pytest.approx(0.0)
+    assert v["door_ahead_m"] == pytest.approx(1.0)
+    # 扉が半分開いたところ. かごの扉と乗場の扉のうち、開きが小さい方で決まる
+    half = Truth(-1.0, 0.0, 0.0, 0.0, 0.0, 0.5 * full, {1: 0.8 * full, 2: 0.0, 3: 0.0})
+    assert door_ratio_at_robot(p, half) == pytest.approx(0.5) and view_state(p, half)["door"] == "partial"
+    # かごが別の階にいる間は、乗場からは閉じた扉しか見えない
+    away = Truth(-1.0, 0.0, 0.0, 0.0, 6.0, full, {1: 0.0, 2: 0.0, 3: full})
+    assert view_state(p, away)["door"] == "closed"
+    # かごの中で扉を向いている. 3 階で全開. 次に向かうのは乗場の 1 m 先
+    v = view_state(p, Truth(0.6, 0.05, 6.0, math.pi, 6.0, full, {1: 0.0, 2: 0.0, 3: full}))
+    assert (v["robot_in_car"], v["door"], v["door_ratio"]) == (True, "open", 1.0)
+    assert v["goal_ahead_m"] == pytest.approx(1.6) and v["goal_left_m"] == pytest.approx(0.05)
+    assert v["door_ahead_m"] == pytest.approx(0.6)
+    # 昇降中は、かごの扉だけで決まる（全閉）
+    assert view_state(p, Truth(0.6, 0.0, 3.3, math.pi, 3.3, 0.0, closed))["door"] == "closed"
+    assert [door_label(r) for r in (0.0, 0.02, 0.03, 0.5, 0.94, 0.95, 1.0)] == [
+        "closed", "closed", "partial", "partial", "partial", "open", "open"]
+
+
+def test_referee_summary_in_words():
+    p = WorldParams()
+    full = p.door_travel
+    ref = Referee(p, board_floor=1, dest_floor=3)
+    assert ref.summary().startswith("未達成: かごに入った –")
+    ref.update(1.0, Truth(0.7, 0.0, 0.0, 0.0, 0.0, full, {1: full, 2: 0.0, 3: 0.0}))       # かごに入った
+    ref.update(2.0, Truth(0.7, 0.0, 0.0, math.pi, 0.0, 0.0, {1: 0.0, 2: 0.0, 3: 0.0}))     # 扉を向いた
+    assert ref.summary() == "未達成: かごに入った ✓ → 扉の方を向いた ✓ → 行先階に着いた – → 行先階で降りた –"
+    assert ref.result()["summary"] == ref.summary()
+    ref.update(3.0, Truth(0.7, 0.0, 6.0, math.pi, 6.0, full, {1: 0.0, 2: 0.0, 3: full}))   # 3 階に着いた
+    ref.update(4.0, Truth(-1.0, 0.0, 6.0, math.pi, 6.0, full, {1: 0.0, 2: 0.0, 3: full}))  # 降りた
+    assert ref.summary() == "成功: 行先階で降りました"
+    wrong = Referee(p, board_floor=1, dest_floor=3)
+    wrong.update(1.0, Truth(0.7, 0.0, 0.0, 0.0, 0.0, full, {1: full, 2: 0.0, 3: 0.0}))
+    wrong.update(2.0, Truth(-1.0, 0.0, 0.0, math.pi, 0.0, full, {1: full, 2: 0.0, 3: 0.0}))  # 乗った階で降りた
+    assert wrong.summary() == "失敗: 行先階ではない階で降りました"

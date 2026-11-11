@@ -14,6 +14,7 @@ perception:
   jpeg_quality: 90
   max_image_age_s: 1.0         # これより古い画像では判定しない
   use_logprobs: false          # true にすると yes の確率も記録する
+  check_prompt: guided         # 判定のシステムプロンプト. guided:「開いている」の見方の説明つき / basic: 短い
   point_scale: 1000.0          # Qwen 系: 画像サイズに対する 0〜1000 の相対座標. 0 なら画素
   point_order: xy              # Gemma 系は yx
 
@@ -22,6 +23,7 @@ executor:
   check_period_s: 0.5          # 判定の周期（2 Hz）. 推論が遅ければ推論の速さで回る
   yes_threshold: 0.0           # use_logprobs と併用. yes の確率がこの値以上のときだけ yes とみなす
   pre_departure_check: false   # 発進の直前に「進路に人や物がないか」を VLM に確かめる
+  recheck_before_departure: true   # 目標を決めた後、発進の直前に条件をもう一度確かめる（扉が閉まり始めていたら発進しない）
 
 skills:
   max_linear: 0.3              # [m/s]

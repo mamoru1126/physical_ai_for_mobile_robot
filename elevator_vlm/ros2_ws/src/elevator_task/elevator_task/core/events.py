@@ -9,7 +9,7 @@ import os
 import threading
 import time
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional
 
 
 class EventLog:
@@ -20,6 +20,8 @@ class EventLog:
         self._image_count = 0
         self.run_dir = run_dir
         self._file = None
+        # 判定と指差しの記録に添える値を返す関数（シミュレーションの真値など. 分析用）
+        self.context_fn: Optional[Callable[[], Optional[Dict[str, Any]]]] = None
         if run_dir:
             try:
                 os.makedirs(os.path.join(run_dir, "images"), exist_ok=True)
@@ -29,10 +31,19 @@ class EventLog:
                 self.run_dir = None
                 self._file = None
 
+    def context(self) -> Optional[Dict[str, Any]]:
+        """今の時点の付加情報（無ければ None）. 画像を撮った直後に呼び、その画像の記録に添える."""
+        if self.context_fn is None:
+            return None
+        try:
+            return self.context_fn() or None
+        except Exception:  # noqa: BLE001  記録の付け足しで実行を止めない
+            return None
+
     def emit(self, kind: str, **data: Any) -> Dict[str, Any]:
         with self._lock:
             event = {"id": self._next_id, "wall": round(time.time(), 3), "kind": kind}
-            event.update(data)
+            event.update({k: v for k, v in data.items() if not (k == "ctx" and v is None)})
             self._next_id += 1
             self._events.append(event)
             if self._file:

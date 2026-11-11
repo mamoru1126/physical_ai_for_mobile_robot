@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .events import EventLog
 from .geometry import CameraModel, Pose2D, in_image, pixel_to_ground, robot_to_odom, wrap_angle
@@ -72,14 +72,16 @@ class Skills:
         self._period = 1.0 / max(cfg.rate_hz, 1.0)
 
     # -- 入口 ---------------------------------------------------------------
-    def run(self, action: Action, deadline: float, confirmed_at: Optional[float] = None) -> SkillResult:
+    def run(self, action: Action, deadline: float, confirmed_at: Optional[float] = None,
+            recheck: Optional[Callable[[], bool]] = None) -> SkillResult:
+        """スキルを1つ実行する. recheck は、発進の直前に条件をもう一度確かめる関数（False なら発進しない）."""
         try:
             if action.skill == SKILL_ROTATE:
                 return self.rotate(math.radians(action.angle_deg), deadline)
             if action.skill == SKILL_MOVE_STRAIGHT:
                 return self.move_straight(action.distance_m, deadline)
             if action.skill == SKILL_GO_TO_VISUAL_TARGET:
-                return self.go_to_visual_target(action.target, deadline, confirmed_at)
+                return self.go_to_visual_target(action.target, deadline, confirmed_at, recheck)
             if action.skill == SKILL_WAIT:
                 return self.wait(action.seconds, deadline)
             return SkillResult(False, f"知らないスキルです: {action.skill}")
@@ -215,6 +217,8 @@ class Skills:
         ground = pixel_to_ground(cam, res.u, res.v)
         if ground is None:
             return None, f"点が地平線より上にあります（v={res.v:.0f}、地平線 v={cam.horizon_v():.0f}）"
+        # 指差した点が、撮影した時点のロボットから見て床のどこに当たるか（前, 左）. 記録の分析に使う
+        self.events.emit("point_ground", image=res.image, ahead_m=round(ground[0], 3), left_m=round(ground[1], 3))
         dist = math.hypot(ground[0], ground[1])
         if dist > self.cfg.max_target_distance_m:
             return None, f"目標が遠すぎます（{dist:.2f} m > {self.cfg.max_target_distance_m:g} m）"
@@ -226,8 +230,8 @@ class Skills:
             return None, "撮影時刻のオドメトリがありません"
         return robot_to_odom(pose, ground[0], ground[1]), ""
 
-    def go_to_visual_target(self, target: str, deadline: float,
-                            confirmed_at: Optional[float] = None) -> SkillResult:
+    def go_to_visual_target(self, target: str, deadline: float, confirmed_at: Optional[float] = None,
+                            recheck: Optional[Callable[[], bool]] = None) -> SkillResult:
         cfg = self.cfg
         cam = self.robot.get_camera()
         if cam is None:
@@ -259,6 +263,9 @@ class Skills:
             return SkillResult(False, f"指差しが検査に通りません: {reason}", retry_condition=True)
         if confirmed_at is not None and self.robot.now() - confirmed_at > cfg.departure_deadline_s:
             return SkillResult(False, "条件の確定から発進までに時間がかかりすぎました", retry_condition=True)
+        # 指差しの間に状況が変わっているかもしれない（扉が閉まり始めた、など）. 発進の直前にもう一度確かめる
+        if recheck is not None and not recheck():
+            return SkillResult(False, "発進の直前に確かめたら、条件が成り立っていませんでした", retry_condition=True)
 
         first = goal
         target_xy = [goal[0], goal[1]]

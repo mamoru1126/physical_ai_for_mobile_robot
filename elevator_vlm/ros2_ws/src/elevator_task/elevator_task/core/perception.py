@@ -11,12 +11,34 @@ from .events import EventLog
 from .robot_io import Frame, Marker, RobotIO, encode_jpeg
 from .vlm_client import VlmClient, VlmError, image_part, parse_point, parse_yes_no, yes_probability
 
-CHECK_SYSTEM = (
+# 判定のシステムプロンプト. 2種類を用意し、設定（perception.check_prompt）で選ぶ.
+#   basic:  短い. 条件文をそのまま画像と照らす.
+#   guided: 「開いている」という条件文の見方を足したもの. 近すぎて開いた扉が画面の外に出ているときや、
+#           扉が途中まで開いているときの答えをそろえるため（エレベーターに限らない、開口部一般の説明）.
+CHECK_SYSTEM_BASIC = (
     "You are the visual perception module of a mobile robot. You receive one image from the robot's "
     "forward-facing camera and one statement about the scene. Decide whether the statement is true in "
     "this image, judging only from what is visible. "
     'Reply with JSON only: {"answer": "yes"} if the statement is true, {"answer": "no"} otherwise.'
 )
+CHECK_SYSTEM_GUIDED = (
+    "You are the visual perception module of a mobile robot. You receive one image from the robot's "
+    "forward-facing camera and one statement about the scene. The camera is mounted low and may be very "
+    "close to what is in front of it. Decide whether the statement is true in this image, judging only "
+    "from what is visible.\n"
+    "When the statement says that something is open (a door, gate, shutter, barrier, or the way ahead), "
+    "judge it like this:\n"
+    "- It is open only when the way through is clear across its whole width, so that the floor and the "
+    "space beyond are visible. The camera may be so close that the open door itself is outside the "
+    "picture; an unobstructed view of the floor and space beyond still counts as open. Doors that are "
+    "visible farther away do not matter.\n"
+    "- If door panels or any other part of the barrier still cover part of the opening, it is only "
+    "partly open, and that does not count as open.\n"
+    "- If a flat surface such as door panels or a wall fills the view straight ahead, it is closed.\n"
+    'Reply with JSON only: {"answer": "yes"} if the statement is true, {"answer": "no"} otherwise.'
+)
+CHECK_SYSTEMS: Dict[str, str] = {"basic": CHECK_SYSTEM_BASIC, "guided": CHECK_SYSTEM_GUIDED}
+CHECK_SYSTEM = CHECK_SYSTEM_GUIDED
 CHECK_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {"answer": {"type": "string", "enum": ["yes", "no"]}},
@@ -27,7 +49,9 @@ CHECK_SCHEMA: Dict[str, Any] = {
 POINT_SYSTEM = (
     "You are the visual perception module of a wheeled mobile robot. You receive one image from the "
     "robot's forward-facing camera. Point at the requested place with a single point on the floor "
-    "surface where the robot could stand. {coords} "
+    "surface where the robot could stand. When the place is described as a distance beyond something "
+    "(for example 'about 1 m beyond the doorway'), point at the floor that far beyond it, not at the "
+    "nearest visible floor. {coords} "
     'Reply with JSON only, like this: {{"point_2d": [x, y]}}'
 )
 POINT_SCHEMA: Dict[str, Any] = {
@@ -49,8 +73,12 @@ class PerceptionConfig:
     # point_scale を 0 にすると画素の値そのままとして扱う. Gemma 系は順序が y, x.
     point_scale: float = 1000.0
     point_order: str = "xy"
-    check_system: str = CHECK_SYSTEM
+    check_prompt: str = "guided"      # 判定のシステムプロンプト: basic / guided（上の説明を参照）
+    check_system: str = ""            # 空でなければ、check_prompt の代わりにこの文をそのまま使う
     point_system: str = POINT_SYSTEM
+
+    def check_system_text(self) -> str:
+        return self.check_system or CHECK_SYSTEMS.get(self.check_prompt, CHECK_SYSTEM_GUIDED)
 
 
 @dataclass
@@ -106,10 +134,11 @@ class Perception:
             self.events.emit("check_error", purpose=purpose, condition=condition, error=res.error)
             self.last_check = res
             return res
+        ctx = self.events.context()
         jpeg = encode_jpeg(frame, self.cfg.jpeg_quality, markers=[marker] if marker else ())
         image_path = self.events.save_image(purpose, jpeg)
         messages = [
-            {"role": "system", "content": self.cfg.check_system},
+            {"role": "system", "content": self.cfg.check_system_text()},
             {"role": "user", "content": [
                 image_part(jpeg),
                 {"type": "text", "text": f'Statement: "{condition}"\nIs the statement true in this image?'},
@@ -130,7 +159,7 @@ class Perception:
         self.events.emit("check", purpose=purpose, condition=condition,
                          answer=None if answer is None else ("yes" if answer else "no"),
                          p_yes=res.p_yes, latency_s=round(res.latency_s, 3), stamp=round(frame.stamp, 3),
-                         text=reply.text[:200], image=image_path)
+                         text=reply.text[:200], image=image_path, ctx=ctx)
         self.last_check = res
         return res
 
@@ -144,6 +173,7 @@ class Perception:
             self.events.emit("point_error", purpose=purpose, target=target, error=res.error)
             self.last_point = res
             return res
+        ctx = self.events.context()
         jpeg = encode_jpeg(frame, self.cfg.jpeg_quality)
         image_path = self.events.save_image(purpose, jpeg)
         if self.cfg.point_scale > 0:
@@ -185,7 +215,8 @@ class Perception:
                               text=reply.text, image=image_path, extra={"raw": [a, b]})
         self.events.emit("point", purpose=purpose, target=target, ok=res.ok,
                          u=round(res.u, 1), v=round(res.v, 1), latency_s=round(res.latency_s, 3),
-                         stamp=round(frame.stamp, 3), text=reply.text[:200], error=res.error, image=image_path)
+                         stamp=round(frame.stamp, 3), text=reply.text[:200], error=res.error, image=image_path,
+                         ctx=ctx)
         self.last_point = res
         return res
 

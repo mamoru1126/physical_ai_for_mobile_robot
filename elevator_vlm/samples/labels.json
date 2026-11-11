@@ -1,46 +1,52 @@
 [
   {
-    "kind": "point",
-    "target": "center of the elevator car floor",
-    "step": 0,
-    "u": 320.0,
-    "v": 254.4,
-    "file": "point_hall_to_car.jpg"
-  },
-  {
-    "kind": "point",
-    "target": "hallway floor 1 m past the door",
-    "step": 2,
-    "u": 305.9,
-    "v": 258.2,
-    "file": "point_car_to_hall.jpg"
-  },
-  {
     "kind": "check",
-    "condition": "Elevator door is fully open.",
-    "expected": "no",
-    "step": 0,
+    "place": "hall",
+    "floor": 1,
+    "door": "closed",
+    "door_ratio": 0.0,
     "file": "check_hall_closed.jpg"
   },
   {
     "kind": "check",
-    "condition": "Elevator door is fully open.",
-    "expected": "yes",
-    "step": 0,
+    "place": "hall",
+    "floor": 1,
+    "door": "open",
+    "door_ratio": 1.0,
     "file": "check_hall_open.jpg"
   },
   {
     "kind": "check",
-    "condition": "Elevator door is fully open.",
-    "expected": "no",
-    "step": 2,
+    "place": "car",
+    "floor": 0,
+    "door": "closed",
+    "door_ratio": 0.0,
     "file": "check_car_closed.jpg"
   },
   {
     "kind": "check",
-    "condition": "Elevator door is fully open.",
-    "expected": "yes",
-    "step": 2,
+    "place": "car",
+    "floor": 3,
+    "door": "open",
+    "door_ratio": 1.0,
     "file": "check_car_open.jpg"
+  },
+  {
+    "kind": "point",
+    "place": "hall",
+    "floor": 1,
+    "goal_ahead_m": 1.778,
+    "goal_left_m": 0.0,
+    "door_ahead_m": 1.003,
+    "file": "point_hall_to_car.jpg"
+  },
+  {
+    "kind": "point",
+    "place": "car",
+    "floor": 3,
+    "goal_ahead_m": 1.716,
+    "goal_left_m": 0.07,
+    "door_ahead_m": 0.716,
+    "file": "point_car_to_hall.jpg"
   }
 ]

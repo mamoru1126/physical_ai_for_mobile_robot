@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import json
-import math
 import random
 import re
 import threading
@@ -15,13 +14,15 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional
 
+from elevator_task.core.executor import PATH_CLEAR_STATEMENT
 from elevator_task.core.geometry import CameraModel, ground_to_pixel
+from elevator_task.core.perception import MARKER_STATEMENT
 
-from .world_params import Truth, WorldParams, door_fully_open
+from .world_params import Truth, WorldParams, door_fully_open, expected_target, to_robot_frame
 
-DOOR_CONDITION = "Elevator door is fully open."
+DOOR_CONDITION = "The way directly in front of the robot is open: no door panel blocks any part of it."
 TARGET_CAR = "center of the elevator car floor"
-TARGET_HALL = "hallway floor 1 m past the door"
+TARGET_HALL = "hallway floor about 1 m beyond the open doorway"
 
 
 @dataclass
@@ -110,40 +111,29 @@ class MockVlm:
         m = re.search(r'Statement:\s*"(.*?)"', text, re.S)
         statement = (m.group(1) if m else text).lower()
         truth = self._truth_fn()
-        if "marker" in statement or "path" in statement:
+        if statement in (MARKER_STATEMENT.lower(), PATH_CLEAR_STATEMENT.lower()):
             answer = True                      # 印の確認と進路の確認は、正常系では常に yes
         elif truth is None:
             answer = False
-        elif "door" in statement:
-            answer = door_fully_open(self.p, truth)
-            if "closed" in statement or "not open" in statement:
-                answer = not answer
         else:
-            answer = False
+            # それ以外の条件文は「前が開いて通れるか」を尋ねているとみなし、扉の真値で答える
+            answer = door_fully_open(self.p, truth)
+            if any(k in statement for k in ("closed", "not open", "blocked")):
+                answer = not answer
         with self._lock:
             if self.cfg.check_flip_prob > 0.0 and self._rng.random() < self.cfg.check_flip_prob:
                 answer = not answer
         return json.dumps({"answer": "yes" if answer else "no"})
 
     def _point(self, text: str) -> str:
-        m = re.search(r"point on the floor:\s*(.*?)\.\s*Output", text, re.S)
-        target = (m.group(1) if m else text).lower()
         truth = self._truth_fn()
         cam = self._camera_fn()
         if truth is None or cam is None:
             return json.dumps({"point_2d": [500, 50]})      # 地平線より上 → 検査で落ちる
-        if any(k in target for k in ("hall", "corridor", "lobby", "outside", "past the door", "beyond")):
-            floor = self.p.nearest_floor(truth.robot_z) or 1
-            wx, wy, wz = -1.0, 0.0, self.p.floor_z(floor)
-        elif any(k in target for k in ("elevator", "car", "cabin", "inside", "interior")):
-            wx, wy, wz = self.p.car_center_x, 0.0, truth.lift_pos
-        else:
-            c, s = math.cos(truth.robot_yaw), math.sin(truth.robot_yaw)
-            wx, wy, wz = truth.robot_x + c * 1.0, truth.robot_y + s * 1.0, truth.robot_z
-        # ワールド座標 → ロボット座標
-        dx, dy = wx - truth.robot_x, wy - truth.robot_y
-        c, s = math.cos(truth.robot_yaw), math.sin(truth.robot_yaw)
-        rx, ry, rz = c * dx + s * dy, -s * dx + c * dy, wz - truth.robot_z
+        # 目標の言い回しによらず、ロボットのいる場所で決める: かごの中にいれば乗場の 1 m 先、乗場にいればかごの中央
+        wx, wy, wz = expected_target(self.p, truth)
+        rx, ry = to_robot_frame(truth, wx, wy)
+        rz = wz - truth.robot_z
         uv = ground_to_pixel(cam, rx, ry, rz)
         if uv is None:
             return json.dumps({"point_2d": [500, 50]})

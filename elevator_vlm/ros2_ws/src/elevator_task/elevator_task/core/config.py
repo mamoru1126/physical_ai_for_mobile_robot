@@ -44,6 +44,11 @@ class WebConfig:
     # 画面に追加で映すカメラ（外から様子を見る固定カメラなど）. 実行系は使わない.
     # 例: [{name: hall, label: 乗場, topic: /observer/floor_1/image_raw}]
     extra_cameras: List[Dict[str, str]] = field(default_factory=list)
+    # 画面に表示する状態のトピック（std_msgs/String、中身は JSON）. 実行系は判断に使わない.
+    # log を付けたものは、判定と指差しの記録（events.jsonl）にもその時点の値を添える（後の分析用）.
+    # log: true なら全体を、log: [項目名, ...] ならその項目だけを添える.
+    # 例: [{name: elevator, label: エレベーター, topic: /elevator/state, log: [phase, door]}]
+    status_topics: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass

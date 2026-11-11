@@ -207,5 +207,70 @@ def door_fully_open(params: WorldParams, truth: Truth, ratio: float = 0.95, leve
     return robot_floor == car_floor
 
 
+def robot_in_car(params: WorldParams, truth: Truth) -> bool:
+    return truth.robot_x >= 0.0 and params.in_car(truth.robot_x, truth.robot_y)
+
+
+def door_ratio_at_robot(params: WorldParams, truth: Truth, level_tol: float = 0.02) -> float:
+    """ロボットの前にある出入口の開き具合（0 = 全閉、1 = 全開）.
+
+    かごの中にいるときは、かごの扉と、着床している階の乗場の扉のうち、開きが小さい方.
+    乗場にいるときは、その階の乗場の扉（かごがその階にいれば、かごの扉との小さい方）.
+    """
+    car_floor = params.nearest_floor(truth.lift_pos, level_tol)
+    if robot_in_car(params, truth):
+        opening = truth.car_door if car_floor is None else min(truth.car_door, truth.landing_open(car_floor))
+    else:
+        robot_floor = params.nearest_floor(truth.robot_z)
+        if robot_floor is None:
+            return 0.0
+        opening = truth.landing_open(robot_floor)
+        if car_floor == robot_floor:
+            opening = min(opening, truth.car_door)
+    return max(0.0, min(1.0, opening / params.door_travel))
+
+
+def door_label(ratio: float, open_ratio: float = 0.95, closed_ratio: float = 0.02) -> str:
+    """開き具合を3つに分ける: closed（全閉）、partial（途中）、open（全開）."""
+    if ratio >= open_ratio:
+        return "open"
+    return "closed" if ratio <= closed_ratio else "partial"
+
+
+def expected_target(params: WorldParams, truth: Truth, beyond_m: float = 1.0) -> Tuple[float, float, float]:
+    """ロボットが次に向かうはずの場所（ワールド座標）. かごの中にいれば乗場の beyond_m 先、乗場にいればかごの中央."""
+    if robot_in_car(params, truth):
+        floor = params.nearest_floor(truth.lift_pos) or 1
+        return -beyond_m, 0.0, params.floor_z(floor)
+    return params.car_center_x, 0.0, truth.lift_pos
+
+
+def to_robot_frame(truth: Truth, wx: float, wy: float) -> Tuple[float, float]:
+    """ワールド座標の点を、ロボットから見た（前, 左）にする."""
+    dx, dy = wx - truth.robot_x, wy - truth.robot_y
+    c, s = math.cos(truth.robot_yaw), math.sin(truth.robot_yaw)
+    return c * dx + s * dy, -s * dx + c * dy
+
+
+def view_state(params: WorldParams, truth: Truth) -> Dict[str, object]:
+    """ロボットが今見ているはずのものを、真値からまとめる（画面の表示と、記録の分析に使う）."""
+    ratio = door_ratio_at_robot(params, truth)
+    ahead, left = to_robot_frame(truth, *expected_target(params, truth)[:2])
+    door_ahead = to_robot_frame(truth, 0.0, 0.0)[0]        # 敷居（x = 0）までの、進行方向の距離
+    return {
+        "robot_x": round(truth.robot_x, 3),
+        "robot_y": round(truth.robot_y, 3),
+        "robot_yaw_deg": round(math.degrees(truth.robot_yaw), 1),
+        "robot_floor": params.nearest_floor(truth.robot_z),
+        "robot_in_car": robot_in_car(params, truth),
+        "door": door_label(ratio),
+        "door_ratio": round(ratio, 3),
+        # 次に向かうはずの場所（かごの中央、または乗場の 1 m 先）を、ロボットから見た（前, 左）
+        "goal_ahead_m": round(ahead, 3),
+        "goal_left_m": round(left, 3),
+        "door_ahead_m": round(door_ahead, 3),
+    }
+
+
 def yaw_from_quaternion(x: float, y: float, z: float, w: float) -> float:
     return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))

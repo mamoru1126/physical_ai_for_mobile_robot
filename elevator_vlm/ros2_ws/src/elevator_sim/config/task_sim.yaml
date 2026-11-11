@@ -46,6 +46,16 @@ web:
     - {name: floor_1, label: 1階の乗場, topic: /observer/floor_1/image_raw}
     - {name: car, label: かごの中, topic: /observer/car/image_raw}
     - {name: floor_3, label: 3階の乗場, topic: /observer/floor_3/image_raw}
+  # シミュレータの状態（画面に表示するだけ. 実行系は判断に使わない）.
+  # log: true のものは、判定と指差しの記録にもその時点の値を添える（後の分析用）
+  status_topics:
+    - name: elevator
+      label: エレベーター（真値）
+      topic: /elevator/state
+      # 判定と指差しの記録に添える項目（VLM の答えを真値と突き合わせて分析するため）
+      log: [time, phase, floor, hold_open, door, door_ratio, robot_in_car, robot_floor,
+            robot_x, robot_y, robot_yaw_deg, goal_ahead_m, goal_left_m, door_ahead_m]
+    - {name: referee, label: 成否の判定（真値）, topic: /sim/referee}
 
 instructions:
   - 扉が開いたら中に入って

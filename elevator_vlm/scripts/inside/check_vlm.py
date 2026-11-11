@@ -5,25 +5,24 @@
   1. yes / no の判定が、構造化出力で正しく返るか. 応答時間
   2. 指差しの座標の約束（Qwen 系は 0〜1000 の相対座標）が設定と合っているか
   3. 3つの指示から、検査に通る計画が作れるか
-  4. 机上評価: シミュレーションのカメラ画像（samples/、正解つき）で、扉の判定と指差しがどれだけ合うか
+  4. 机上評価: シミュレーションのカメラ画像（samples/、正解つき）で、今の既定の言い回しでの
+     扉の判定と指差しがどれだけ合うか（ほかの言い回しとの比較は scripts/vlm_phrases.sh）
 
 1〜3 は設定の確認で、NG があれば終了コードが 1 になる. 4 は VLM の実力の確認で、終了コードには影響しない.
 """
-import io
 import json
-import math
 import os
 import sys
 
 ROOT = os.environ.get("ELEVATOR_VLM_ROOT", "/workspace")
 sys.path.insert(0, os.path.join(ROOT, "ros2_ws", "src", "elevator_task"))
 sys.path.insert(0, os.path.join(ROOT, "ros2_ws", "src", "elevator_sim"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PIL import Image, ImageDraw  # noqa: E402
 
 from elevator_task.core.config import load_config  # noqa: E402
 from elevator_task.core.events import EventLog  # noqa: E402
-from elevator_task.core.geometry import CameraModel, pixel_to_ground  # noqa: E402
 from elevator_task.core.perception import Perception  # noqa: E402
 from elevator_task.core.planner import make_plan  # noqa: E402
 from elevator_task.core.robot_io import Frame, RobotIO, encode_jpeg  # noqa: E402
@@ -49,54 +48,26 @@ class StillImage(RobotIO):
         return self.frame
 
 
-def desk_eval(perception: Perception, cfg) -> None:
-    """正解つきのシミュレーション画像で、扉の判定と指差しを評価する."""
-    labels_path = os.path.join(SAMPLES, "labels.json")
-    if not os.path.isfile(labels_path):
-        print("\n[4] 机上評価: samples/labels.json がないので省略します")
+def desk_eval(cfg, vlm: VlmClient) -> None:
+    """正解つきのシミュレーション画像で、今の既定の言い回し（samples/phrases.json の先頭）を評価する."""
+    import eval_phrases
+
+    samples = eval_phrases.load_samples(SAMPLES, [], 3)
+    phrases_path = os.path.join(SAMPLES, "phrases.json")
+    if not samples or not os.path.isfile(phrases_path):
+        print("\n[4] 机上評価: samples/ に正解つきの画像がないので省略します")
         return
-    with open(labels_path, encoding="utf-8") as f:
-        labels = json.load(f)
-    print(f"\n[4] 机上評価（シミュレーションのカメラ画像 {len(labels)} 枚. 正解はシミュレータの真値）")
-    cam = None
-    correct = total = 0
-    latencies = []
-    for item in labels:
-        with open(os.path.join(SAMPLES, item["file"]), "rb") as f:
-            img = Image.open(io.BytesIO(f.read())).convert("RGB")
-        frame = Frame(0.0, img.width, img.height, img.tobytes())
-        if cam is None:
-            mount = cfg.camera
-            focal = img.width / (2.0 * math.tan(math.radians(mount.hfov_deg) / 2.0))
-            cam = CameraModel(focal, focal, img.width / 2.0, img.height / 2.0, img.width, img.height,
-                              mount.height_m, math.radians(mount.pitch_deg), mount.x_offset_m)
-        if item["kind"] == "check":
-            res = perception.check(item["condition"], frame=frame)
-            answer = "?" if res.answer is None else ("yes" if res.answer else "no")
-            good = answer == item["expected"]
-            total += 1
-            correct += 1 if good else 0
-            latencies.append(res.latency_s)
-            print(f"  {'OK' if good else 'NG'}  {item['file']}: 正解 {item['expected']}、答え {answer}  {res.latency_s:.2f} 秒")
-        else:
-            res = perception.point(item["target"], frame=frame)
-            if not res.ok:
-                print(f"  NG  {item['file']}: 点を読めません（{res.error}）")
-                continue
-            latencies.append(res.latency_s)
-            err_px = math.hypot(res.u - item["u"], res.v - item["v"])
-            truth, got = pixel_to_ground(cam, item["u"], item["v"]), pixel_to_ground(cam, res.u, res.v)
-            if truth is None or got is None:
-                detail = "床に当たらない点です（地平線より上）"
-            else:
-                detail = (f"床の上で {math.hypot(got[0] - truth[0], got[1] - truth[1]) * 100:.0f} cm"
-                          f"（前後 {(got[0] - truth[0]) * 100:+.0f} cm、左右 {(got[1] - truth[1]) * 100:+.0f} cm）")
-            print(f"  --  {item['file']}:「{item['target']}」 正解 ({item['u']:.0f}, {item['v']:.0f})、"
-                  f"答え ({res.u:.0f}, {res.v:.0f})、ずれ {err_px:.0f} 画素 = {detail}  {res.latency_s:.2f} 秒")
-    if total:
-        print(f"  判定の正解: {correct} / {total}")
-    if latencies:
-        print(f"  応答時間: 平均 {sum(latencies) / len(latencies):.2f} 秒、最大 {max(latencies):.2f} 秒")
+    with open(phrases_path, encoding="utf-8") as f:
+        phrases = json.load(f)
+    checks = [s for s in samples if s["kind"] == "check"]
+    points = [s for s in samples if s["kind"] == "point"]
+    frames = {s["path"]: eval_phrases.frame_of(s["path"]) for s in samples}
+    targets = {place: list((phrases.get("targets") or {}).get(place, []))[:1] for place in eval_phrases.PLACES}
+    cond = eval_phrases.eval_conditions(cfg, vlm, list(phrases.get("conditions", []))[:1],
+                                        [cfg.perception.check_prompt], checks, frames, 4)
+    targ = eval_phrases.eval_targets(cfg, vlm, targets, points, frames, 4)
+    print("\n[4] 机上評価（今の既定の言い回し. 正解はシミュレータの真値. ほかの候補との比較は scripts/vlm_phrases.sh）")
+    print(eval_phrases.report(cfg.vlm.model, checks, points, cond, targ))
 
 
 def main() -> int:
@@ -152,7 +123,7 @@ def main() -> int:
             print(f"  OK  {result.latency_s:.2f} 秒、{result.attempts} 回目で通過")
             print(result.plan.to_json())
 
-    desk_eval(perception, cfg)
+    desk_eval(cfg, vlm)
 
     print("\n設定の確認（1〜3）: " + ("すべて OK" if failures == 0 else f"{failures} 件の NG"))
     return 0 if failures == 0 else 1

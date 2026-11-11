@@ -25,7 +25,7 @@ from std_srvs.srv import Trigger
 
 from .elevator_logic import ElevatorConfig, ElevatorLogic, Sensed
 from .referee import Referee
-from .world_params import RobotParams, Truth, WorldParams, yaw_from_quaternion
+from .world_params import RobotParams, Truth, WorldParams, view_state, yaw_from_quaternion
 
 
 class ElevatorControllerNode(Node):
@@ -150,9 +150,10 @@ class ElevatorControllerNode(Node):
             pub.publish(Float64(data=float(cmd.landing.get(floor, 0.0))))
 
         pose = self._truth_pose
+        truth: Optional[Truth] = None
         if pose is not None and sensed.lift_pos is not None and sensed.car_door is not None:
-            self.referee.update(now, Truth(pose[0], pose[1], pose[2], pose[3], sensed.lift_pos,
-                                           sensed.car_door, dict(sensed.landing)))
+            truth = Truth(pose[0], pose[1], pose[2], pose[3], sensed.lift_pos, sensed.car_door, dict(sensed.landing))
+            self.referee.update(now, truth)
         if self.logic.phase != self._last_phase:
             state = self.logic.state()
             self.get_logger().info(f"状態: {self._last_phase or '(起動)'} → {self.logic.phase}"
@@ -162,6 +163,8 @@ class ElevatorControllerNode(Node):
         if self._tick_count % 5 == 0:
             state = self.logic.state()
             state["time"] = round(now, 3)
+            if truth is not None:
+                state.update(view_state(self.wp, truth))      # ロボットから見た扉の様子など（分析用）
             self._state_pub.publish(String(data=json.dumps(state)))
         if self._tick_count % 10 == 0:
             result = self.referee.result()

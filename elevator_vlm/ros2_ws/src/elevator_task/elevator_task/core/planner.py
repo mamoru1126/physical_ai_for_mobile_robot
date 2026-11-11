@@ -1,6 +1,7 @@
 """指示文を計画（JSON）に変える. VLM を1回（直しが要れば2回）呼ぶ.
 
-プロンプトには、使えるスキルと「いつ」の3種類だけを書く. エレベーターの説明は入れない.
+プロンプトには、使えるスキルと「いつ」の3種類、条件文と目標の書き方だけを書く. エレベーターの説明は入れない
+（書き方の例も、別の作業のものにしてある）.
 """
 from __future__ import annotations
 
@@ -27,9 +28,16 @@ Each step has four fields.
 - "timeout_s": give up when the step has not finished after this many seconds. Use 120 for "when_true" steps, 300 for "after_false_then_true" steps and 30 for "now" steps.
 
 Rules for the text you write:
-- Write every "condition" and "target" in English, even when the instruction is in another language.
-- A condition is one short statement that can be judged true or false from a single camera image and describes the awaited state (for example "The traffic light is green." or "The gate is fully open.").
-- A target is a short noun phrase for the spot on the floor where the robot should stop, so that it can be pointed at in the image (for example "floor in front of the desk" or "center of the floor inside the room"). When the instruction is to leave or to pass through something, choose a floor spot about 1 m beyond it.
+- Write every "condition" and "target" in English, even when the instruction is in another language. Name the things you can recognise in the camera image.
+- A condition is one short statement that can be judged true or false from a single camera image, without knowing what happened before. The camera is mounted low. It may be so close to an opening that the open door itself is outside the picture, and other doors may be visible farther away. So when the robot waits for a door, gate, shutter or barrier to open, do not write "The door is open."; describe the way directly in front of the robot and require it to be completely open, for example "The way directly in front of the robot is open: no door panel blocks any part of it.".
+- A target is a short noun phrase for the spot on the floor where the robot should stop, so that it can be pointed at in the image. To go into a space, use the center of its floor, for example "center of the floor of the room beyond the open doorway". To leave a space or to pass through something, use a spot about 1 m beyond the opening and say so, for example "floor about 1 m beyond the open doorway", so that the whole robot ends up clear of the opening.
+
+Example (a different task, to show the wording).
+Instructions, in order:
+1. ゲートが開いたら通り抜けて
+2. 通り抜けたら左に90度回って
+Reply:
+{"steps": [{"instruction": "ゲートが開いたら通り抜けて", "when": {"type": "when_true", "condition": "The way directly in front of the robot is open: no part of the gate blocks it."}, "do": {"skill": "go_to_visual_target", "target": "ground about 1 m beyond the open gate"}, "timeout_s": 120}, {"instruction": "通り抜けたら左に90度回って", "when": {"type": "now"}, "do": {"skill": "rotate", "angle_deg": 90}, "timeout_s": 30}]}
 
 Reply with JSON only: {"steps": [...]}"""
 

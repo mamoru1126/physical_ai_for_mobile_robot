@@ -39,15 +39,29 @@ class TaskRuntime:
     def __init__(self, cfg: TaskConfig, robot: RobotIO,
                  stop_hook: Optional[Trigger] = None, reset_hook: Optional[Trigger] = None,
                  triggers: Optional[Dict[str, Trigger]] = None,
-                 extra_jpeg: Optional[Callable[[str], Optional[bytes]]] = None):
+                 extra_jpeg: Optional[Callable[[str], Optional[bytes]]] = None,
+                 status_fn: Optional[Callable[[], Dict[str, Any]]] = None):
         self.cfg = cfg
         self.robot = robot
         self._extra_jpeg = extra_jpeg
+        self._status_fn = status_fn
         self._stop_hook = stop_hook
         self._reset_hook = reset_hook
         self._triggers = triggers or {}
         run_dir = os.path.join(cfg.log_dir, time.strftime("%Y%m%d_%H%M%S")) if cfg.log_dir else None
         self.events = EventLog(run_dir)
+        # log: true ならその状態の全体を、項目名の並びならその項目だけを、判定と指差しの記録に添える
+        logged = {str(t.get("name", "")): t.get("log") for t in cfg.web.status_topics if t.get("log")}
+        if status_fn is not None and logged:
+            def context() -> Dict[str, Any]:
+                out: Dict[str, Any] = {}
+                for name, data in status_fn().items():
+                    keys = logged.get(name)
+                    if not keys or not isinstance(data, dict):
+                        continue
+                    out[name] = dict(data) if keys is True else {k: data[k] for k in keys if k in data}
+                return out
+            self.events.context_fn = context
         self.vlm = VlmClient(cfg.vlm)
         self.cancel = threading.Event()
         self.perception = Perception(robot, self.vlm, cfg.perception, self.events)
@@ -191,6 +205,15 @@ class TaskRuntime:
             self.events.emit("task_exception", error=repr(e))
         finally:
             self.robot.send_cmd(0.0, 0.0)
+        if self._status_fn is not None:
+            # 終わった時点の状態（シミュレーションでは真値による判定を含む）を記録に残す.
+            # 状態に summary（一言のまとめ）があれば、実行の結果の表示にも添える
+            status = self._status_fn()
+            self.events.emit("status", task_ok=ok, status=status)
+            for topic in self.cfg.web.status_topics:
+                data = status.get(str(topic.get("name", "")))
+                if isinstance(data, dict) and data.get("summary"):
+                    message += f"（{topic.get('label', topic.get('name', ''))}: {data['summary']}）"
         with self._lock:
             if self.cancel.is_set():
                 self.task_state = TASK_STOPPED
@@ -280,6 +303,9 @@ class TaskRuntime:
                                 for c in self.cfg.web.extra_cameras]
         out["instructions"] = self.cfg.instructions
         out["presets"] = self.presets()
+        status = self._status_fn() if self._status_fn is not None else {}
+        out["status"] = [{"name": str(t.get("name", "")), "label": str(t.get("label", t.get("name", ""))),
+                          "data": status.get(str(t.get("name", "")))} for t in self.cfg.web.status_topics]
         out["run_dir"] = self.events.run_dir or ""
         out["events"] = self.events.since(since)
         return out

@@ -1,0 +1,26 @@
+{
+  "comment": "言い回しの候補. scripts/vlm_phrases.sh が、正解つきの画像でどれが合うかを測る. 先頭が今の既定（計画づくりの手本と、用意済みの計画）",
+  "conditions": [
+    "The way directly in front of the robot is open: no door panel blocks any part of it.",
+    "The door is open.",
+    "Elevator door is fully open.",
+    "The doorway directly in front of the robot is fully open.",
+    "The robot can drive straight ahead through the opening in front of it; no door panel covers any part of the opening.",
+    "There is no closed or partly closed door directly in front of the robot.",
+    "The floor continues straight ahead of the robot into the next space without being blocked by a door."
+  ],
+  "targets": {
+    "hall": [
+      "center of the elevator car floor",
+      "floor inside the room",
+      "center of the floor of the room beyond the open doorway",
+      "center of the floor inside the elevator"
+    ],
+    "car": [
+      "hallway floor about 1 m beyond the open doorway",
+      "floor outside the room",
+      "floor about 1 m beyond the open doorway",
+      "the floor in the middle of the hallway ahead"
+    ]
+  }
+}

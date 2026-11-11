@@ -5,6 +5,7 @@
 #     RENDER        egl（NVIDIA の GPU で描画. 既定）か xvfb（GPU なし. ソフトウェア描画）
 #     PRINT_IMAGES  true にすると、要所の画像を小さくして base64 でログに出す（CI 用）
 #     PRINT_SAMPLES true にすると、正解つきの画像の組（机上評価用）を作って base64 でログに出す（CI 用）
+#     SAMPLES_PER_CATEGORY  その画像の、分類（場所 × 階 × 扉の様子）ごとの枚数（既定 3）
 #     DOOR_HOLD_S / DOOR_SENSOR / BOARD_FLOOR / DEST_FLOOR   エレベーターの設定
 set -u
 MODE="${1:-mock}"
@@ -53,9 +54,17 @@ done
 pkill -9 -f "gz sim" 2>/dev/null
 pkill -9 -f "parameter_bridge" 2>/dev/null
 
-if [ "${PRINT_SAMPLES:-false}" = "true" ] && [ -f "${OUT}/summary.json" ]; then
+RUN_DIR=""
+if [ -f "${OUT}/summary.json" ]; then
   RUN_DIR="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('run_dir') or '')" "${OUT}/summary.json")"
-  if [ -n "${RUN_DIR}" ] && python3 /workspace/scripts/inside/export_samples.py "${RUN_DIR}" "${OUT}/samples"; then
+fi
+if [ -n "${RUN_DIR}" ] && [ -f "${RUN_DIR}/events.jsonl" ]; then
+  echo "---- 記録の分析（VLM の答えと真値の突き合わせ）----"
+  python3 /workspace/scripts/inside/analyze_run.py "${RUN_DIR}" 2>&1 | tee "${OUT}/analysis.txt"
+fi
+
+if [ "${PRINT_SAMPLES:-false}" = "true" ] && [ -n "${RUN_DIR}" ]; then
+  if python3 /workspace/scripts/inside/export_samples.py "${RUN_DIR}" "${OUT}/samples" --per-category "${SAMPLES_PER_CATEGORY:-3}"; then
     for f in "${OUT}"/samples/*; do
       echo "SAMPLE_BEGIN $(basename "${f}")"
       base64 -w 0 "${f}"

@@ -9,6 +9,7 @@ Web UI もこのプロセスの中で動く（既定は http://<ホスト>:8080/
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 import threading
@@ -25,6 +26,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image
+from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from .core.config import TaskConfig, load_config
@@ -205,16 +207,37 @@ class TaskNode(Node):
                 self.get_logger().warn(f"web.extra_cameras の項目に name と topic が必要です: {cam}")
                 continue
             self.create_subscription(Image, topic, partial(self._on_extra_image, name), qos_profile_sensor_data)
+        # 画面に表示する状態のトピック（JSON の文字列）
+        self._status_lock = threading.Lock()
+        self._status: Dict[str, object] = {}
+        for item in cfg.web.status_topics:
+            name, topic = str(item.get("name", "")), str(item.get("topic", ""))
+            if not name or not topic:
+                self.get_logger().warn(f"web.status_topics の項目に name と topic が必要です: {item}")
+                continue
+            self.create_subscription(String, topic, partial(self._on_status, name), 10)
         self.runtime = TaskRuntime(
             cfg, self.io,
             stop_hook=partial(self._call_trigger, stop_cli, "safety/stop"),
             reset_hook=partial(self._call_trigger, reset_cli, "safety/reset"),
-            triggers=triggers, extra_jpeg=self._extra_jpeg)
+            triggers=triggers, extra_jpeg=self._extra_jpeg, status_fn=self._get_status)
         self.web = WebUI(self.runtime, cfg.web.host, cfg.web.port, cfg.web.stream_hz)
         self.web.start()
         self.get_logger().info(
             f"Web UI: http://localhost:{self.web.port}/  VLM: {cfg.vlm.base_url} ({cfg.vlm.model})  "
             f"記録: {self.runtime.events.run_dir or '保存しない'}")
+
+    def _on_status(self, name: str, msg: String) -> None:
+        try:
+            data = json.loads(msg.data)
+        except ValueError:
+            return
+        with self._status_lock:
+            self._status[name] = data
+
+    def _get_status(self) -> Dict[str, object]:
+        with self._status_lock:
+            return dict(self._status)
 
     def _on_extra_image(self, name: str, msg: Image) -> None:
         rgb = image_to_rgb8(msg)

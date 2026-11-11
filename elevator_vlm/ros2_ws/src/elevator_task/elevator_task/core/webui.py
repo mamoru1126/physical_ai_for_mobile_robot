@@ -80,6 +80,7 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <dt>入力</dt><dd id="rstat">-</dd>
 <dt>記録の保存先</dt><dd id="rundir">-</dd>
 </dl>
+<dl id="status" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:none"></dl>
 <div class="row"><button class="stop" id="bstop">停止</button><button id="breset">停止を解除</button><span id="extra" class="row" style="margin:0"></span></div>
 </section>
 </div>
@@ -141,6 +142,7 @@ async function tick(){
   $("pose").textContent=s.pose?("x="+s.pose[0]+" y="+s.pose[1]+" 向き="+(s.pose[2]*180/Math.PI).toFixed(1)+"°"):"未受信";
   $("rstat").textContent=s.robot_status.length?s.robot_status.join("、"):"すべて受信中";
   $("rundir").textContent=s.run_dir||"-";
+  if(s.status&&s.status.length){ const el=$("status"); el.style.display=""; el.innerHTML=s.status.map(x=>"<dt>"+esc(x.label)+"</dt><dd>"+(x.data&&x.data.summary?"<b>"+esc(x.data.summary)+"</b><br>":"")+(x.data?Object.entries(x.data).filter(([k,v])=>v!==null&&k!=="time"&&k!=="summary").map(([k,v])=>esc(k)+"="+esc(typeof v==="object"?JSON.stringify(v):v)).join("　"):"未受信")+"</dd>").join(""); }
   const ps={none:"計画はまだありません。",planning:"VLM が計画を作成中です…",ready:"計画を確認し、問題がなければ承認してください。"+(s.plan_latency_s?"（生成 "+s.plan_latency_s+" 秒）":""),error:"計画を作れませんでした: "+s.plan_error};
   $("planstate").textContent=ps[s.plan_state]||"";
   // 作った計画は編集欄にも写す（条件文や目標の言い回しを変えて試せるように）

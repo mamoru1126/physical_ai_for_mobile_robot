@@ -220,3 +220,40 @@ def test_local_requests_bypass_proxy(monkeypatch):
         server.shutdown()
     assert is_local("http://localhost:8000/v1") and is_local("http://[::1]:8000") and is_local("http://127.0.0.2/")
     assert not is_local("http://192.168.0.10:8000/v1") and not is_local("https://huggingface.co")
+
+
+# -- 判定のプロンプトと、記録に添える付加情報 -------------------------------------
+def test_check_prompt_variants_and_no_task_specific_knowledge():
+    from elevator_task.core.perception import (CHECK_SYSTEM_BASIC, CHECK_SYSTEM_GUIDED, POINT_SYSTEM,
+                                               PerceptionConfig)
+    from elevator_task.core.planner import PLANNER_SYSTEM
+
+    assert PerceptionConfig().check_system_text() == CHECK_SYSTEM_GUIDED
+    assert PerceptionConfig(check_prompt="basic").check_system_text() == CHECK_SYSTEM_BASIC
+    assert PerceptionConfig(check_prompt="typo").check_system_text() == CHECK_SYSTEM_GUIDED
+    assert PerceptionConfig(check_system="custom").check_system_text() == "custom"
+    # guided は、途中まで開いた扉を「開いている」としない見方を足したもの
+    assert "partly open" in CHECK_SYSTEM_GUIDED and "partly open" not in CHECK_SYSTEM_BASIC
+    # 計画づくりは、条件文と目標の書き方（真正面の通り道、開口部の約 1 m 先）を教える
+    assert "directly in front of the robot" in PLANNER_SYSTEM and "about 1 m beyond" in PLANNER_SYSTEM
+    # どのプロンプトにも、エレベーターの知識は入れない
+    for prompt in (CHECK_SYSTEM_BASIC, CHECK_SYSTEM_GUIDED, POINT_SYSTEM, PLANNER_SYSTEM):
+        assert "elevator" not in prompt.lower() and "エレベーター" not in prompt
+
+
+def test_event_context():
+    from elevator_task.core.events import EventLog
+
+    log = EventLog(None)
+    assert log.context() is None
+    assert "ctx" not in log.emit("check", ctx=log.context())
+    log.context_fn = lambda: {"elevator": {"door": "open"}}
+    assert log.emit("check", ctx=log.context())["ctx"] == {"elevator": {"door": "open"}}
+    log.context_fn = lambda: {}
+    assert log.context() is None                       # 空なら添えない
+
+    def broken():
+        raise RuntimeError("boom")
+
+    log.context_fn = broken
+    assert log.context() is None                       # 付加情報の失敗で実行を止めない

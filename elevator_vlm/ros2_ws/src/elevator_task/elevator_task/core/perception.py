@@ -38,7 +38,8 @@ CHECK_SYSTEM_GUIDED = (
     'Reply with JSON only: {"answer": "yes"} if the statement is true, {"answer": "no"} otherwise.'
 )
 CHECK_SYSTEMS: Dict[str, str] = {"basic": CHECK_SYSTEM_BASIC, "guided": CHECK_SYSTEM_GUIDED}
-CHECK_SYSTEM = CHECK_SYSTEM_GUIDED
+# 測った結果（log/20261111_144828、Qwen3.5-9B）: basic の方がよく合った（既定の条件文で 31/35、guided は 26/35）
+CHECK_SYSTEM = CHECK_SYSTEM_BASIC
 CHECK_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {"answer": {"type": "string", "enum": ["yes", "no"]}},
@@ -73,12 +74,12 @@ class PerceptionConfig:
     # point_scale を 0 にすると画素の値そのままとして扱う. Gemma 系は順序が y, x.
     point_scale: float = 1000.0
     point_order: str = "xy"
-    check_prompt: str = "guided"      # 判定のシステムプロンプト: basic / guided（上の説明を参照）
+    check_prompt: str = "basic"       # 判定のシステムプロンプト: basic / guided（上の説明を参照）
     check_system: str = ""            # 空でなければ、check_prompt の代わりにこの文をそのまま使う
     point_system: str = POINT_SYSTEM
 
     def check_system_text(self) -> str:
-        return self.check_system or CHECK_SYSTEMS.get(self.check_prompt, CHECK_SYSTEM_GUIDED)
+        return self.check_system or CHECK_SYSTEMS.get(self.check_prompt, CHECK_SYSTEM_BASIC)
 
 
 @dataclass

@@ -228,9 +228,9 @@ def test_check_prompt_variants_and_no_task_specific_knowledge():
                                                PerceptionConfig)
     from elevator_task.core.planner import PLANNER_SYSTEM
 
-    assert PerceptionConfig().check_system_text() == CHECK_SYSTEM_GUIDED
-    assert PerceptionConfig(check_prompt="basic").check_system_text() == CHECK_SYSTEM_BASIC
-    assert PerceptionConfig(check_prompt="typo").check_system_text() == CHECK_SYSTEM_GUIDED
+    assert PerceptionConfig().check_system_text() == CHECK_SYSTEM_BASIC
+    assert PerceptionConfig(check_prompt="guided").check_system_text() == CHECK_SYSTEM_GUIDED
+    assert PerceptionConfig(check_prompt="typo").check_system_text() == CHECK_SYSTEM_BASIC
     assert PerceptionConfig(check_system="custom").check_system_text() == "custom"
     # guided は、途中まで開いた扉を「開いている」としない見方を足したもの
     assert "partly open" in CHECK_SYSTEM_GUIDED and "partly open" not in CHECK_SYSTEM_BASIC

@@ -14,7 +14,7 @@ perception:
   jpeg_quality: 90
   max_image_age_s: 1.0         # これより古い画像では判定しない
   use_logprobs: false          # true にすると yes の確率も記録する
-  check_prompt: guided         # 判定のシステムプロンプト. guided:「開いている」の見方の説明つき / basic: 短い
+  check_prompt: basic          # 判定のシステムプロンプト. basic: 短い / guided:「開いている」の見方の説明つき
   point_scale: 1000.0          # Qwen 系: 画像サイズに対する 0〜1000 の相対座標. 0 なら画素
   point_order: xy              # Gemma 系は yx
 

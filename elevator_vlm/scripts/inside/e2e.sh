@@ -10,6 +10,13 @@
 #     DOOR_HOLD_S / DOOR_SENSOR / BOARD_FLOOR / DEST_FLOOR   エレベーターの設定
 set -u
 MODE="${1:-mock}"
+# 別のシミュレーションが動いたままだと、ロボットへの指令やオドメトリが混ざって、おかしな動きになる.
+# Web UI のポートが使われていたら、始めない
+if (exec 3<>"/dev/tcp/127.0.0.1/${WEB_PORT:-8080}") 2> /dev/null; then
+  echo "NG: 別のシミュレーションが動いたままです（ポート ${WEB_PORT:-8080} が使われています）."
+  echo "    動かしている端末を Ctrl+C で止めるか、bash scripts/down.sh を実行してから、やり直してください."
+  exit 3
+fi
 OUT="/runs/e2e_$(date +%Y%m%d_%H%M%S)_${MODE}"
 mkdir -p "${OUT}"
 

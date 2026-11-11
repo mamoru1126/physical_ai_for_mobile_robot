@@ -1,0 +1,2298 @@
+{
+ "model": "vlm",
+ "runs": [],
+ "conditions": [
+  {
+   "phrase": "The way directly in front of the robot is open: no door panel blocks any part of it.",
+   "system": "guided",
+   "correct": 26,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     4,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     4,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     1,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial70_31.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.7,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.808
+  },
+  {
+   "phrase": "The way directly in front of the robot is open: no door panel blocks any part of it.",
+   "system": "basic",
+   "correct": 31,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     6,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     5,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     3,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.462
+  },
+  {
+   "phrase": "The door is open.",
+   "system": "guided",
+   "correct": 19,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     2,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     1,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.177
+  },
+  {
+   "phrase": "The door is open.",
+   "system": "basic",
+   "correct": 13,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     0,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     1,
+     8
+    ],
+    "car/open": [
+     1,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     2,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial17_02.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.17,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial16_05.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.16,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial18_13.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.18,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial28_16.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.28,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial32_19.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.32,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_open_21.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f1_open_22.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f3_open_24.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.452
+  },
+  {
+   "phrase": "Elevator door is fully open.",
+   "system": "guided",
+   "correct": 20,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     2,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     2,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     1,
+     4
+    ],
+    "car_near/open": [
+     2,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial18_13.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.18,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.169
+  },
+  {
+   "phrase": "Elevator door is fully open.",
+   "system": "basic",
+   "correct": 22,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     2,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     4,
+     8
+    ],
+    "car/open": [
+     3,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     4,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_open_24.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.452
+  },
+  {
+   "phrase": "The doorway directly in front of the robot is fully open.",
+   "system": "guided",
+   "correct": 22,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     2,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     0,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial70_31.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.7,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.178
+  },
+  {
+   "phrase": "The doorway directly in front of the robot is fully open.",
+   "system": "basic",
+   "correct": 22,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     2,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     0,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial45_03.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.45,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial44_06.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.44,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial70_31.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.7,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.457
+  },
+  {
+   "phrase": "The robot can drive straight ahead through the opening in front of it; no door panel covers any part of the opening.",
+   "system": "guided",
+   "correct": 25,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     4,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     1,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial70_31.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.7,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.19
+  },
+  {
+   "phrase": "The robot can drive straight ahead through the opening in front of it; no door panel covers any part of the opening.",
+   "system": "basic",
+   "correct": 30,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     4,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     6,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     3,
+     4
+    ],
+    "car_near/open": [
+     4,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_partial73_04.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.73,
+     "answer": "yes"
+    },
+    {
+     "file": "check_hall_f1_partial71_07.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "partial",
+     "door_ratio": 0.71,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    }
+   ],
+   "latency_s": 0.465
+  },
+  {
+   "phrase": "There is no closed or partly closed door directly in front of the robot.",
+   "system": "guided",
+   "correct": 23,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     6,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     4,
+     4
+    ],
+    "car_near/closed": [
+     0,
+     2
+    ],
+    "car_near/partial": [
+     1,
+     4
+    ],
+    "car_near/open": [
+     2,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f0_closed_28.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "closed",
+     "door_ratio": 0.0,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_closed_29.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "closed",
+     "door_ratio": 0.0,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_partial42_30.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.42,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.186
+  },
+  {
+   "phrase": "There is no closed or partly closed door directly in front of the robot.",
+   "system": "basic",
+   "correct": 22,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     6,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     5,
+     8
+    ],
+    "car/open": [
+     0,
+     4
+    ],
+    "car_near/closed": [
+     0,
+     2
+    ],
+    "car_near/partial": [
+     4,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_open_21.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f1_open_22.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f3_open_23.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f3_open_24.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f0_closed_28.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "closed",
+     "door_ratio": 0.0,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_closed_29.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "closed",
+     "door_ratio": 0.0,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.462
+  },
+  {
+   "phrase": "The floor continues straight ahead of the robot into the next space without being blocked by a door.",
+   "system": "guided",
+   "correct": 22,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     6,
+     6
+    ],
+    "hall/open": [
+     2,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     3,
+     8
+    ],
+    "car/open": [
+     2,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     2,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_car_f1_partial46_14.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.46,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_partial74_15.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.74,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial56_17.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.56,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial84_18.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.84,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f3_partial59_20.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "partial",
+     "door_ratio": 0.59,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_f1_open_21.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f1_open_22.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_partial30_32.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.3,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f3_partial58_33.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "partial",
+     "door_ratio": 0.58,
+     "answer": "yes"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.191
+  },
+  {
+   "phrase": "The floor continues straight ahead of the robot into the next space without being blocked by a door.",
+   "system": "basic",
+   "correct": 25,
+   "total": 35,
+   "by_category": {
+    "hall/closed": [
+     2,
+     2
+    ],
+    "hall/partial": [
+     6,
+     6
+    ],
+    "hall/open": [
+     0,
+     2
+    ],
+    "car/closed": [
+     3,
+     3
+    ],
+    "car/partial": [
+     8,
+     8
+    ],
+    "car/open": [
+     0,
+     4
+    ],
+    "car_near/closed": [
+     2,
+     2
+    ],
+    "car_near/partial": [
+     4,
+     4
+    ],
+    "car_near/open": [
+     0,
+     4
+    ]
+   },
+   "wrong": [
+    {
+     "file": "check_hall_f1_open_08.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_hall_f1_open_09.jpg",
+     "source": "samples",
+     "place": "hall",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f1_open_21.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f1_open_22.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f3_open_23.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_f3_open_24.jpg",
+     "source": "samples",
+     "place": "car",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_34.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f1_open_35.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_36.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    },
+    {
+     "file": "check_car_near_f3_open_37.jpg",
+     "source": "samples",
+     "place": "car_near",
+     "door": "open",
+     "door_ratio": 1.0,
+     "answer": "no"
+    }
+   ],
+   "latency_s": 0.467
+  }
+ ],
+ "targets": [
+  {
+   "place": "hall",
+   "phrase": "center of the elevator car floor",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_hall_f1_25.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 320.0,
+     "v": 249.6,
+     "ahead_m": 1.865,
+     "left_m": 0.0,
+     "d_ahead_m": 0.09,
+     "d_left_m": 0.0,
+     "beyond_m": 0.865
+    }
+   ]
+  },
+  {
+   "place": "hall",
+   "phrase": "floor inside the room",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_hall_f1_25.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 357.1,
+     "v": 245.8,
+     "ahead_m": 1.94,
+     "left_m": -0.21,
+     "d_ahead_m": 0.165,
+     "d_left_m": -0.21,
+     "beyond_m": 0.94
+    }
+   ]
+  },
+  {
+   "place": "hall",
+   "phrase": "center of the floor of the room beyond the open doorway",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_hall_f1_25.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 320.0,
+     "v": 250.1,
+     "ahead_m": 1.856,
+     "left_m": 0.0,
+     "d_ahead_m": 0.081,
+     "d_left_m": 0.0,
+     "beyond_m": 0.856
+    }
+   ]
+  },
+  {
+   "place": "hall",
+   "phrase": "center of the floor inside the elevator",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_hall_f1_25.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 320.0,
+     "v": 249.6,
+     "ahead_m": 1.865,
+     "left_m": 0.0,
+     "d_ahead_m": 0.09,
+     "d_left_m": 0.0,
+     "beyond_m": 0.865
+    }
+   ]
+  },
+  {
+   "place": "car",
+   "phrase": "hallway floor about 1 m beyond the open doorway",
+   "ok": 2,
+   "total": 2,
+   "results": [
+    {
+     "file": "point_car_f3_26.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 302.7,
+     "v": 264.0,
+     "ahead_m": 1.629,
+     "left_m": 0.082,
+     "d_ahead_m": -0.112,
+     "d_left_m": 0.011,
+     "beyond_m": 0.887
+    },
+    {
+     "file": "point_car_f3_27.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 306.6,
+     "v": 249.6,
+     "ahead_m": 1.865,
+     "left_m": 0.073,
+     "d_ahead_m": 0.142,
+     "d_left_m": 0.002,
+     "beyond_m": 1.142
+    }
+   ]
+  },
+  {
+   "place": "car",
+   "phrase": "floor outside the room",
+   "ok": 0,
+   "total": 2,
+   "results": [
+    {
+     "file": "point_car_f3_26.jpg",
+     "source": "samples",
+     "ok": false,
+     "u": 318.7,
+     "v": 441.6,
+     "ahead_m": 0.663,
+     "left_m": 0.002,
+     "d_ahead_m": -1.078,
+     "d_left_m": -0.069,
+     "beyond_m": -0.079
+    },
+    {
+     "file": "point_car_f3_27.jpg",
+     "source": "samples",
+     "ok": false,
+     "u": 318.7,
+     "v": 441.6,
+     "ahead_m": 0.663,
+     "left_m": 0.002,
+     "d_ahead_m": -1.06,
+     "d_left_m": -0.069,
+     "beyond_m": -0.06
+    }
+   ]
+  },
+  {
+   "place": "car",
+   "phrase": "floor about 1 m beyond the open doorway",
+   "ok": 2,
+   "total": 2,
+   "results": [
+    {
+     "file": "point_car_f3_26.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 298.2,
+     "v": 267.8,
+     "ahead_m": 1.576,
+     "left_m": 0.099,
+     "d_ahead_m": -0.165,
+     "d_left_m": 0.028,
+     "beyond_m": 0.834
+    },
+    {
+     "file": "point_car_f3_27.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 306.6,
+     "v": 265.0,
+     "ahead_m": 1.615,
+     "left_m": 0.063,
+     "d_ahead_m": -0.108,
+     "d_left_m": -0.008,
+     "beyond_m": 0.892
+    }
+   ]
+  },
+  {
+   "place": "car",
+   "phrase": "the floor in the middle of the hallway ahead",
+   "ok": 2,
+   "total": 2,
+   "results": [
+    {
+     "file": "point_car_f3_26.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 295.7,
+     "v": 249.6,
+     "ahead_m": 1.865,
+     "left_m": 0.132,
+     "d_ahead_m": 0.124,
+     "d_left_m": 0.061,
+     "beyond_m": 1.123
+    },
+    {
+     "file": "point_car_f3_27.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 302.7,
+     "v": 217.0,
+     "ahead_m": 2.801,
+     "left_m": 0.143,
+     "d_ahead_m": 1.078,
+     "d_left_m": 0.072,
+     "beyond_m": 2.078
+    }
+   ]
+  },
+  {
+   "place": "car_near",
+   "phrase": "hallway floor about 1 m beyond the open doorway",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_car_near_f3_38.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 312.3,
+     "v": 269.8,
+     "ahead_m": 1.551,
+     "left_m": 0.034,
+     "d_ahead_m": 0.015,
+     "d_left_m": -0.039,
+     "beyond_m": 1.015
+    }
+   ]
+  },
+  {
+   "place": "car_near",
+   "phrase": "floor outside the room",
+   "ok": 0,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_car_near_f3_38.jpg",
+     "source": "samples",
+     "ok": false,
+     "u": 318.1,
+     "v": 423.8,
+     "ahead_m": 0.702,
+     "left_m": 0.004,
+     "d_ahead_m": -0.834,
+     "d_left_m": -0.069,
+     "beyond_m": 0.166
+    }
+   ]
+  },
+  {
+   "place": "car_near",
+   "phrase": "floor about 1 m beyond the open doorway",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_car_near_f3_38.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 306.6,
+     "v": 269.8,
+     "ahead_m": 1.551,
+     "left_m": 0.06,
+     "d_ahead_m": 0.015,
+     "d_left_m": -0.013,
+     "beyond_m": 1.015
+    }
+   ]
+  },
+  {
+   "place": "car_near",
+   "phrase": "the floor in the middle of the hallway ahead",
+   "ok": 1,
+   "total": 1,
+   "results": [
+    {
+     "file": "point_car_near_f3_38.jpg",
+     "source": "samples",
+     "ok": true,
+     "u": 312.3,
+     "v": 234.2,
+     "ahead_m": 2.21,
+     "left_m": 0.05,
+     "d_ahead_m": 0.674,
+     "d_left_m": -0.023,
+     "beyond_m": 1.674
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+言い回しの比較   VLM: vlm
+画像: 判定 35 枚（乗場・全閉 2、乗場・途中 6、乗場・全開 2、かごの中・全閉 3、かごの中・途中 8、かごの中・全開 4、かごの中（扉の近く）・全閉 2、かごの中（扉の近く）・途中 4、かごの中（扉の近く）・全開 4）、指差し 4 枚
+
+判定の条件文（正解は「全開のときだけ yes」. 数字は 正解 / 枚数. 閉 = 全閉、途 = 途中、開 = 全開、近く = かごの中で扉の近く）
+[C1] The way directly in front of the robot is open: no door panel blocks any part of it.
+     guided 乗場 閉2/2 途4/6 開2/2 ｜ かご 閉3/3 途4/8 開4/4 ｜ 近く 閉2/2 途1/4 開4/4 ｜ 計 26/35（74%） 0.81秒
+     basic  乗場 閉2/2 途6/6 開2/2 ｜ かご 閉3/3 途5/8 開4/4 ｜ 近く 閉2/2 途3/4 開4/4 ｜ 計 31/35（89%） 0.46秒
+[C2] The door is open.
+     guided 乗場 閉2/2 途2/6 開2/2 ｜ かご 閉3/3 途3/8 開4/4 ｜ 近く 閉2/2 途1/4 開0/4 ｜ 計 19/35（54%） 0.18秒
+     basic  乗場 閉2/2 途0/6 開2/2 ｜ かご 閉3/3 途1/8 開1/4 ｜ 近く 閉2/2 途2/4 開0/4 ｜ 計 13/35（37%） 0.45秒
+[C3] Elevator door is fully open.
+     guided 乗場 閉2/2 途2/6 開2/2 ｜ かご 閉3/3 途2/8 開4/4 ｜ 近く 閉2/2 途1/4 開2/4 ｜ 計 20/35（57%） 0.17秒
+     basic  乗場 閉2/2 途2/6 開2/2 ｜ かご 閉3/3 途4/8 開3/4 ｜ 近く 閉2/2 途4/4 開0/4 ｜ 計 22/35（63%） 0.45秒
+[C4] The doorway directly in front of the robot is fully open.
+     guided 乗場 閉2/2 途2/6 開2/2 ｜ かご 閉3/3 途3/8 開4/4 ｜ 近く 閉2/2 途0/4 開4/4 ｜ 計 22/35（63%） 0.18秒
+     basic  乗場 閉2/2 途2/6 開2/2 ｜ かご 閉3/3 途3/8 開4/4 ｜ 近く 閉2/2 途0/4 開4/4 ｜ 計 22/35（63%） 0.46秒
+[C5] The robot can drive straight ahead through the opening in front of it; no door panel covers any part of the opening.
+     guided 乗場 閉2/2 途4/6 開2/2 ｜ かご 閉3/3 途3/8 開4/4 ｜ 近く 閉2/2 途1/4 開4/4 ｜ 計 25/35（71%） 0.19秒
+     basic  乗場 閉2/2 途4/6 開2/2 ｜ かご 閉3/3 途6/8 開4/4 ｜ 近く 閉2/2 途3/4 開4/4 ｜ 計 30/35（86%） 0.47秒
+[C6] There is no closed or partly closed door directly in front of the robot.
+     guided 乗場 閉2/2 途6/6 開2/2 ｜ かご 閉3/3 途3/8 開4/4 ｜ 近く 閉0/2 途1/4 開2/4 ｜ 計 23/35（66%） 0.19秒
+     basic  乗場 閉2/2 途6/6 開2/2 ｜ かご 閉3/3 途5/8 開0/4 ｜ 近く 閉0/2 途4/4 開0/4 ｜ 計 22/35（63%） 0.46秒
+[C7] The floor continues straight ahead of the robot into the next space without being blocked by a door.
+     guided 乗場 閉2/2 途6/6 開2/2 ｜ かご 閉3/3 途3/8 開2/4 ｜ 近く 閉2/2 途2/4 開0/4 ｜ 計 22/35（63%） 0.19秒
+     basic  乗場 閉2/2 途6/6 開0/2 ｜ かご 閉3/3 途8/8 開0/4 ｜ 近く 閉2/2 途4/4 開0/4 ｜ 計 25/35（71%） 0.47秒
+
+合計の高い順（上位 3）
+  31/35  [basic] The way directly in front of the robot is open: no door panel blocks any part of it.
+  30/35  [basic] The robot can drive straight ahead through the opening in front of it; no door panel covers any part of the opening.
+  26/35  [guided] The way directly in front of the robot is open: no door panel blocks any part of it.
+  1位が外した画像: check_car_f1_partial74_15.jpg（かごの中・途中 74% → yes）、check_car_f3_partial56_17.jpg（かごの中・途中 56% → yes）、check_car_f3_partial84_18.jpg（かごの中・途中 84% → yes）、check_car_near_f3_partial58_33.jpg（かごの中（扉の近く）・途中 58% → yes）
+
+指差しの目標（床の上の位置. OK の範囲: 乗るときは敷居の先 0.40〜1.15 m、降りるときは 0.45 m 以上、左右のずれ 0.25 m 以内）
+ 乗場から（正解はかごの中央）
+ [T1] center of the elevator car floor   → OK 1/1
+       point_hall_f1_25.jpg: 前 1.86 m・左 +0.00 m、敷居の先 0.86 m（正解とのずれ 前後 +0.09 m、左右 +0.00 m） OK
+ [T2] floor inside the room   → OK 1/1
+       point_hall_f1_25.jpg: 前 1.94 m・左 -0.21 m、敷居の先 0.94 m（正解とのずれ 前後 +0.17 m、左右 -0.21 m） OK
+ [T3] center of the floor of the room beyond the open doorway   → OK 1/1
+       point_hall_f1_25.jpg: 前 1.86 m・左 +0.00 m、敷居の先 0.86 m（正解とのずれ 前後 +0.08 m、左右 +0.00 m） OK
+ [T4] center of the floor inside the elevator   → OK 1/1
+       point_hall_f1_25.jpg: 前 1.86 m・左 +0.00 m、敷居の先 0.86 m（正解とのずれ 前後 +0.09 m、左右 +0.00 m） OK
+ かごの中から（正解は乗場の 1 m 先）
+ [T5] hallway floor about 1 m beyond the open doorway   → OK 2/2
+       point_car_f3_26.jpg: 前 1.63 m・左 +0.08 m、敷居の先 0.89 m（正解とのずれ 前後 -0.11 m、左右 +0.01 m） OK
+       point_car_f3_27.jpg: 前 1.86 m・左 +0.07 m、敷居の先 1.14 m（正解とのずれ 前後 +0.14 m、左右 +0.00 m） OK
+ [T6] floor outside the room   → OK 0/2
+       point_car_f3_26.jpg: 前 0.66 m・左 +0.00 m、敷居の先 -0.08 m（正解とのずれ 前後 -1.08 m、左右 -0.07 m） NG
+       point_car_f3_27.jpg: 前 0.66 m・左 +0.00 m、敷居の先 -0.06 m（正解とのずれ 前後 -1.06 m、左右 -0.07 m） NG
+ [T7] floor about 1 m beyond the open doorway   → OK 2/2
+       point_car_f3_26.jpg: 前 1.58 m・左 +0.10 m、敷居の先 0.83 m（正解とのずれ 前後 -0.17 m、左右 +0.03 m） OK
+       point_car_f3_27.jpg: 前 1.61 m・左 +0.06 m、敷居の先 0.89 m（正解とのずれ 前後 -0.11 m、左右 -0.01 m） OK
+ [T8] the floor in the middle of the hallway ahead   → OK 2/2
+       point_car_f3_26.jpg: 前 1.86 m・左 +0.13 m、敷居の先 1.12 m（正解とのずれ 前後 +0.12 m、左右 +0.06 m） OK
+       point_car_f3_27.jpg: 前 2.80 m・左 +0.14 m、敷居の先 2.08 m（正解とのずれ 前後 +1.08 m、左右 +0.07 m） OK
+ かごの中（扉の近く）から（正解は乗場の 1 m 先）
+ [T9] hallway floor about 1 m beyond the open doorway   → OK 1/1
+       point_car_near_f3_38.jpg: 前 1.55 m・左 +0.03 m、敷居の先 1.01 m（正解とのずれ 前後 +0.01 m、左右 -0.04 m） OK
+ [T10] floor outside the room   → OK 0/1
+       point_car_near_f3_38.jpg: 前 0.70 m・左 +0.00 m、敷居の先 0.17 m（正解とのずれ 前後 -0.83 m、左右 -0.07 m） NG
+ [T11] floor about 1 m beyond the open doorway   → OK 1/1
+       point_car_near_f3_38.jpg: 前 1.55 m・左 +0.06 m、敷居の先 1.01 m（正解とのずれ 前後 +0.01 m、左右 -0.01 m） OK
+ [T12] the floor in the middle of the hallway ahead   → OK 1/1
+       point_car_near_f3_38.jpg: 前 2.21 m・左 +0.05 m、敷居の先 1.67 m（正解とのずれ 前後 +0.67 m、左右 -0.02 m） OK
+
+（50 秒）

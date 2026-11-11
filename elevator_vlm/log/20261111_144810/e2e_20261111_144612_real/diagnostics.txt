@@ -1,0 +1,15 @@
+==== ROS のトピックの周波数（各 4 秒）====
+--- /clock
+average rate: 444.157
+	min: 0.000s max: 0.011s std dev: 0.00176s window: 1334
+failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+--- /camera/image_raw
+--- /camera/camera_info
+	min: 0.031s max: 0.193s std dev: 0.05109s window: 11
+average rate: 8.699
+	min: 0.031s max: 0.193s std dev: 0.04843s window: 21
+--- /odom
+	min: 0.016s max: 0.029s std dev: 0.00248s window: 92
+average rate: 45.156
+	min: 0.016s max: 0.030s std dev: 0.00267s window: 137
+--- /ground_truth/odom

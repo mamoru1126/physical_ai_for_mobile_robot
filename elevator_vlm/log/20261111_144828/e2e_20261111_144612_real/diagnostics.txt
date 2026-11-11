@@ -1,0 +1,73 @@
+==== ROS のトピックの周波数（各 4 秒）====
+--- /clock
+average rate: 444.157
+	min: 0.000s max: 0.011s std dev: 0.00176s window: 1334
+failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+--- /camera/image_raw
+--- /camera/camera_info
+	min: 0.031s max: 0.193s std dev: 0.05109s window: 11
+average rate: 8.699
+	min: 0.031s max: 0.193s std dev: 0.04843s window: 21
+--- /odom
+	min: 0.016s max: 0.029s std dev: 0.00248s window: 92
+average rate: 45.156
+	min: 0.016s max: 0.030s std dev: 0.00267s window: 137
+--- /ground_truth/odom
+	min: 0.017s max: 0.029s std dev: 0.00272s window: 91
+average rate: 44.297
+	min: 0.017s max: 0.030s std dev: 0.00290s window: 135
+--- /elevator/joint_states
+average rate: 44.670
+	min: 0.013s max: 0.031s std dev: 0.00334s window: 137
+failed to initialize wait set: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/wait.c:130
+==== Gazebo のトピック ====
+/camera/camera_info
+/camera/image_raw
+/clock
+/cmd_vel
+/elevator/car_door/cmd_pos
+/elevator/joint_states
+/elevator/landing_door_1/cmd_pos
+/elevator/landing_door_2/cmd_pos
+/elevator/landing_door_3/cmd_pos
+/elevator/lift/cmd_vel
+/gazebo/resource_paths
+/ground_truth/odom
+/ground_truth/tf
+/gui/camera/pose
+/gui/currently_tracked
+/gui/track
+/model/elevator_robot/odometry_with_covariance
+/observer/car/camera_info
+/observer/car/image_raw
+/observer/floor_1/camera_info
+/observer/floor_1/image_raw
+/observer/floor_2/camera_info
+/observer/floor_2/image_raw
+/observer/floor_3/camera_info
+/observer/floor_3/image_raw
+/odom
+/sensors/marker
+/stats
+/wheel_tf
+/world/elevator_world/clock
+/world/elevator_world/dynamic_pose/info
+/world/elevator_world/pose/info
+/world/elevator_world/scene/deletion
+/world/elevator_world/scene/info
+/world/elevator_world/state
+/world/elevator_world/stats
+/model/elevator_robot/enable
+/world/elevator_world/light_config
+/world/elevator_world/material_color
+==== 環境 ====
+ROS_VERSION=2
+GZ_PARTITION=elevator
+ROS_PYTHON_VERSION=3
+ROS_DOMAIN_ID=42
+https_proxy=http://10.77.8.70:8080
+GZ_IP=127.0.0.1
+HTTP_PROXY=http://10.77.8.70:8080
+http_proxy=http://10.77.8.70:8080
+ROS_LOCALHOST_ONLY=0
+ROS_DISTRO=humble

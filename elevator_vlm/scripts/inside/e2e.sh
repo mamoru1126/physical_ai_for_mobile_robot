@@ -27,6 +27,24 @@ LAUNCH_PID=$!
 ros2 run elevator_sim e2e_runner --ros-args -p out_dir:="${OUT}" -p print_images:="${PRINT_IMAGES:-false}"
 CODE=$?
 
+if [ "${CODE}" != "0" ]; then
+  # 失敗したら、トピックが届いているかを記録する（シミュレータを止める前に）
+  {
+    echo "==== ROS のトピックの周波数（各 4 秒）===="
+    for t in /clock /camera/image_raw /camera/camera_info /odom /ground_truth/odom /elevator/joint_states; do
+      echo "--- ${t}"
+      timeout 4 ros2 topic hz "${t}" 2>&1 | tail -n 3
+    done
+    echo "==== Gazebo のトピック ===="
+    timeout 5 gz topic -l 2>&1 | head -n 60
+    echo "==== 環境 ===="
+    env | grep -E "^(GZ_|ROS_|RMW_|http_proxy|https_proxy|no_proxy|HTTP_PROXY|NO_PROXY)" | sed -E 's#(://)[^@/]*@#\1***@#'
+  } > "${OUT}/diagnostics.txt" 2>&1
+  cp -r "$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('run_dir') or '/nonexistent')" "${OUT}/summary.json" 2>/dev/null)/events.jsonl" "${OUT}/" 2>/dev/null
+  echo "---- 診断（${OUT}/diagnostics.txt）----"
+  cat "${OUT}/diagnostics.txt"
+fi
+
 kill -INT "${LAUNCH_PID}" 2>/dev/null
 for _ in $(seq 1 20); do
   kill -0 "${LAUNCH_PID}" 2>/dev/null || break

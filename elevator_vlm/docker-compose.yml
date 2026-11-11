@@ -14,6 +14,9 @@ x-elevator: &elevator
     NVIDIA_DRIVER_CAPABILITIES: all   # compute + graphics（Gazebo のカメラの描画に必要）
     ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
     GZ_PARTITION: ${GZ_PARTITION:-elevator}
+    # Gazebo の通信を自分の計算機の中だけで行う（ネットワークによってはマルチキャストが使えず、
+    # IP_ADD_MEMBERSHIP のエラーになり、トピックが届かないことがある）
+    GZ_IP: ${GZ_IP:-127.0.0.1}
     VLM_BASE_URL: ${VLM_BASE_URL:-http://127.0.0.1:8000/v1}
     VLM_MODEL: ${VLM_MODEL:-vlm}
     RENDER: ${RENDER:-egl}

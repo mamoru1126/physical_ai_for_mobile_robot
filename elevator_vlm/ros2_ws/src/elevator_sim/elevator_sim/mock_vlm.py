@@ -94,10 +94,12 @@ def plan_from_instructions(lines: List[str]) -> Dict[str, Any]:
 
 class MockVlm:
     def __init__(self, params: WorldParams, cfg: MockConfig,
-                 truth_fn: Callable[[], Optional[Truth]], camera_fn: Callable[[], Optional[CameraModel]]):
+                 truth_fn: Callable[[], Optional[Truth]], camera_fn: Callable[[], Optional[CameraModel]],
+                 missing_fn: Optional[Callable[[], List[str]]] = None):
         self.p = params
         self.cfg = cfg
         self._truth_fn = truth_fn
+        self._missing_fn = missing_fn
         self._camera_fn = camera_fn
         self._rng = random.Random(cfg.seed)
         self._lock = threading.Lock()
@@ -159,8 +161,16 @@ class MockVlm:
         return json.dumps(plan_from_instructions(lines), ensure_ascii=False)
 
     # -- OpenAI 互換の応答 ---------------------------------------------------
+    def missing(self) -> List[str]:
+        """答えるのに必要で、まだ届いていない入力（トピック名）."""
+        return self._missing_fn() if self._missing_fn is not None else []
+
     def handle(self, request: Dict[str, Any]) -> Dict[str, Any]:
         kind = _kind(request)
+        missing = self.missing()
+        if kind != "plan" and missing:
+            # 真値がないまま「no」と答えると、原因の分からない時間切れになる. 誤りとして返す
+            raise MockNotReady("モック VLM に真値が届いていません: " + ", ".join(missing))
         text = _user_text(request)
         if kind == "plan":
             content = self._plan(text)
@@ -179,6 +189,10 @@ class MockVlm:
                          "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
+
+
+class MockNotReady(RuntimeError):
+    pass
 
 
 def make_server(mock: MockVlm, host: str = "127.0.0.1", port: int = 8001) -> ThreadingHTTPServer:
@@ -200,7 +214,11 @@ def make_server(mock: MockVlm, host: str = "127.0.0.1", port: int = 8001) -> Thr
 
         def do_GET(self) -> None:  # noqa: N802
             if self.path.rstrip("/").endswith("/models"):
-                self._json({"object": "list", "data": [{"id": mock.cfg.model_name, "object": "model"}]})
+                missing = mock.missing()
+                if missing:     # 真値がそろうまでは「準備中」と返す（実行系の画面に理由が出る）
+                    self._json({"error": "モック VLM に真値が届いていません: " + ", ".join(missing)}, 503)
+                else:
+                    self._json({"object": "list", "data": [{"id": mock.cfg.model_name, "object": "model"}]})
             else:
                 self._json({"error": "not found"}, 404)
 
@@ -212,7 +230,10 @@ def make_server(mock: MockVlm, host: str = "127.0.0.1", port: int = 8001) -> Thr
                 self._json({"error": f"bad request: {e}"}, 400)
                 return
             if self.path.rstrip("/").endswith("/chat/completions"):
-                self._json(mock.handle(request))
+                try:
+                    self._json(mock.handle(request))
+                except MockNotReady as e:
+                    self._json({"error": str(e)}, 503)
             else:
                 self._json({"error": "not found"}, 404)
 

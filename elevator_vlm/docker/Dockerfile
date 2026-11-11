@@ -13,7 +13,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PYTHONUNBUFFERED=1 \
-    ELEVATOR_VLM_ROOT=/workspace
+    ELEVATOR_VLM_ROOT=/workspace \
+    GZ_IP=127.0.0.1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

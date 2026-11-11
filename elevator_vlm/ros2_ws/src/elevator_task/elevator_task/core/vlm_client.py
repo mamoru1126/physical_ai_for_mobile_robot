@@ -113,6 +113,8 @@ class VlmClient:
                 data = json.loads(resp.read().decode("utf-8"))
             names = [m.get("id", "?") for m in data.get("data", [])] if isinstance(data, dict) else []
             return True, ", ".join(names) or "ok"
+        except urllib.error.HTTPError as e:
+            return False, f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:300]}"
         except Exception as e:  # noqa: BLE001  状態表示用なので何が起きても文字列で返す
             return False, str(e)
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import rclpy
 from nav_msgs.msg import Odometry
@@ -42,7 +42,8 @@ class MockVlmNode(Node):
         self.create_subscription(Odometry, "/ground_truth/odom", self._on_truth, qos_profile_sensor_data)
         self.create_subscription(JointState, self.wp.joint_state_topic, self._on_joints, qos_profile_sensor_data)
         self.create_subscription(CameraInfo, "/camera/camera_info", self._on_info, qos_profile_sensor_data)
-        self.mock = MockVlm(self.wp, cfg, self._truth, self._get_camera)
+        self.mock = MockVlm(self.wp, cfg, self._truth, self._get_camera, self._missing)
+        self.create_timer(5.0, self._report_missing)
         self.server = make_server(self.mock, host, port)
         self._server_thread = threading.Thread(target=self.server.serve_forever, name="mock_vlm_http", daemon=True)
         self._server_thread.start()
@@ -75,6 +76,22 @@ class MockVlmNode(Node):
     def _get_camera(self) -> Optional[CameraModel]:
         with self._lock:
             return self._camera
+
+    def _missing(self) -> List[str]:
+        with self._lock:
+            out = []
+            if self._pose is None:
+                out.append("/ground_truth/odom")
+            if self.wp.lift_joint not in self._joint_pos:
+                out.append(self.wp.joint_state_topic)
+            if self._camera is None:
+                out.append("/camera/camera_info")
+        return out
+
+    def _report_missing(self) -> None:
+        missing = self._missing()
+        if missing:
+            self.get_logger().warn("真値が届いていないので答えられません: " + ", ".join(missing))
 
     def _truth(self) -> Optional[Truth]:
         wp = self.wp

@@ -203,3 +203,27 @@ def test_bridge_config_covers_all_topics():
         assert entries[topic]["direction"] == "GZ_TO_ROS"
     for topic in ["/cmd_vel", wp.lift_cmd_topic, wp.car_door_cmd_topic] + [wp.landing_door_cmd_topic(f) for f in wp.floors()]:
         assert entries[topic]["direction"] == "ROS_TO_GZ"
+
+
+def test_mock_reports_missing_ground_truth_instead_of_answering_no():
+    import threading
+
+    from elevator_sim.mock_vlm import MockConfig, MockVlm, make_server
+    from elevator_task.core.vlm_client import VlmClient, VlmConfig, VlmError
+
+    missing = ["/ground_truth/odom"]
+    mock = MockVlm(WorldParams(), MockConfig(latency_s=0.0), lambda: None, lambda: None, lambda: list(missing))
+    server = make_server(mock, "127.0.0.1", 0)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    client = VlmClient(VlmConfig(base_url=f"http://127.0.0.1:{server.server_address[1]}/v1"))
+    try:
+        ok, info = client.ping()
+        assert not ok and "/ground_truth/odom" in info
+        msg = [{"role": "user", "content": [{"type": "text", "text": 'Statement: "door open"'}]}]
+        with pytest.raises(VlmError, match="ground_truth"):
+            client.chat(msg, max_tokens=8, schema_name="condition_check", schema={})
+        missing.clear()
+        assert client.ping()[0]
+        assert "answer" in client.chat(msg, max_tokens=8, schema_name="condition_check", schema={}).text
+    finally:
+        server.shutdown()

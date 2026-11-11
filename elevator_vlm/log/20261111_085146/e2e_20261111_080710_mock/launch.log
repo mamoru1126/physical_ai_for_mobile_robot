@@ -1,0 +1,60 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-11-11-08-07-10-372181-PC-20211221A020-73
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [gz-1]: process started with pid [76]
+[INFO] [parameter_bridge-2]: process started with pid [78]
+[INFO] [elevator_controller-3]: process started with pid [80]
+[INFO] [mock_vlm-4]: process started with pid [82]
+[INFO] [safety_gate-5]: process started with pid [84]
+[INFO] [task_node-6]: process started with pid [86]
+[mock_vlm-4] [INFO] [1794384430.555025058] [mock_vlm]: モック VLM: http://127.0.0.1:8001/v1（遅れ 0.3 秒、指差しのずれ 0.0 画素、誤答の確率 0.0）. 画像は見ずに真値から答える
+[elevator_controller-3] [INFO] [1794384430.556033687] [elevator_controller]: エレベーター: 1 階で乗り 3 階へ. 全開の保持 6.0 秒、扉のセンサ あり. /elevator/call で呼ぶ
+[safety_gate-5] [INFO] [1794384430.582628357] [safety_gate]: 安全ゲート: 並進 0.5 m/s、旋回 1.2 rad/s まで
+[task_node-6] [INFO] [1794384430.593419387] [elevator_task]: Web UI: http://localhost:8080/  VLM: http://127.0.0.1:8001/v1 (mock-vlm)  記録: /runs/20261111_080710
+[parameter_bridge-2] [INFO] [1794384431.454661373] [gz_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.457574149] [gz_bridge]: Creating GZ->ROS Bridge: [/camera/image_raw (gz.msgs.Image) -> /camera/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.463226467] [gz_bridge]: Creating GZ->ROS Bridge: [/camera/camera_info (gz.msgs.CameraInfo) -> /camera/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.464781712] [gz_bridge]: Creating GZ->ROS Bridge: [/odom (gz.msgs.Odometry) -> /odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.468717254] [gz_bridge]: Creating ROS->GZ Bridge: [/cmd_vel (geometry_msgs/msg/Twist) -> /cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.470537902] [gz_bridge]: Creating GZ->ROS Bridge: [/ground_truth/odom (gz.msgs.Odometry) -> /ground_truth/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.471205929] [gz_bridge]: Creating GZ->ROS Bridge: [/elevator/joint_states (gz.msgs.Model) -> /elevator/joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.471896613] [gz_bridge]: Creating ROS->GZ Bridge: [/elevator/lift/cmd_vel (std_msgs/msg/Float64) -> /elevator/lift/cmd_vel (gz.msgs.Double)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.473381642] [gz_bridge]: Creating ROS->GZ Bridge: [/elevator/car_door/cmd_pos (std_msgs/msg/Float64) -> /elevator/car_door/cmd_pos (gz.msgs.Double)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.473803043] [gz_bridge]: Creating ROS->GZ Bridge: [/elevator/landing_door_1/cmd_pos (std_msgs/msg/Float64) -> /elevator/landing_door_1/cmd_pos (gz.msgs.Double)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.474167890] [gz_bridge]: Creating ROS->GZ Bridge: [/elevator/landing_door_2/cmd_pos (std_msgs/msg/Float64) -> /elevator/landing_door_2/cmd_pos (gz.msgs.Double)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.474520545] [gz_bridge]: Creating ROS->GZ Bridge: [/elevator/landing_door_3/cmd_pos (std_msgs/msg/Float64) -> /elevator/landing_door_3/cmd_pos (gz.msgs.Double)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.474858557] [gz_bridge]: Creating GZ->ROS Bridge: [/observer/floor_1/image_raw (gz.msgs.Image) -> /observer/floor_1/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.475228519] [gz_bridge]: Creating GZ->ROS Bridge: [/observer/floor_2/image_raw (gz.msgs.Image) -> /observer/floor_2/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.475541037] [gz_bridge]: Creating GZ->ROS Bridge: [/observer/floor_3/image_raw (gz.msgs.Image) -> /observer/floor_3/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-2] [INFO] [1794384431.475806853] [gz_bridge]: Creating GZ->ROS Bridge: [/observer/car/image_raw (gz.msgs.Image) -> /observer/car/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[gz-1] Authorization required, but no authorization protocol specified
+[gz-1] libEGL warning: egl: failed to create dri2 screen
+[gz-1] libEGL warning: egl: failed to create dri2 screen
+[gz-1] [1;33m[Wrn] [Ogre2Camera.cc:423] [0m[1;33mOgre2Camera::SetVisibilityMask: Mask bits [0m[1;33mc0000000[0m[1;33m are set but will be ignored as they conflict with the [0m[1;33mreserved bits used internally by the ogre2 backend.[0m[1;33m[0m
+[gz-1] [1;33m[Wrn] [Ogre2Camera.cc:423] [0m[1;33mOgre2Camera::SetVisibilityMask: Mask bits [0m[1;33mc0000000[0m[1;33m are set but will be ignored as they conflict with the [0m[1;33mreserved bits used internally by the ogre2 backend.[0m[1;33m[0m
+[gz-1] [1;33m[Wrn] [Ogre2Camera.cc:423] [0m[1;33mOgre2Camera::SetVisibilityMask: Mask bits [0m[1;33mc0000000[0m[1;33m are set but will be ignored as they conflict with the [0m[1;33mreserved bits used internally by the ogre2 backend.[0m[1;33m[0m
+[gz-1] [1;33m[Wrn] [Ogre2Camera.cc:423] [0m[1;33mOgre2Camera::SetVisibilityMask: Mask bits [0m[1;33mc0000000[0m[1;33m are set but will be ignored as they conflict with the [0m[1;33mreserved bits used internally by the ogre2 backend.[0m[1;33m[0m
+[gz-1] [1;33m[Wrn] [Ogre2Camera.cc:423] [0m[1;33mOgre2Camera::SetVisibilityMask: Mask bits [0m[1;33mc0000000[0m[1;33m are set but will be ignored as they conflict with the [0m[1;33mreserved bits used internally by the ogre2 backend.[0m[1;33m[0m
+[safety_gate-5] [INFO] [1794384433.305998640] [safety_gate]: 状態: (起動) → odom_lost
+[elevator_controller-3] [INFO] [1794384433.306238787] [elevator_controller]: 状態: (起動) → idle（階 None、かごの高さ None）
+[parameter_bridge-2] [INFO] [1794384433.313736676] [gz_bridge]: Passing message from ROS geometry_msgs/msg/Twist to Gazebo gz.msgs.Twist (showing msg only once per type)
+[parameter_bridge-2] [INFO] [1794384433.314026032] [gz_bridge]: Passing message from ROS std_msgs/msg/Float64 to Gazebo gz.msgs.Double (showing msg only once per type)
+[safety_gate-5] [INFO] [1794384433.325884353] [safety_gate]: 状態: odom_lost → idle
+[safety_gate-5] [INFO] [1794384437.088336510] [safety_gate]: 状態: idle → ok
+[elevator_controller-3] [INFO] [1794384437.091490183] [elevator_controller]: 呼び: 1 階で乗り、3 階へ向かいます
+[safety_gate-5] [INFO] [1794384439.088285123] [safety_gate]: 状態: ok → idle
+[safety_gate-5] [INFO] [1794384439.108293031] [safety_gate]: 状態: idle → ok
+[elevator_controller-3] [INFO] [1794384440.106497457] [elevator_controller]: 状態: idle → opening（階 1、かごの高さ 0.0）
+[elevator_controller-3] [INFO] [1794384441.906906705] [elevator_controller]: 状態: opening → open（階 1、かごの高さ 0.0）
+[safety_gate-5] [INFO] [1794384443.108022866] [safety_gate]: 状態: ok → idle
+[safety_gate-5] [INFO] [1794384443.226882862] [safety_gate]: 状態: idle → ok
+[elevator_controller-3] [INFO] [1794384450.007123220] [elevator_controller]: 状態: open → closing（階 1、かごの高さ -0.0）
+[elevator_controller-3] [INFO] [1794384451.827168456] [elevator_controller]: 状態: closing → idle（階 1、かごの高さ -0.0）
+[elevator_controller-3] [INFO] [1794384452.826988146] [elevator_controller]: 状態: idle → moving（階 1、かごの高さ -0.0）
+[elevator_controller-3] [INFO] [1794384460.427225105] [elevator_controller]: 状態: moving → opening（階 3、かごの高さ 5.9963）
+[elevator_controller-3] [INFO] [1794384462.227278706] [elevator_controller]: 状態: opening → open（階 3、かごの高さ 5.9982）
+[safety_gate-5] [INFO] [1794384463.507506260] [safety_gate]: 状態: ok → idle
+[safety_gate-5] [INFO] [1794384463.627078312] [safety_gate]: 状態: idle → ok
+[elevator_controller-3] [INFO] [1794384469.965978917] [elevator_controller]: 状態: open → closing（階 3、かごの高さ 5.9982）
+[safety_gate-5] [INFO] [1794384470.087599592] [safety_gate]: 状態: ok → idle
+[elevator_controller-3] [INFO] [1794384471.787082058] [elevator_controller]: 状態: closing → idle（階 3、かごの高さ 5.9982）
+[ERROR] [parameter_bridge-2]: process has died [pid 78, exit code -9, cmd '/opt/ros/humble/lib/ros_gz_bridge/parameter_bridge --ros-args -r __node:=gz_bridge --params-file /tmp/launch_params_11cccjv3'].

@@ -1,0 +1,75 @@
+{
+  "result": "PASS",
+  "outcome": "done",
+  "task_state": "done",
+  "task_message": "すべての手順が完了しました",
+  "steps": [
+    {
+      "phase": "done",
+      "seen_false": true,
+      "checks": 12,
+      "streak": 2,
+      "streak_answer": "yes",
+      "started_at": 3.7960000000000003,
+      "confirmed_at": 9.616000000000001,
+      "finished_at": 15.902000000000001,
+      "message": "目標点に着きました"
+    },
+    {
+      "phase": "done",
+      "seen_false": true,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": 15.902000000000001,
+      "confirmed_at": null,
+      "finished_at": 20.712,
+      "message": "178.9 度旋回しました"
+    },
+    {
+      "phase": "done",
+      "seen_false": true,
+      "checks": 19,
+      "streak": 2,
+      "streak_answer": "yes",
+      "started_at": 20.712,
+      "confirmed_at": 30.028000000000002,
+      "finished_at": 36.29,
+      "message": "目標点に着きました"
+    }
+  ],
+  "referee": {
+    "success": true,
+    "failed": false,
+    "board_floor": 1,
+    "dest_floor": 3,
+    "entered_car_s": 14.0,
+    "turned_s": 19.38,
+    "arrived_dest_floor_s": 26.56,
+    "exited_dest_s": 33.98,
+    "exited_wrong_floor_s": null,
+    "left_behind_s": null,
+    "fell_s": null,
+    "back_wall_margin_m": 0.436,
+    "max_lateral_at_door_m": 0.035,
+    "door_side_margin_m": 0.195,
+    "time": 36.4
+  },
+  "elevator": {
+    "phase": "open",
+    "floor": 3,
+    "lift_pos": 5.9982,
+    "lift_vel": 0.0,
+    "car_door_ratio": 1.0,
+    "serving": 3,
+    "stops": [
+      3
+    ],
+    "hold_open": false,
+    "obstructed": false,
+    "door_cycles": 1,
+    "reopen_count": 0,
+    "time": 36.4
+  },
+  "run_dir": "/runs/20261111_080710"
+}

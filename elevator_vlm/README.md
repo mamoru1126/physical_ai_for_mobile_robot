@@ -153,6 +153,7 @@ bash scripts/down.sh
 | `GUI` | true | false で Gazebo の画面を出さない |
 | `VLM_HF_MODEL` | RedHatAI/Qwen3.5-9B-quantized.w4a16 | vLLM が読み込むモデル |
 | `VLM_GPU_MEMORY_UTILIZATION` | 0.65 | vLLM が確保する GPU メモリの割合 |
+| `VLM_MAX_NUM_SEQS` | 8 | vLLM が同時に処理する要求の上限。大きくすると起動に必要なメモリが増える |
 | `VLM_BASE_URL` | http://127.0.0.1:8000/v1 | 実行系から見た VLM サーバの場所。別の PC でもよい |
 
 ### 実行系（`ros2_ws/src/elevator_sim/config/task_sim.yaml`）

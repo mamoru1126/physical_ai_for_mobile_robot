@@ -62,6 +62,10 @@ services:
       - "${VLM_GPU_MEMORY_UTILIZATION:-0.65}"
       - --reasoning-parser
       - qwen3
+      # 同時に処理する要求の上限. 実行系が同時に送るのは 2〜3 件なので小さくてよい.
+      # 既定（256）のままだと、Qwen3.5 の状態キャッシュがメモリに収まらず起動に失敗する
+      - --max-num-seqs
+      - "${VLM_MAX_NUM_SEQS:-8}"
     deploy:
       resources:
         reservations:

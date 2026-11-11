@@ -1,0 +1,73 @@
+{
+  "result": "FAIL",
+  "outcome": "failed",
+  "task_state": "failed",
+  "task_message": "条件が成り立たないまま時間切れになりました",
+  "steps": [
+    {
+      "phase": "failed",
+      "seen_false": true,
+      "checks": 240,
+      "streak": 240,
+      "streak_answer": "no",
+      "started_at": 0.8380000000000001,
+      "confirmed_at": null,
+      "finished_at": 120.97800000000001,
+      "message": "条件が成り立たないまま時間切れになりました"
+    },
+    {
+      "phase": "pending",
+      "seen_false": false,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": null,
+      "confirmed_at": null,
+      "finished_at": null,
+      "message": ""
+    },
+    {
+      "phase": "pending",
+      "seen_false": false,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": null,
+      "confirmed_at": null,
+      "finished_at": null,
+      "message": ""
+    }
+  ],
+  "referee": {
+    "success": false,
+    "failed": false,
+    "board_floor": 1,
+    "dest_floor": 3,
+    "entered_car_s": null,
+    "turned_s": null,
+    "arrived_dest_floor_s": null,
+    "exited_dest_s": null,
+    "exited_wrong_floor_s": null,
+    "left_behind_s": null,
+    "fell_s": null,
+    "back_wall_margin_m": null,
+    "max_lateral_at_door_m": 0.0,
+    "door_side_margin_m": 0.23,
+    "time": 121.4
+  },
+  "elevator": {
+    "phase": "idle",
+    "floor": 3,
+    "lift_pos": 5.9982,
+    "lift_vel": 0.0,
+    "car_door_ratio": 0.0,
+    "serving": null,
+    "stops": [],
+    "hold_open": false,
+    "obstructed": false,
+    "door_cycles": 2,
+    "reopen_count": 0,
+    "time": 121.4
+  },
+  "run_dir": "/runs/20261111_044646"
+}

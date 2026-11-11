@@ -26,6 +26,17 @@ from export_samples import DOOR_JA, DOORS, PLACE_JA, load_events, place_of, trut
 # 指差しの目標が「通り抜けた」と言える、敷居の先の距離 [m]（ロボットの半分の長さ 0.25 m + 余裕）
 EXIT_MIN_BEYOND_M = 0.45
 ENTER_BEYOND_M = (0.40, 1.15)       # かごの中に収まる範囲（奥行き 1.35 m のかごに、長さ 0.5 m のロボット）
+# 扉の開きがこれより大きい「途中」は、全開との境目とみなす（画像と真値の時刻のずれがあるので、どちらの答えでもよい）
+NEARLY_OPEN_RATIO = 0.85
+
+
+def expected_yes(truth: Dict[str, Any]) -> Optional[bool]:
+    """真値から決まる正解. 全開なら yes、全閉と途中なら no、全開との境目なら None（どちらでもよい）."""
+    if truth["door"] == "open":
+        return True
+    if truth["door"] == "partial" and float(truth.get("door_ratio") or 0.0) > NEARLY_OPEN_RATIO:
+        return None
+    return False
 
 
 def latest_run(root: str) -> Optional[str]:
@@ -133,15 +144,16 @@ class Analysis:
                 if row[ans]:
                     detail = f"（開き {pct(row[ans])}）" if key[1] == "partial" else ""
                     parts.append(f"{ans} {len(row[ans])}{detail}")
-            wrong = len(row["no"]) if key[1] == "open" else len(row["yes"])
+            wrong_yes = [r for r in row["yes"] if key[1] == "closed" or r <= NEARLY_OPEN_RATIO]
+            wrong = len(row["no"]) if key[1] == "open" else len(wrong_yes)
             self.out(f"       {PLACE_JA[key[0]]}・{DOOR_JA[key[1]]}: " + "、".join(parts)
                      + (f"   ← 食い違い {wrong}" if wrong else ""))
             place = PLACE_JA[key[0]]
             if key[1] == "open" and len(row["no"]) >= 2:
                 self.note(f"{place}で、扉が全開なのに no と答えています（{len(row['no'])} 回）. 近くからは開いた扉が"
                           "画面の外に出るので、条件文が「扉が見えていること」を前提にしていないか確かめてください")
-            if key[1] == "partial" and row["yes"]:
-                self.note(f"{place}で、扉が動いている途中（開き {pct(row['yes'])}）に yes と答えています. "
+            if key[1] == "partial" and wrong_yes:
+                self.note(f"{place}で、扉が動いている途中（開き {pct(wrong_yes)}）に yes と答えています. "
                           "閉まりかけの扉に向かって発進するおそれがあります. 条件文に「完全に開いている」ことを入れてください")
             if key[1] == "closed" and row["yes"]:
                 self.note(f"{place}で、扉が全閉なのに yes と答えています（{len(row['yes'])} 回）")
@@ -149,7 +161,7 @@ class Analysis:
             t = truth_of(m.get("_last_check") or {})
             if m["kind"] == "condition_confirmed" and t is not None:
                 self.out(f"     確定したときの扉（真値）: {DOOR_JA[t['door']]}（開き {round(float(t['door_ratio']) * 100)}%）")
-                if t["door"] != "open":
+                if expected_yes(t) is False:
                     self.note(f"扉が開き切っていないとき（開き {round(float(t['door_ratio']) * 100)}%）に条件が確定しました")
             if m["kind"] == "condition_false_confirmed" and t is not None and t["door"] == "open":
                 self.out("     「成り立たない」を確定したときの扉（真値）: 全開   ← 食い違い")
@@ -180,7 +192,8 @@ class Analysis:
         t = truth_of(e)
         head = f"{label}: " if brief else f"{label}「{e.get('target', '')}」: "
         if g is None:
-            return head + f"画素 (u={e.get('u')}, v={e.get('v')})"
+            # 古い記録（床の上の位置を残していない）か、地平線より上を指した（床に当たらない）
+            return head + f"画素 (u={e.get('u')}, v={e.get('v')})" + ("（床に当たらない点）" if self.ground else "")
         text = head + f"前 {g['ahead_m']:.2f} m・左 {g['left_m']:+.2f} m"
         if t is None or "goal_ahead_m" not in t:
             return text

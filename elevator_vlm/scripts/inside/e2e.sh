@@ -6,6 +6,7 @@
 #     PRINT_IMAGES  true にすると、要所の画像を小さくして base64 でログに出す（CI 用）
 #     PRINT_SAMPLES true にすると、正解つきの画像の組（机上評価用）を作って base64 でログに出す（CI 用）
 #     SAMPLES_PER_CATEGORY  その画像の、分類（場所 × 階 × 扉の様子）ごとの枚数（既定 3）
+#     PLAN_FILE     計画の JSON のファイル. 指定すると、VLM に計画を作らせず、この計画を読み込んで実行する
 #     DOOR_HOLD_S / DOOR_SENSOR / BOARD_FLOOR / DEST_FLOOR   エレベーターの設定
 set -u
 MODE="${1:-mock}"
@@ -25,7 +26,11 @@ else
 fi
 LAUNCH_PID=$!
 
-ros2 run elevator_sim e2e_runner --ros-args -p out_dir:="${OUT}" -p print_images:="${PRINT_IMAGES:-false}"
+RUNNER_ARGS=(-p out_dir:="${OUT}" -p print_images:="${PRINT_IMAGES:-false}")
+if [ -n "${PLAN_FILE:-}" ]; then
+  RUNNER_ARGS+=(-p plan_file:="${PLAN_FILE}")
+fi
+ros2 run elevator_sim e2e_runner --ros-args "${RUNNER_ARGS[@]}"
 CODE=$?
 
 if [ "${CODE}" != "0" ]; then

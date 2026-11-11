@@ -304,6 +304,27 @@ def test_export_labelled_samples_from_a_run(make_stack, tmp_path):
     assert len(set(names)) == len(names)
 
 
+def test_closeup_plan_stops_short_in_the_car_and_still_succeeds(make_stack, tmp_path):
+    # samples/plan_closeup.json: かごの手前寄り（1回目の実験でロボットが止まった位置）で止まる計画.
+    # 扉の近くからの見え方の画像を撮るために CI で使う. 扉を長く開けておいても、出発階では降りない
+    module = load_script("export_samples")
+    with open(os.path.join(os.path.dirname(os.path.dirname(SCRIPTS)), "samples", "plan_closeup.json"),
+              encoding="utf-8") as f:
+        plan = parse_plan(f.read())
+    run_dir = str(tmp_path / "run")
+    world = FakeWorld(ElevatorConfig(door_hold_s=16.0))
+    stack = make_stack(world, run_dir=run_dir)
+    result = run_task(stack, plan)
+    ref = world.referee.result()
+    assert result.ok and ref["success"] and ref["exited_wrong_floor_s"] is None, (result.message, ref)
+    assert not world.door_contact and world.logic.reopen_count == 0
+    stack.events.close()
+    samples = module.select(module.load_events(run_dir))
+    close = [s for s in samples if s["kind"] == "point" and s["place"] == "car"]
+    assert close and close[0]["door_ahead_m"] == pytest.approx(0.55, abs=0.05)     # 敷居まで 0.55 m（かごの中央なら 0.78 m）
+    assert {("car", 1, "open"), ("car", 3, "open")} <= {(s["place"], s["floor"], s.get("door")) for s in samples}
+
+
 def test_analysis_agrees_with_truth_for_a_perfect_vlm(make_stack, tmp_path):
     # 記録の分析: 真値どおりに答える VLM では、食い違いも、気づいた点も出ない
     module = load_script("analyze_run")

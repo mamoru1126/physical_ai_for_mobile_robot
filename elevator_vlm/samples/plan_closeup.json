@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "instruction": "扉が開いたら 1.55 m 前進して",
+      "when": {
+        "type": "when_true",
+        "condition": "The way directly in front of the robot is open: no door panel blocks any part of it."
+      },
+      "do": {
+        "skill": "move_straight",
+        "distance_m": 1.55
+      },
+      "timeout_s": 120
+    },
+    {
+      "instruction": "中に入ったら180度旋回して",
+      "when": {
+        "type": "now"
+      },
+      "do": {
+        "skill": "rotate",
+        "angle_deg": 180
+      },
+      "timeout_s": 30
+    },
+    {
+      "instruction": "再び扉が開いたら出て",
+      "when": {
+        "type": "after_false_then_true",
+        "condition": "The way directly in front of the robot is open: no door panel blocks any part of it."
+      },
+      "do": {
+        "skill": "go_to_visual_target",
+        "target": "hallway floor about 1 m beyond the open doorway"
+      },
+      "timeout_s": 300
+    }
+  ]
+}

@@ -36,10 +36,12 @@ jobs:
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
 
       # 扉を長く開けておく場合: 旋回が終わっても出発階の扉が開いている（検討資料の図2の A）.
-      # 「再び」は、閉じたのを見た後の「開いた」でだけ成り立つので、出発階で降りてはいけない
+      # 「再び」は、閉じたのを見た後の「開いた」でだけ成り立つので、出発階で降りてはいけない.
+      # 計画は用意したものを読み込む（かごの手前寄りで止まる. 1回目の実験で、ロボットが止まった位置に当たる）
       - name: End-to-end run with a long door-open time (must not leave at the boarding floor)
         run: |
-          docker run --rm -e RENDER=xvfb -e DOOR_HOLD_S=16 -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=60 \
+          docker run --rm -e RENDER=xvfb -e DOOR_HOLD_S=16 -e PLAN_FILE=/workspace/samples/plan_closeup.json \
+            -e PRINT_SAMPLES=true -e LAUNCH_LOG_LINES=60 \
             -v "$PWD/elevator_vlm/runs:/runs" elevator_vlm:ci bash /workspace/scripts/inside/e2e.sh mock
 
       - name: Upload run records

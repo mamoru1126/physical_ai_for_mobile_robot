@@ -17,3 +17,9 @@
 | 日付 | 環境 |
 | --- | --- |
 | 2026-11-11 | [エレベーターの乗り降りを VLM で実行する（Gazebo Harmonic、ROS 2 Humble、Qwen3.5-9B）](elevator_vlm/) |
+
+## Jetson の準備
+
+| 日付 | 手順 |
+| --- | --- |
+| 2026-11-22 | [Jetson AGX Orin を JetPack 7.2 にする（Jetson ISO の USB メモリを作るスクリプトつき）](jetson/) |

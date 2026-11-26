@@ -1,0 +1,63 @@
+# ベンチ用の実行系の設定（Orin で、実機の代わりにダミーの世界をつないで通す）.
+# 書いていない項目は既定値（elevator_task の config/task.yaml と同じ）.
+#   * カメラは実機と同じ /camera/compressed（JPEG）を受ける. 画像はダミーの世界が samples/ から選んで流す.
+#   * camera の取り付けは、samples/ を撮ったシミュレーションのロボットに合わせてある（実機の値ではない）.
+#   * 電源モードを最大にしない Orin では VLM が遅いので、時間の余裕を大きくしてある.
+
+vlm:
+  base_url: http://127.0.0.1:8000/v1       # 環境変数 VLM_BASE_URL があればそちら
+  model: vlm
+  timeout_s: 60.0              # 電源モードを抑えた Orin では、1回目の問いが遅いことがある
+  structured_output: true
+  disable_thinking: true
+
+perception:
+  jpeg_quality: 90
+  max_image_age_s: 1.0
+  point_scale: 1000.0
+  point_order: xy
+
+executor:
+  confirm_count: 2
+  check_period_s: 0.5
+  pre_departure_check: false
+  recheck_before_departure: true
+
+skills:
+  max_linear: 0.3
+  max_angular: 0.8
+  max_target_distance_m: 3.0
+  departure_deadline_s: 15.0   # 条件の確定から発進まで. 指差しと確かめ直しの推論が遅くても間に合うように
+  verify_point: false
+  # ダミーのカメラは、同じ場所と状態なら同じ画像を出し続ける（ロボットが進んでも画像は変わらない）.
+  # 走行中に指差しをやり直すと、目標が前へずれていくので使わない
+  repoint_period_s: 0.0
+
+camera:
+  image_topic: /camera/compressed
+  info_topic: /camera/camera_info
+  height_m: 0.50
+  pitch_deg: 15.0
+  x_offset_m: 0.20
+  hfov_deg: 90.0
+
+web:
+  port: 8080
+  buttons:
+    - {name: call, label: エレベーターを呼ぶ, service: /elevator/call}
+    - {name: hold, label: 「開」を押す／離す, service: /elevator/toggle_hold}
+    - {name: reset_sim, label: 初期位置に戻す, service: /sim/reset}
+  status_topics:
+    - name: elevator
+      label: ダミーの世界（真値）
+      topic: /elevator/state
+      log: [time, phase, floor, hold_open, door, door_ratio, robot_in_car, robot_floor,
+            robot_x, robot_y, robot_yaw_deg, goal_ahead_m, goal_left_m, door_ahead_m, camera_image]
+    - {name: referee, label: 成否の判定（真値）, topic: /sim/referee}
+
+instructions:
+  - 扉が開いたら中に入って
+  - 中に入ったら180度旋回して
+  - 再び扉が開いたら出て
+
+log_dir: /runs

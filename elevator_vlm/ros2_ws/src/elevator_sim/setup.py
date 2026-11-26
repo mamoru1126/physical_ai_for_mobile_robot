@@ -39,6 +39,7 @@ setup(
             "mock_vlm = elevator_sim.mock_vlm_node:main",
             "e2e_runner = elevator_sim.e2e_runner:main",
             "generate_world = elevator_sim.world_gen:main",
+            "bench_world = elevator_sim.bench_world_node:main",
         ],
     },
 )

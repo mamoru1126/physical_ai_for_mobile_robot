@@ -1,7 +1,7 @@
 """安全ゲートの ROS 2 ノード. スキルの出力（cmd_vel_raw）に制限をかけて台車（cmd_vel）に流す.
 
   購読:  cmd_vel_raw (geometry_msgs/Twist)、odom (nav_msgs/Odometry)、
-         camera/camera_info (sensor_msgs/CameraInfo、カメラが生きているかの監視用)
+         camera/camera_info (sensor_msgs/CameraInfo、カメラが生きているかの監視用. 設定の camera.info_topic)
   配信:  cmd_vel (geometry_msgs/Twist、50 Hz)、safety/state (std_msgs/String)
   提供:  safety/stop、safety/reset (std_srvs/Trigger)
 """
@@ -37,7 +37,7 @@ class SafetyGateNode(Node):
         self._state_pub = self.create_publisher(String, "safety/state", 10)
         self.create_subscription(Twist, "cmd_vel_raw", self._on_cmd, 10)
         self.create_subscription(Odometry, "odom", self._on_odom, qos_profile_sensor_data)
-        self.create_subscription(CameraInfo, "camera/camera_info", self._on_camera, qos_profile_sensor_data)
+        self.create_subscription(CameraInfo, cfg.camera.info_topic, self._on_camera, qos_profile_sensor_data)
         self.create_service(Trigger, "safety/stop", self._on_stop)
         self.create_service(Trigger, "safety/reset", self._on_reset)
         self.create_timer(0.02, self._tick)

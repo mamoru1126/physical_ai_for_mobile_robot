@@ -2,6 +2,8 @@
 
   購読:  camera/image_raw (sensor_msgs/Image)、camera/camera_info (sensor_msgs/CameraInfo)、
          odom (nav_msgs/Odometry)
+         画像のトピックは設定の camera.image_topic で変えられる. 名前が compressed で終われば
+         sensor_msgs/CompressedImage（実機のロボットの /camera/compressed など）として受けて展開する
   配信:  cmd_vel_raw (geometry_msgs/Twist)  ← safety_gate が制限をかけて cmd_vel に流す
   呼出:  safety/stop、safety/reset (std_srvs/Trigger)
 
@@ -9,6 +11,7 @@ Web UI もこのプロセスの中で動く（既定は http://<ホスト>:8080/
 """
 from __future__ import annotations
 
+import io
 import json
 import math
 import os
@@ -25,7 +28,7 @@ from nav_msgs.msg import Odometry
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
@@ -61,6 +64,22 @@ def image_to_rgb8(msg: Image) -> Optional[bytes]:
     return np.ascontiguousarray(arr).tobytes()
 
 
+def compressed_to_rgb8(msg: CompressedImage) -> Optional[Tuple[int, int, bytes]]:
+    """sensor_msgs/CompressedImage（JPEG、PNG）を (幅, 高さ, RGB8 のバイト列) にする. 読めなければ None."""
+    from PIL import Image as PilImage  # 遅延 import
+
+    try:
+        img = PilImage.open(io.BytesIO(bytes(msg.data)))
+        img = img.convert("RGB")
+    except Exception:  # noqa: BLE001  壊れた画像は捨てる
+        return None
+    return img.width, img.height, img.tobytes()
+
+
+def is_compressed_topic(topic: str) -> bool:
+    return topic.rstrip("/").endswith("compressed")
+
+
 def _stamp_to_sec(stamp) -> float:
     return float(stamp.sec) + float(stamp.nanosec) * 1e-9
 
@@ -75,8 +94,14 @@ class RosRobotIO(RobotIO):
         self._history = PoseHistory(horizon_s=15.0)
         self._warned_encoding = False
         self._cmd_pub = node.create_publisher(Twist, "cmd_vel_raw", 10)
-        node.create_subscription(Image, "camera/image_raw", self._on_image, qos_profile_sensor_data)
-        node.create_subscription(CameraInfo, "camera/camera_info", self._on_info, qos_profile_sensor_data)
+        image_topic = cfg.camera.image_topic
+        if is_compressed_topic(image_topic):
+            node.create_subscription(CompressedImage, image_topic, self._on_compressed, qos_profile_sensor_data)
+        else:
+            node.create_subscription(Image, image_topic, self._on_image, qos_profile_sensor_data)
+        node.create_subscription(CameraInfo, cfg.camera.info_topic, self._on_info, qos_profile_sensor_data)
+        node.get_logger().info(f"カメラ: {image_topic}（{'圧縮' if is_compressed_topic(image_topic) else '非圧縮'}）、"
+                               f"{cfg.camera.info_topic}")
         node.create_subscription(Odometry, "odom", self._on_odom, qos_profile_sensor_data)
 
     # -- 受信 ---------------------------------------------------------------
@@ -90,6 +115,18 @@ class RosRobotIO(RobotIO):
         stamp = _stamp_to_sec(msg.header.stamp) or self.now()
         with self._lock:
             self._frame = Frame(stamp, int(msg.width), int(msg.height), rgb)
+
+    def _on_compressed(self, msg: CompressedImage) -> None:
+        decoded = compressed_to_rgb8(msg)
+        if decoded is None:
+            if not self._warned_encoding:
+                self._warned_encoding = True
+                self._node.get_logger().error(f"圧縮画像を展開できません（形式: {msg.format}）")
+            return
+        width, height, rgb = decoded
+        stamp = _stamp_to_sec(msg.header.stamp) or self.now()
+        with self._lock:
+            self._frame = Frame(stamp, width, height, rgb)
 
     def _on_info(self, msg: CameraInfo) -> None:
         fx, fy, cx, cy = float(msg.k[0]), float(msg.k[4]), float(msg.k[2]), float(msg.k[5])

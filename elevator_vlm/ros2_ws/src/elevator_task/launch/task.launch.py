@@ -7,6 +7,8 @@
   web_port      Web UI のポート（既定 8080）
   log_dir       記録の保存先（既定 /runs）
   use_sim_time  シミュレーション時刻を使うか（既定 true. 実機では false）
+  cmd_vel_topic 安全ゲート（このパッケージの safety_gate）が速度指令を出すトピック（既定 cmd_vel）.
+                後ろにもう1つ安全ゲート（点群を見るもの）をつなぐときは、その入力（例 /vlm_cmd_vel）にする
 VLM サーバの場所は、環境変数 VLM_BASE_URL / VLM_MODEL か設定ファイルで指定する.
 """
 import os
@@ -28,10 +30,12 @@ def generate_launch_description():
         DeclareLaunchArgument("web_port", default_value="8080"),
         DeclareLaunchArgument("log_dir", default_value="/runs"),
         DeclareLaunchArgument("use_sim_time", default_value="true"),
+        DeclareLaunchArgument("cmd_vel_topic", default_value="cmd_vel"),
         Node(
             package="elevator_task",
             executable="safety_gate",
             name="safety_gate",
+            remappings=[("cmd_vel", LaunchConfiguration("cmd_vel_topic"))],
             parameters=[{
                 "config_file": ParameterValue(config_file, value_type=str),
                 "use_sim_time": use_sim_time,

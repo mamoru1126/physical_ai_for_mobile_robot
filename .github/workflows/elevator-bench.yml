@@ -1,0 +1,98 @@
+name: elevator-bench
+
+# Orin のベンチ（実機の代わりにダミーの世界をつないで、エレベーターのタスクを通す）の確認.
+#   bench-e2e:  x86 で、実行系のイメージと安全ゲートのイメージを作り、モック VLM で1回通す
+#               （ダミーの世界 → 実行系 → 安全ゲート（Python）→ 安全ゲート（点群、C++）→ ダミーの世界）
+#   build-arm64: Orin と同じ arm64 で、2つのイメージが作れるか（中の単体テストも通す）
+
+on:
+  push:
+    paths:
+      - "elevator_vlm/ros2_ws/**"
+      - "elevator_vlm/docker/**"
+      - "elevator_vlm/samples/**"
+      - "safety_gate/**"
+      - "jetson/bench/**"
+      - ".github/workflows/elevator-bench.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bench-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the runtime image (unit tests run inside)
+        run: |
+          set -o pipefail
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f elevator_vlm/docker/Dockerfile.runtime \
+            -t elevator-runtime:ci elevator_vlm 2>&1 | tail -n 60
+
+      - name: Build the safety gate image
+        run: |
+          set -o pipefail
+          DOCKER_BUILDKIT=1 docker build --progress=plain -t safety-gate:ci safety_gate 2>&1 | tail -n 30
+
+      - name: Start the safety gate and the bench (mock VLM)
+        run: |
+          mkdir -p runs
+          docker run -d --name bench-gate --network host --ipc host -e ROS_LOCALHOST_ONLY=1 \
+            -v "$PWD/jetson/bench/safety_gate:/config:ro" safety-gate:ci
+          docker run -d --name bench-runtime --network host --ipc host \
+            -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 -v "$PWD/runs:/runs" \
+            elevator-runtime:ci ros2 launch elevator_sim bench.launch.py vlm:=mock
+          sleep 15
+          docker logs bench-gate 2>&1 | tail -n 20
+          docker logs bench-runtime 2>&1 | tail -n 40
+
+      - name: Run the task once through the Web UI API
+        run: |
+          docker exec -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 bench-runtime /entrypoint.sh \
+            ros2 run elevator_sim e2e_runner --ros-args -p out_dir:=/runs/bench_e2e -p task_timeout_s:=300.0
+
+      - name: Check the Web UIs
+        if: always()
+        run: |
+          curl -sf http://127.0.0.1:8080/ | head -c 200; echo
+          curl -sf "http://127.0.0.1:8080/api/state" | python3 -c "import json,sys; s=json.load(sys.stdin); print('task:', s['task_state'], s['task_message'])"
+          curl -sf http://127.0.0.1:9001/latest | python3 -c "import json,sys; s=json.load(sys.stdin); print('safety gate:', s['state'], s['reason'], 'voxels', s['nvox'], 'frames', s['frames'])"
+
+      - name: Logs
+        if: always()
+        run: |
+          echo "==== bench-runtime ===="; docker logs bench-runtime 2>&1 | tail -n 200
+          echo "==== bench-gate ===="; docker logs bench-gate 2>&1 | tail -n 60
+          docker rm -f bench-runtime bench-gate > /dev/null 2>&1 || true
+
+      - name: Upload run records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elevator-bench-runs
+          path: runs
+          retention-days: 14
+
+  build-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the runtime image for arm64 (unit tests run inside)
+        run: |
+          set -o pipefail
+          docker buildx build --platform linux/arm64 --progress=plain -f elevator_vlm/docker/Dockerfile.runtime \
+            -t elevator-runtime:arm64 elevator_vlm 2>&1 | tail -n 40
+
+      - name: Build the safety gate image for arm64
+        run: |
+          set -o pipefail
+          docker buildx build --platform linux/arm64 --progress=plain -t safety-gate:arm64 safety_gate 2>&1 | tail -n 30

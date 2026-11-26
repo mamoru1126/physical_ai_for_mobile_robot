@@ -45,6 +45,8 @@ camera:
   pitch_deg: 15.0              # 俯角（下向きが正）
   x_offset_m: 0.20             # ロボット中心からカメラまでの前後の距離
   hfov_deg: 90.0               # カメラ情報が届かないときだけ使う水平画角
+  image_topic: camera/image_raw    # 名前が compressed で終われば圧縮画像として受ける（例 /camera/compressed）
+  info_topic: camera/camera_info
 
 web:
   port: 8080

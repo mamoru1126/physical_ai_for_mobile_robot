@@ -1,0 +1,53 @@
+# ベンチ用の安全ゲート（safety_gate/）の設定. 実機用の /etc/safety-gate/config.yaml とは別のもの.
+# 実機の代わりにダミーの世界をつなぐので、足形は samples/ を撮ったシミュレーションのロボットに合わせてある.
+
+# ROS 2 のドメイン. 本番（42）と分ける. さらに ROS_LOCALHOST_ONLY=1 で、この PC の中だけで通信する
+# （同じネットワークにロボットの橋渡しがあっても、ベンチの /cmd_vel がロボットに届かないように）
+ros_domain_id: 43
+
+topics:
+  cmd_in: /vlm_cmd_vel          # 実行系（elevator_task の safety_gate）の出力
+  cloud: /cloud                 # ダミーの世界の点群
+  cmd_out: /cmd_vel             # ダミーの世界への速度指令
+  state: /safety_gate/state
+  debug: /safety_gate/debug
+
+frames:
+  base: base_link
+  cloud: ""                     # 点群のヘッダの座標系（cloud_link）. TF はダミーの世界が出す
+
+tf:
+  publish_static: false
+
+# シミュレーションのロボット（長さ 0.50 m、車輪を含む幅 0.44 m）
+footprint:
+  - [0.25, 0.22]
+  - [0.25, -0.22]
+  - [-0.25, -0.22]
+  - [-0.25, 0.22]
+
+height_range:
+  min_z: 0.05
+  max_z: 1.5
+
+safety:
+  margin: 0.10
+  time_horizon: 2.0
+  stop_time: 0.5
+  time_step: 0.1
+  voxel_size: 0.05
+  obstacle_voxel_threshold: 3
+  cmd_timeout: 0.5
+  cloud_timeout: 0.5
+  rate: 20.0
+
+limits:
+  max_linear_x: 0.5
+  max_linear_y: 0.5
+  max_angular_z: 1.2
+
+web:
+  port: 9001
+  rate: 5.0
+  view_size: 10.0
+  cell_size: 0.05

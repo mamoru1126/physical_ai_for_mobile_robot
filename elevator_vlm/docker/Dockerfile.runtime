@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# エレベーター課題の実行系（Gazebo なし）. Orin（arm64）でも x86 でも作れる.
+#   * 実行系（elevator_task）: 計画、判定、指差し、スキル、Web UI、速度の安全ゲート
+#   * ベンチ用のダミーの世界（elevator_sim の bench_world）: 実機の代わりに /odom やカメラ画像を出す
+# VLM は別のコンテナ（vLLM）で動かし、HTTP でつなぐ. 点群を見る安全ゲートも別のコンテナ（safety_gate/）.
+# =============================================================================
+ARG BASE_IMAGE=ros:humble-ros-base-jammy
+FROM ${BASE_IMAGE}
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONUNBUFFERED=1 \
+    ELEVATOR_VLM_ROOT=/workspace \
+    ELEVATOR_SAMPLES_DIR=/workspace/samples \
+    ELEVATOR_SKIP_BUILD=1
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-colcon-common-extensions \
+        python3-numpy python3-pil python3-yaml python3-pytest fonts-dejavu-core \
+        curl less nano \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . /workspace
+WORKDIR /workspace
+RUN source /opt/ros/humble/setup.bash \
+    && mkdir -p /opt/elevator_ws \
+    && colcon --log-base /opt/elevator_ws/log build \
+        --base-paths /workspace/ros2_ws/src \
+        --build-base /opt/elevator_ws/build --install-base /opt/elevator_ws/install
+
+# ---- 動作確認 --------------------------------------------------------------------
+# 1. ROS に依存しない部分の単体テストと、擬似世界での通し試験、ベンチの部品の試験
+# 2. ノードが import できるか、launch ファイルの引数が解釈できるか
+RUN source /opt/ros/humble/setup.bash && source /opt/elevator_ws/install/setup.bash \
+    && python3 -m pytest -q -p no:cacheprovider /workspace/ros2_ws/src/elevator_task/test \
+    && python3 -m pytest -q -p no:cacheprovider /workspace/ros2_ws/src/elevator_sim/test \
+    && python3 -c "import elevator_task.task_node, elevator_task.safety_gate_node, elevator_sim.bench_world_node, elevator_sim.mock_vlm_node, elevator_sim.e2e_runner; print('nodes import ok')" \
+    && ros2 launch elevator_sim bench.launch.py --show-args > /dev/null \
+    && ros2 launch elevator_task task.launch.py --show-args > /dev/null
+
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["ros2", "launch", "elevator_sim", "bench.launch.py"]

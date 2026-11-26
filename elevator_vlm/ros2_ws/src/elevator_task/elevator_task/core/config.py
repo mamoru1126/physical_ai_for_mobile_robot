@@ -31,6 +31,9 @@ class CameraMount:
     x_offset_m: float = 0.20       # ロボット中心からの前後の距離
     y_offset_m: float = 0.0
     hfov_deg: float = 90.0         # カメラ情報が届かないときだけ使う水平画角
+    # 画像のトピック. 名前が compressed で終われば sensor_msgs/CompressedImage（JPEG など）として受ける
+    image_topic: str = "camera/image_raw"
+    info_topic: str = "camera/camera_info"
 
 
 @dataclass

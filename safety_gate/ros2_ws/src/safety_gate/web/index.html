@@ -81,8 +81,8 @@ window.addEventListener("resize", resize);
 function decodeCells(b64, bpi) {
   if (!b64) return [];
   const raw = atob(b64);
-  const out = new Array(raw.length / bpi);
-  for (let i = 0, j = 0; i < raw.length; i += bpi, j++) {
+  const out = new Array(Math.floor(raw.length / bpi));
+  for (let i = 0, j = 0; i + bpi <= raw.length; i += bpi, j++) {
     let v = 0;
     for (let b = bpi - 1; b >= 0; b--) v = v * 256 + raw.charCodeAt(i + b);
     out[j] = v;

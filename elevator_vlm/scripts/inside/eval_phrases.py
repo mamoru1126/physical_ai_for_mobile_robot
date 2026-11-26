@@ -101,6 +101,25 @@ def camera_of(cfg, frame: Frame) -> CameraModel:
                        mount.height_m, math.radians(mount.pitch_deg), mount.x_offset_m)
 
 
+def latency_stats(values: List[float]) -> Optional[Dict[str, float]]:
+    """応答時間のまとめ（平均、中央値、95 パーセンタイル、最大）. 値がなければ None."""
+    values = sorted(v for v in values if v)
+    if not values:
+        return None
+
+    def pick(q: float) -> float:
+        return values[min(len(values) - 1, max(0, math.ceil(q * len(values)) - 1))]
+
+    return {"n": len(values), "mean": round(sum(values) / len(values), 3), "p50": round(pick(0.5), 3),
+            "p95": round(pick(0.95), 3), "max": round(values[-1], 3)}
+
+
+def latency_text(stats: Optional[Dict[str, float]]) -> str:
+    if not stats:
+        return ""
+    return f"平均 {stats['mean']:.2f} 秒、95% {stats['p95']:.2f} 秒"
+
+
 def eval_conditions(cfg, vlm: VlmClient, phrases: List[str], systems: List[str], checks: List[Dict[str, Any]],
                     frames: Dict[str, Frame], workers: int) -> List[Dict[str, Any]]:
     results = []
@@ -128,10 +147,12 @@ def eval_conditions(cfg, vlm: VlmClient, phrases: List[str], systems: List[str],
                                   "door": item["door"], "door_ratio": item.get("door_ratio"),
                                   "answer": None if answer is None else ("yes" if answer else "no")})
             latencies = [lat for _, lat in answers if lat]
+            stats = latency_stats(latencies)
             results.append({"phrase": phrase, "system": system,
                             "correct": sum(c for c, _ in by.values()), "total": sum(t for _, t in by.values()),
                             "by_category": by, "wrong": wrong,
-                            "latency_s": round(sum(latencies) / len(latencies), 3) if latencies else None})
+                            "latency_s": stats["mean"] if stats else None, "latency": stats,
+                            "latencies_s": [round(lat, 3) for lat in latencies]})
     return results
 
 
@@ -147,7 +168,8 @@ def eval_targets(cfg, vlm: VlmClient, targets: Dict[str, List[str]], points: Lis
             def ask(item: Dict[str, Any], phrase=phrase, place=place) -> Dict[str, Any]:
                 frame = frames[item["path"]]
                 res = perception.point(phrase, frame=frame)
-                out: Dict[str, Any] = {"file": item["file"], "source": item["source"], "ok": False}
+                out: Dict[str, Any] = {"file": item["file"], "source": item["source"], "ok": False,
+                                       "latency_s": round(res.latency_s, 3) if res.latency_s else None}
                 if not res.ok:
                     out["error"] = res.error
                     return out
@@ -176,7 +198,8 @@ def eval_targets(cfg, vlm: VlmClient, targets: Dict[str, List[str]], points: Lis
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 rows = list(pool.map(ask, items))
             results.append({"place": place, "phrase": phrase, "ok": sum(1 for r in rows if r["ok"]),
-                            "total": len(rows), "results": rows})
+                            "total": len(rows), "results": rows,
+                            "latency": latency_stats([r["latency_s"] for r in rows if r.get("latency_s")])})
     return results
 
 
@@ -208,7 +231,8 @@ def report(model: str, checks: List[Dict[str, Any]], points: List[Dict[str, Any]
                     if part:
                         cells.append(f"{PLACE_SHORT[place]} " + " ".join(part))
                 rate = 100.0 * r["correct"] / r["total"] if r["total"] else 0.0
-                lat = f" {r['latency_s']:.2f}秒" if r["latency_s"] else ""
+                stats = r.get("latency")
+                lat = f" {stats['mean']:.2f}秒（95% {stats['p95']:.2f}）" if stats else ""
                 lines.append(f"     {r['system']:<6} " + " ｜ ".join(cells)
                              + f" ｜ 計 {r['correct']}/{r['total']}（{rate:.0f}%）{lat}")
         ranked = sorted(cond, key=lambda r: (-r["correct"], r["latency_s"] or 0.0))
@@ -235,7 +259,8 @@ def report(model: str, checks: List[Dict[str, Any]], points: List[Dict[str, Any]
             lines.append(f" {PLACE_JA[place]}から（正解は{'かごの中央' if place == 'hall' else '乗場の 1 m 先'}）")
             for r in rows:
                 number += 1
-                lines.append(f" [T{number}] {r['phrase']}   → OK {r['ok']}/{r['total']}")
+                lat = latency_text(r.get("latency"))
+                lines.append(f" [T{number}] {r['phrase']}   → OK {r['ok']}/{r['total']}" + (f"（{lat}）" if lat else ""))
                 for x in r["results"]:
                     if "ahead_m" not in x:
                         lines.append(f"       {x['file']}: {x.get('error', '点を読めません')}")
@@ -244,6 +269,16 @@ def report(model: str, checks: List[Dict[str, Any]], points: List[Dict[str, Any]
                     lines.append(f"       {x['file']}: 前 {x['ahead_m']:.2f} m・左 {x['left_m']:+.2f} m{beyond}"
                                  f"（正解とのずれ 前後 {x['d_ahead_m']:+.2f} m、左右 {x['d_left_m']:+.2f} m）"
                                  f" {'OK' if x['ok'] else 'NG'}")
+    # 応答時間のまとめ（1回ずつ順に問いかけたときの値が、実機での待ち時間の目安になる）
+    check_lat = latency_stats([v for r in cond for v in r.get("latencies_s", [])])
+    point_lat = latency_stats([x["latency_s"] for r in targ for x in r["results"] if x.get("latency_s")])
+    if check_lat or point_lat:
+        lines.append("")
+        lines.append("応答時間（1回あたり）")
+        for name, stats in (("判定", check_lat), ("指差し", point_lat)):
+            if stats:
+                lines.append(f"  {name}: 平均 {stats['mean']:.2f} 秒、中央値 {stats['p50']:.2f} 秒、"
+                             f"95% {stats['p95']:.2f} 秒、最大 {stats['max']:.2f} 秒（{stats['n']} 回）")
     return "\n".join(lines)
 
 
@@ -256,7 +291,8 @@ def main() -> int:
     parser.add_argument("--system", default="both", choices=["both"] + sorted(CHECK_SYSTEMS),
                         help="判定のシステムプロンプト（既定 both: 両方を比べる）")
     parser.add_argument("--per-category", type=int, default=3, help="記録から取る画像の、分類ごとの枚数（既定 3）")
-    parser.add_argument("--workers", type=int, default=4, help="同時に問いかける数（既定 4）")
+    parser.add_argument("--workers", type=int, default=4,
+                        help="同時に問いかける数（既定 4）. 応答時間を測るときは 1 にする")
     parser.add_argument("--out", default="/runs", help="結果の保存先のディレクトリ（既定 /runs）")
     opts = parser.parse_args()
 

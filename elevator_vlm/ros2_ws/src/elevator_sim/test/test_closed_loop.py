@@ -415,6 +415,12 @@ def test_phrase_evaluation_tallies_answers_by_place_and_door_state(make_stack, t
     assert by_place["hall"]["ok"] == 0 and by_place["car"]["ok"] == 0
     text = module.report("canned", checks, points, cond, targ)
     assert "[C1] X is open." in text and "合計の高い順" in text and "[T2] b" in text and "かご 閉0/" in text
+    # 応答時間のまとめ（1 回あたり）. この VLM はいつも 0.2 秒で答える
+    assert "応答時間（1回あたり）" in text
+    assert "判定: 平均 0.20 秒、中央値 0.20 秒、95% 0.20 秒、最大 0.20 秒" in text
+    assert "指差し: 平均 0.20 秒" in text
+    assert module.latency_stats([0.1, 0.2, 0.3, 0.4, 1.0]) == {"n": 5, "mean": 0.4, "p50": 0.3, "p95": 1.0, "max": 1.0}
+    assert module.latency_stats([]) is None
 
 
 def test_recheck_before_departure_catches_a_door_that_closed_while_pointing(make_stack):

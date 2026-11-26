@@ -9,6 +9,11 @@
      扉の判定と指差しがどれだけ合うか（ほかの言い回しとの比較は scripts/vlm_phrases.sh）
 
 1〜3 は設定の確認で、NG があれば終了コードが 1 になる. 4 は VLM の実力の確認で、終了コードには影響しない.
+
+環境変数:
+  ELEVATOR_VLM_ROOT  elevator_vlm フォルダの場所（既定 /workspace. コンテナの外で動かすときに指定する）
+  VLM_BASE_URL / VLM_MODEL  VLM サーバ（既定は設定ファイルの値）
+  VLM_EVAL_WORKERS   4 の机上評価で同時に問いかける数（既定 4. 応答時間を測るときは 1）
 """
 import json
 import os
@@ -64,10 +69,14 @@ def desk_eval(cfg, vlm: VlmClient) -> None:
     frames = {s["path"]: eval_phrases.frame_of(s["path"]) for s in samples}
     targets = {place: list((phrases.get("targets") or {}).get(place, []))[:1]
                for place in eval_phrases.TARGET_PLACES}
+    # 同時に問いかける数. 応答時間を実機の待ち時間として見たいとき（Orin で測るときなど）は 1 にする
+    workers = max(1, int(os.environ.get("VLM_EVAL_WORKERS", "4")))
     cond = eval_phrases.eval_conditions(cfg, vlm, list(phrases.get("conditions", []))[:1],
-                                        [cfg.perception.check_prompt], checks, frames, 4)
-    targ = eval_phrases.eval_targets(cfg, vlm, targets, points, frames, 4)
+                                        [cfg.perception.check_prompt], checks, frames, workers)
+    targ = eval_phrases.eval_targets(cfg, vlm, targets, points, frames, workers)
     print("\n[4] 机上評価（今の既定の言い回し. 正解はシミュレータの真値. ほかの候補との比較は scripts/vlm_phrases.sh）")
+    print(f"    同時に問いかける数: {workers}" + ("（応答時間は 1 回ずつ順に問いかけたときの値）" if workers == 1
+                                            else "（応答時間は同時に問いかけたときの値. 1 回ずつは VLM_EVAL_WORKERS=1）"))
     print(eval_phrases.report(cfg.vlm.model, checks, points, cond, targ))
 
 

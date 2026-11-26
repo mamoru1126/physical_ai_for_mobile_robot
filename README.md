@@ -23,3 +23,4 @@
 | 日付 | 手順 |
 | --- | --- |
 | 2026-11-22 | [Jetson AGX Orin を JetPack 7.2 にする（Jetson ISO の USB メモリを作るスクリプトつき）](jetson/) |
+| 2026-11-26 | [Orin で VLM を動かして、速さを測る（起動と測定のスクリプトつき）](jetson/vlm.md) |

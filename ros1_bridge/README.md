@@ -29,6 +29,10 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 | ROS 1 → ROS 2（ロボットのものを Orin で受ける） | `/odom` | `nav_msgs/Odometry` |
 | ROS 1 → ROS 2（ロボットのものを Orin で受ける） | `/cloud` | `sensor_msgs/PointCloud2` |
 | ROS 2 → ROS 1（Orin からロボットへ流す） | `/cmd_vel` | `geometry_msgs/Twist` |
+| 両方向 | `/tf`、`/tf_static` | `tf2_msgs/TFMessage` |
+
+- TF は、[安全ゲート](../safety_gate/) が点群を `cloud_link` から `base_link` に直すのに使います。要らなければ `BRIDGE_TF=false` にします。
+- `/tf_static` は、ros1_bridge が自動で「全部とっておき、あとから起動した相手にも渡す」設定（keep all、transient local）にします。ROS 2 の側で、安全ゲートをあとから起動しても受け取れます。
 
 ## 中身
 
@@ -41,7 +45,7 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 
 - Humble の Ubuntu 22.04 には、ROS 1 の公式のパッケージがありません。そこで、Ubuntu 自身が配っている ROS 1 を入れ、ros1_bridge をコンテナの中で作ります。やり方は ROS 2 の公式の手引き（[Using ros1_bridge with upstream ROS on Ubuntu 22.04](https://docs.ros.org/en/humble/How-To-Guides/Using-ros1_bridge-Jammy-upstream.html)）と、[ros-humble-ros1-bridge-builder](https://github.com/TommyChangUMD/ros-humble-ros1-bridge-builder) にならいました。
 - コンテナの中は Ubuntu 22.04 なので、ロボットの PC が Ubuntu 20.04 などでも動きます。
-- イメージを作る最後に、`Odometry`、`PointCloud2`、`Twist` を橋渡しできるかを確かめます。できなければ、そこで止まります。
+- イメージを作る最後に、`Odometry`、`PointCloud2`、`Twist`、`TFMessage` を橋渡しできるかを確かめます。できなければ、そこで止まります。
 - roscore が動くまで待ちます。roscore が止まったら（15 秒ほど見えなかったら）、起動し直して、また待ちます。ロボットの PC の電源を入れた直後に、roscore があとから起動しても大丈夫です。
 - 橋渡しは、両側に送り手と受け手がそろったトピックだけ流れます。Orin で `/cmd_vel` を出すノードが動いていなければ、ロボットには何も流れません。
 
@@ -97,6 +101,7 @@ sudo systemctl restart ros1-bridge
 | `ROS1_IP` | auto | ROS 1 のノードどうしがつなぐときの、この PC の IP。localhost なら 127.0.0.1 になる |
 | `ROS1_HOSTS` | auto | ROS 1 のノードが名前（ホスト名）で名乗っていて、名前が引けないときは、roscore と同じ PC とみなす |
 | `ODOM_TOPIC` / `CLOUD_TOPIC` / `CMD_VEL_TOPIC` | /odom / /cloud / /cmd_vel | 橋渡しするトピックの名前 |
+| `BRIDGE_TF` | true | `/tf` と `/tf_static` も橋渡しするか |
 | `ROS_DOMAIN_ID` | 42 | ROS 2 のドメイン。Orin（omnivla_real）とそろえる |
 | `ROS2_PEERS` | なし | ROS 2 の相手が自動で見つからないときだけ、Orin の IP を書く。例: `ROS2_PEERS=192.168.0.200` |
 

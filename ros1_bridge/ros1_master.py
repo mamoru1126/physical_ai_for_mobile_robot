@@ -4,8 +4,9 @@
   ros1_master.py find auto          同じネットワークの roscore を探して、URI を出す
   ros1_master.py find http://...    その roscore が答えるか確かめて、URI を出す
   ros1_master.py check URI          roscore が答えれば 0 で終わる
-  ros1_master.py set-topics URI ODOM CLOUD CMD_VEL
-                                    parameter_bridge が読む /topics を roscore に書く
+  ros1_master.py set-topics URI ODOM CLOUD CMD_VEL [TF]
+                                    parameter_bridge が読む /topics を roscore に書く.
+                                    TF が true なら /tf と /tf_static も橋渡しする
   ros1_master.py fix-hosts URI      名前（ホスト名）が引けないノードを、roscore と同じ PC とみなして
                                     /etc/hosts に書き足す. 書き足した名前を出す
 """
@@ -88,12 +89,19 @@ def find_auto():
     return found[0] if found else None
 
 
-def set_topics(uri, odom, cloud, cmd_vel):
+def set_topics(uri, odom, cloud, cmd_vel, tf="true"):
     topics = [
         {"topic": odom, "type": "nav_msgs/msg/Odometry", "queue_size": 10},
         {"topic": cloud, "type": "sensor_msgs/msg/PointCloud2", "queue_size": 2},
         {"topic": cmd_vel, "type": "geometry_msgs/msg/Twist", "queue_size": 1},
     ]
+    if str(tf).lower() in ("1", "true", "yes", "on"):
+        # /tf_static は parameter_bridge が自動で「全部とっておき、あとから来た相手にも渡す」
+        # （keep all、transient local）にする
+        topics += [
+            {"topic": "/tf", "type": "tf2_msgs/msg/TFMessage", "queue_size": 100},
+            {"topic": "/tf_static", "type": "tf2_msgs/msg/TFMessage", "queue_size": 100},
+        ]
     code, msg, _ = master(uri).setParam(CALLER, "/topics", topics)
     if code != 1:
         raise SystemExit(f"NG: /topics を書けません: {msg}")
@@ -142,7 +150,7 @@ def main(argv):
     if cmd == "check":
         return 0 if answers(argv[2]) else 1
     if cmd == "set-topics":
-        set_topics(*argv[2:6])
+        set_topics(*argv[2:7])
         return 0
     if cmd == "fix-hosts":
         fix_hosts(argv[2])

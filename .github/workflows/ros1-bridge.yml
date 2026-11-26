@@ -1,0 +1,35 @@
+name: ros1-bridge
+
+# ROS 1 との橋渡し（ros1_bridge/）のイメージが作れるかの確認.
+# イメージの中で ros1_bridge を作り、Odometry、PointCloud2、Twist、TFMessage を橋渡しできるかを確かめる.
+
+on:
+  push:
+    paths:
+      - "ros1_bridge/**"
+      - ".github/workflows/ros1-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (ros1_bridge is built and its message pairs are checked inside)
+        run: |
+          set -o pipefail
+          DOCKER_BUILDKIT=1 docker build --progress=plain -t ros1-bridge:ci ros1_bridge 2>&1 | tee /tmp/build.log
+
+      - name: Bridged message pairs
+        run: |
+          docker run --rm --entrypoint bash ros1-bridge:ci -c \
+            "source /opt/ros/humble/setup.bash; source /opt/ros1_bridge_ws/install/local_setup.bash; \
+             ros2 run ros1_bridge dynamic_bridge --print-pairs | grep -E 'Odometry|PointCloud2|Twist|TFMessage'"
+
+      - name: Image size
+        run: docker image ls ros1-bridge:ci

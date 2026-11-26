@@ -43,6 +43,9 @@ fi
 echo "ROS 2: Humble、ドメイン ${ROS_DOMAIN_ID:-0}"
 echo "ROS 1 -> ROS 2: ${ODOM_TOPIC} (nav_msgs/Odometry)、${CLOUD_TOPIC} (sensor_msgs/PointCloud2)"
 echo "ROS 2 -> ROS 1: ${CMD_VEL_TOPIC} (geometry_msgs/Twist)"
+if [ "${BRIDGE_TF:-true}" = "true" ]; then
+  echo "ROS 1 <-> ROS 2: /tf、/tf_static (tf2_msgs/TFMessage)"
+fi
 
 until uri="$(python3 "${TOOL}" find "${want_master}")"; do
   if [ "${want_master}" = "auto" ]; then
@@ -72,7 +75,7 @@ add_hosts() {
 }
 add_hosts
 
-python3 "${TOOL}" set-topics "${ROS_MASTER_URI}" "${ODOM_TOPIC}" "${CLOUD_TOPIC}" "${CMD_VEL_TOPIC}"
+python3 "${TOOL}" set-topics "${ROS_MASTER_URI}" "${ODOM_TOPIC}" "${CLOUD_TOPIC}" "${CMD_VEL_TOPIC}" "${BRIDGE_TF:-true}"
 ros2 run ros1_bridge parameter_bridge &
 bridge_pid=$!
 trap 'kill ${bridge_pid} 2> /dev/null || true' TERM INT

@@ -23,6 +23,16 @@ VLM が出す速度の指令を、点群を見て安全なものにしてから�
 
 トピックの名前、ロボットの足形、余裕などは、すべて設定ファイル（YAML）で、コンテナの外から変えられます。
 
+### TF（`cloud_link` → `base_link`）
+
+ロボット（ROS 1）が `/tf` か `/tf_static` で `base_link` と `cloud_link` の関係を流していれば、[ROS 1 との橋渡し](../ros1_bridge/) が ROS 2 に流すので、そのまま使えます（`BRIDGE_TF=true`、既定）。確かめること:
+
+- ロボットの TF の座標系の名前が、設定の `frames.base`（既定 `base_link`）と、点群のヘッダの座標系に合っているか。違えば `frames.base`、`frames.cloud` を書き換える。ロボットの PC で `rosrun tf tf_echo base_link cloud_link` を実行すると、関係が出るかでわかる。
+- `base_link` と `cloud_link` が、TF の木でつながっているか（間に別の座標系があってもよい）。
+- このときは `tf.publish_static` を false のままにする（同じ関係を 2 か所から出さない）。
+
+ロボットが TF を流していないときだけ、`tf.publish_static: true` にして、`xyz`・`rpy` に取り付けの位置と向きを書きます。
+
 ## 判定のしかた
 
 1. 点群を TF で `base_link` に直します（`cloud_link` から）。

@@ -23,7 +23,7 @@ RUN mkdir -p /root/ros2-apt \
     && apt-get download python3-catkin-pkg python3-rospkg python3-rosdistro \
     && dpkg --force-overwrite -i python3-catkin-pkg*.deb python3-rospkg*.deb python3-rosdistro*.deb \
     && apt-get install -f -y \
-    && apt-get install -y ros-core-dev libgeometry-msgs-dev libsensor-msgs-dev libnav-msgs-dev git iproute2 \
+    && apt-get install -y ros-core-dev libgeometry-msgs-dev libsensor-msgs-dev libnav-msgs-dev libtf2-msgs-dev git iproute2 \
     && if [ "$(uname -m)" = "aarch64" ] && [ -d /usr/lib/x86_64-linux-gnu/pkgconfig ]; then \
          cp -n /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/aarch64-linux-gnu/pkgconfig/; \
        fi \
@@ -44,14 +44,14 @@ RUN source /opt/ros/humble/setup.bash \
          --cmake-args -DCMAKE_BUILD_TYPE=Release --event-handlers console_direct+ \
     && rm -rf build log
 
-# 3. 使うメッセージの組が作られたかを確かめる（なければ、ここで止める）
+# 3. 使うメッセージの組（TF も）が作られたかを確かめる（なければ、ここで止める）
 RUN source /opt/ros/humble/setup.bash \
     && source /opt/ros1_bridge_ws/install/local_setup.bash \
     && timeout 60 ros2 run ros1_bridge dynamic_bridge --print-pairs > /tmp/pairs.txt \
-    && for t in nav_msgs/msg/Odometry sensor_msgs/msg/PointCloud2 geometry_msgs/msg/Twist; do \
+    && for t in nav_msgs/msg/Odometry sensor_msgs/msg/PointCloud2 geometry_msgs/msg/Twist tf2_msgs/msg/TFMessage; do \
          grep -q "${t}" /tmp/pairs.txt || { echo "NG: ${t} を橋渡しできません"; exit 1; }; \
        done \
-    && echo "OK: Odometry、PointCloud2、Twist を橋渡しできます"
+    && echo "OK: Odometry、PointCloud2、Twist、TFMessage を橋渡しできます"
 
 COPY entrypoint.sh ros1_master.py /opt/ros1_bridge/
 RUN chmod +x /opt/ros1_bridge/entrypoint.sh

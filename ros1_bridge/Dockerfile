@@ -30,6 +30,23 @@ RUN mkdir -p /root/ros2-apt \
     && mv /root/ros2-apt/* /etc/apt/sources.list.d/ \
     && rm -rf /var/lib/apt/lists/* /tmp/*.deb
 
+# 1b. Ubuntu の libtf2-msgs-dev には C++ のヘッダしかなく、ros1_bridge が ROS 1 の tf2_msgs を見つけられない.
+#     足りないもの（メッセージの定義、package.xml、pkg-config）だけを足す. 中身は Noetic の tf2_msgs と同じ
+COPY ros1_tf2_msgs/ /tmp/ros1_tf2_msgs/
+RUN echo "libtf2-msgs-dev の中身:" && dpkg -L libtf2-msgs-dev | grep -vE "^/usr/include/tf2_msgs/.+" | head -40 \
+    && test -f /usr/include/tf2_msgs/TFMessage.h \
+    && mkdir -p /usr/share/tf2_msgs/msg \
+    && for f in TFMessage.msg TF2Error.msg; do \
+         [ -f "/usr/share/tf2_msgs/msg/${f}" ] || cp "/tmp/ros1_tf2_msgs/msg/${f}" /usr/share/tf2_msgs/msg/; \
+       done \
+    && { [ -f /usr/share/tf2_msgs/package.xml ] || cp /tmp/ros1_tf2_msgs/package.xml /usr/share/tf2_msgs/; } \
+    && pc_dir="/usr/lib/$(uname -m)-linux-gnu/pkgconfig" \
+    && mkdir -p "${pc_dir}" \
+    && { pkg-config --exists tf2_msgs || cp /tmp/ros1_tf2_msgs/tf2_msgs.pc "${pc_dir}/"; } \
+    && pkg-config --modversion tf2_msgs \
+    && ls /usr/share/tf2_msgs /usr/share/tf2_msgs/msg \
+    && rm -rf /tmp/ros1_tf2_msgs
+
 # 2. ros1_bridge を作る. メモリ 3 GB あたり 1 つずつ並べて作る（足りないと止まるため）
 RUN source /opt/ros/humble/setup.bash \
     && export ROS_PACKAGE_PATH=/usr/share \

@@ -1,0 +1,9 @@
+prefix=/usr
+includedir=${prefix}/include
+
+Name: tf2_msgs
+Description: tf2_msgs (ROS 1) headers from libtf2-msgs-dev
+Version: 0.7.5
+Requires: geometry_msgs
+Cflags: -I${includedir}
+Libs:

@@ -30,8 +30,8 @@ RUN mkdir -p /root/ros2-apt \
     && mv /root/ros2-apt/* /etc/apt/sources.list.d/ \
     && rm -rf /var/lib/apt/lists/* /tmp/*.deb
 
-# 1b. Ubuntu の libtf2-msgs-dev には C++ のヘッダしかなく、ros1_bridge が ROS 1 の tf2_msgs を見つけられない.
-#     足りないもの（メッセージの定義、package.xml、pkg-config）だけを足す. 中身は Noetic の tf2_msgs と同じ
+# 1b. Ubuntu 22.04 の libtf2-msgs-dev には、ヘッダ・package.xml・pkg-config はあるが、メッセージの定義（msg/）が
+#     ない. そのため ros1_bridge が ROS 1 の tf2_msgs を使えない. 足りないものだけを足す（中身は Noetic と同じ）
 COPY ros1_tf2_msgs/ /tmp/ros1_tf2_msgs/
 RUN echo "libtf2-msgs-dev の中身:" && dpkg -L libtf2-msgs-dev | grep -vE "^/usr/include/tf2_msgs/.+" | head -40 \
     && test -f /usr/include/tf2_msgs/TFMessage.h \

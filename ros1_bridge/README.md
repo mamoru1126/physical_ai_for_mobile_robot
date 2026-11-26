@@ -6,7 +6,8 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 
 | 項目 | 状態 |
 | --- | --- |
-| スクリプト | 用意した。実機ではまだ通していない。一式をまとめる・ネットなしで入れる流れは、にせの Docker で確かめた。roscore につなぐ・止まったら起動し直す流れは、にせの roscore で確かめた。イメージは、まだ作っていない |
+| イメージ | GitHub Actions（x86）で作れることを確かめた（[.github/workflows/ros1-bridge.yml](../.github/workflows/ros1-bridge.yml)）。`Odometry`、`PointCloud2`、`Twist`、`TFMessage` を橋渡しできる。大きさは圧縮して約 380 MB |
+| スクリプト | 実機ではまだ通していない。一式をまとめる・ネットなしで入れる流れは、にせの Docker で確かめた。roscore につなぐ・止まったら起動し直す流れは、にせの roscore で確かめた |
 
 ## つながり方
 

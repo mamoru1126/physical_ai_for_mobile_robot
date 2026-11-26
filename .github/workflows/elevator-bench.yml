@@ -38,7 +38,9 @@ jobs:
         run: |
           docker run -d --name mock-vlm --network host --ipc host -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 \
             elevator-runtime:latest ros2 run elevator_sim mock_vlm --ros-args -p port:=8000 -p latency_s:=0.5
-          for _ in $(seq 1 30); do curl -sf http://127.0.0.1:8000/v1/models && break; sleep 1; done
+          # 真値（ダミーの世界）が届くまでは 503（準備中）を返す. 待ち受けを始めたかだけを確かめる
+          for _ in $(seq 1 30); do (exec 3<> /dev/tcp/127.0.0.1/8000) 2> /dev/null && break; sleep 1; done
+          curl -s http://127.0.0.1:8000/v1/models; echo
 
       - name: bench_up.sh (builds the safety gate image, starts the gate and the bench)
         run: bash jetson/bench/bench_up.sh

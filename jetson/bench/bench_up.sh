@@ -79,8 +79,12 @@ build "${GATE_IMAGE}" "${ROOT}/safety_gate"
 
 # ---- 2. VLM のサーバ --------------------------------------------------------------------
 vlm_ready() { curl -sf --noproxy '*' --max-time 3 "http://127.0.0.1:${VLM_PORT}/v1/models" > /dev/null 2>&1; }
+vlm_listening() { (exec 3<> "/dev/tcp/127.0.0.1/${VLM_PORT}") 2> /dev/null; }
 if ! vlm_ready; then
-  if "${DOCKER[@]}" ps --format '{{.Names}}' | grep -qx elevator-vlm; then
+  if vlm_listening && ! "${DOCKER[@]}" ps --format '{{.Names}}' | grep -qx elevator-vlm; then
+    # 別の VLM のサーバ（モックなど）がポートで待ち受けている. 準備ができたかは、実行系の画面で確かめる
+    say "ポート ${VLM_PORT} の VLM のサーバを使います（まだ準備中. このまま進みます）"
+  elif "${DOCKER[@]}" ps --format '{{.Names}}' | grep -qx elevator-vlm; then
     say "VLM のサーバが起動の途中です. 答えられるようになるまで待ちます"
     for _ in $(seq 1 480); do
       vlm_ready && break

@@ -4,8 +4,8 @@
 
 | 項目 | 状態 |
 | --- | --- |
-| スクリプト | 用意した。Orin ではまだ通していない |
-| 通しの確認（x86、モックの VLM） | GitHub Actions で、ダミーの世界 → 実行系 → 安全ゲート 2 段 → ダミーの世界の1回の通しが PASS（[.github/workflows/elevator-bench.yml](../../.github/workflows/elevator-bench.yml)） |
+| Orin での通し | まだ（この手順で行う） |
+| スクリプトの通し（x86、モックの VLM） | GitHub Actions で、`bench_up.sh` → `bench_e2e.sh` をそのまま動かして PASS。ダミーの世界 → 実行系 → 安全ゲート 2 段 → ダミーの世界の順に、指令が通ることも確かめた（[.github/workflows/elevator-bench.yml](../../.github/workflows/elevator-bench.yml)） |
 | arm64（Orin と同じ）でイメージを作る | GitHub Actions で確かめた（中の単体テストも通る） |
 
 ## 何が本物で、何がダミーか

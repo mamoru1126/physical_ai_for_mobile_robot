@@ -47,7 +47,11 @@ if [ -f /etc/nv_tegra_release ]; then
     say "    AGX Orin 開発キットの JetPack 7.2 なら、既定の MODE_30W はモード 2 です: sudo nvpmodel -m 2" >&2
     exit 1
   fi
-  say "電源モード: ${power_name:-不明}（MAXN にはしません. jetson_clocks も使いません）"
+  if [ -z "${power_name}" ]; then
+    say "注意: 電源モードを確かめられません. sudo nvpmodel -q で、MAXN ではないことを確かめてください"
+  else
+    say "電源モード: ${power_name}（MAXN にはしません. jetson_clocks も使いません）"
+  fi
 fi
 
 # ---- 前に起動したベンチを片づけ、ポートが空いているか確かめる ---------------------------

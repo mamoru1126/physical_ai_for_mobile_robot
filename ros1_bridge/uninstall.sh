@@ -1,6 +1,6 @@
 #!/bin/bash
-# ROS 1 との橋渡しのサービスを止めて、自動で起動しないようにする（設定ファイルとイメージは残す）.
-#   bash jetson/ros1_bridge/uninstall.sh
+# 橋渡しのサービスを止めて、自動で起動しないようにする（設定ファイルとイメージは残す）.
+#   bash uninstall.sh
 set -euo pipefail
 NAME="ros1-bridge"
 sudo systemctl disable --now "${NAME}" 2> /dev/null || true

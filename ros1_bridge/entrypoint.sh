@@ -6,7 +6,7 @@ source /opt/ros/humble/setup.bash
 source /opt/ros1_bridge_ws/install/local_setup.bash
 TOOL=/opt/ros1_bridge/ros1_master.py
 
-want_master="${ROS_MASTER_URI:-auto}"
+want_master="${ROS_MASTER_URI:-http://localhost:11311}"
 unset ROS_MASTER_URI ROS_HOSTNAME
 ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 CLOUD_TOPIC="${CLOUD_TOPIC:-/cloud}"
@@ -21,6 +21,24 @@ for word in $(echo "${ROS1_HOSTS:-auto}" | tr -d '"'); do
     echo "${word#*:} ${word%%:*}" >> /etc/hosts
   fi
 done
+
+# ROS 2 の相手の IP が書いてあれば、Fast DDS に教える（自動で見つからないとき用）
+if [ -n "${ROS2_PEERS:-}" ]; then
+  {
+    echo '<?xml version="1.0" encoding="UTF-8"?>'
+    echo '<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">'
+    echo '  <participant profile_name="peers" is_default_profile="true"><rtps><builtin><initialPeersList>'
+    for peer in $(echo "${ROS2_PEERS}" | tr -d '"'); do
+      echo "    <locator><udpv4><address>${peer}</address></udpv4></locator>"
+    done
+    echo '    <locator><udpv4><address>127.0.0.1</address></udpv4></locator>'
+    echo '  </initialPeersList></builtin></rtps></participant>'
+    echo '</profiles>'
+  } > /tmp/fastdds_peers.xml
+  export FASTRTPS_DEFAULT_PROFILES_FILE=/tmp/fastdds_peers.xml
+  export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+  echo "ROS 2 の相手: ${ROS2_PEERS}"
+fi
 
 echo "ROS 2: Humble、ドメイン ${ROS_DOMAIN_ID:-0}"
 echo "ROS 1 -> ROS 2: ${ODOM_TOPIC} (nav_msgs/Odometry)、${CLOUD_TOPIC} (sensor_msgs/PointCloud2)"

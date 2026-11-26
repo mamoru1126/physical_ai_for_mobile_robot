@@ -25,4 +25,4 @@
 | 2026-11-22 | [Jetson AGX Orin を JetPack 7.2 にする（Jetson ISO の USB メモリを作るスクリプトつき）](jetson/) |
 | 2026-11-26 | [Orin で VLM を動かして、速さを測る（起動と測定のスクリプトつき）](jetson/vlm.md) |
 | 2026-11-27 | [ロボットのカメラ（USB）の映像を ROS 2 のトピックに流す（ポート 9000 でブラウザからも見られる、自動で起動）](jetson/camera/) |
-| 2026-11-27 | [ROS 1 のシステムとの橋渡し（/odom と /cloud を受け、/cmd_vel を流す、自動で起動）](jetson/ros1_bridge/) |
+| 2026-11-27 | [ROS 1 のシステムとの橋渡し（ロボットの PC で動かす。手元の PC でイメージを作って運ぶ。/odom と /cloud を受け、/cmd_vel を流す）](ros1_bridge/) |

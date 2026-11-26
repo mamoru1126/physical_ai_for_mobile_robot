@@ -1,6 +1,6 @@
 # USB カメラの映像を ROS 2 のトピックに流す（自動で起動）
 
-Orin（または Linux の PC）につないだ USB カメラの映像を、ROS 2 のトピックに流します。同じネットワークの PC から、ブラウザでも見られます（ポート 9000）。Docker のコンテナとして動き、電源を入れるたびに自動で起動します。
+ロボットのカメラ（Orin につないだ USB カメラ）の映像を、ROS 2 のトピックに流します。同じネットワークの PC から、ブラウザでも見られます（ポート 9000）。Docker のコンテナとして動き、電源を入れるたびに自動で起動します。
 
 | 項目 | 状態 |
 | --- | --- |
@@ -12,11 +12,13 @@ Orin（または Linux の PC）につないだ USB カメラの映像を、ROS 
 | --- | --- |
 | カメラのノード | [usb_cam](https://index.ros.org/p/usb_cam)（ROS 2 Humble） |
 | ブラウザ向けの配信 | [web_video_server](https://index.ros.org/p/web_video_server/)（ポート 9000） |
-| トピック | `/usb_cam/image_raw`、`/usb_cam/image_raw/compressed`、`/usb_cam/camera_info` |
+| トピック | `/camera/image_raw`、`/camera/compressed`（JPEG で圧縮した画像）、`/camera/camera_info` |
 | 自動の起動 | systemd のサービス `usb-camera` が、Docker のコンテナ `usb-camera` を起動する。止まったら 5 秒後に起動し直す |
 
 - カメラがつながっていなければ、つながるまで待ちます。抜けたら、挿し直したときに起動し直します。
-- トピックの名前空間は `usb_cam` にしてあります。ロボットのカメラ（`/camera/...`）とぶつかりません。
+- トピックの名前は、omnivla_real（`configs/robot.yaml`）のロボットのカメラにそろえてあります。エレベーターのタスクの実行系も `/camera/...` を使います。
+- ROS 2 のドメインは、omnivla_real と同じ 42 にしてあります。
+- 同じ名前のトピックを出すほかのカメラのノードとは、同時に動かさないでください。
 - GPU は使いません。JetPack 6 でも 7.2 でも、x86 の PC でも動く見込みです。
 
 ## 入れる
@@ -27,7 +29,7 @@ Orin（または Linux の PC）につないだ USB カメラの映像を、ROS 
 bash jetson/camera/install.sh
 ```
 
-終わると、ブラウザで開く URL が出ます。同じネットワークの PC で開くと、トピックの一覧が出ます。`/usb_cam/image_raw` を押すと映像が出ます。
+終わると、ブラウザで開く URL が出ます。同じネットワークの PC で開くと、トピックの一覧が出ます。`/camera/image_raw` を押すと映像が出ます。
 
 ```text
 http://<OrinのIP>:9000/
@@ -36,7 +38,7 @@ http://<OrinのIP>:9000/
 映像だけを直接開くこともできます。
 
 ```text
-http://<OrinのIP>:9000/stream?topic=/usb_cam/image_raw
+http://<OrinのIP>:9000/stream?topic=/camera/image_raw
 ```
 
 ## 設定を変える
@@ -57,10 +59,11 @@ sudo systemctl restart usb-camera
 | `CAMERA_WIDTH` / `CAMERA_HEIGHT` | 640 / 480 | 画像の大きさ |
 | `CAMERA_FPS` | 30.0 | 1 秒あたりの枚数 |
 | `CAMERA_PIXEL_FORMAT` | mjpeg2rgb | カメラから受け取る形式。映らなければ yuyv2rgb を試す |
-| `CAMERA_NAMESPACE` | usb_cam | トピックの名前空間 |
+| `CAMERA_NAMESPACE` | camera | トピックの名前空間 |
+| `CAMERA_COMPRESSED_TOPIC` | /camera/compressed | 圧縮した画像のトピック |
 | `CAMERA_INFO_URL` | 空 | カメラの校正ファイル（例 `file:///etc/usb-camera/camera_info.yaml`） |
 | `CAMERA_WEB_PORT` | 9000 | ブラウザで見るためのポート |
-| `ROS_DOMAIN_ID` | 0 | ROS 2 のドメイン。ほかの PC やロボットとトピックをやりとりするなら、相手とそろえる |
+| `ROS_DOMAIN_ID` | 42 | ROS 2 のドメイン（omnivla_real と同じ）。ほかの PC とトピックをやりとりするなら、相手とそろえる |
 
 画像の大きさと枚数は、カメラが対応している組み合わせにします。対応している組み合わせは、ログの最初に出ます。
 
@@ -79,7 +82,7 @@ journalctl -u usb-camera -f
 ROS 2 の入った PC（同じ `ROS_DOMAIN_ID`）から、トピックが届いているかを見ます。
 
 ```bash
-ros2 topic hz /usb_cam/image_raw
+ros2 topic hz /camera/compressed
 ```
 
 ## 外す

@@ -33,7 +33,7 @@ done
 
 echo "カメラ: ${device}"
 v4l2-ctl --device "${device}" --list-formats-ext 2> /dev/null | head -n 40 || true
-echo "トピック: /${CAMERA_NAMESPACE:-usb_cam}/image_raw（圧縮: /${CAMERA_NAMESPACE:-usb_cam}/image_raw/compressed）"
+echo "トピック: /${CAMERA_NAMESPACE:-camera}/image_raw、/${CAMERA_NAMESPACE:-camera}/camera_info（圧縮: ${CAMERA_COMPRESSED_TOPIC:-/camera/compressed}）"
 echo "ブラウザ: http://<このPCのIP>:${CAMERA_WEB_PORT:-9000}/"
 
 exec ros2 launch /opt/usb_camera/camera.launch.py \
@@ -42,7 +42,8 @@ exec ros2 launch /opt/usb_camera/camera.launch.py \
   image_height:="${CAMERA_HEIGHT:-480}" \
   framerate:="${CAMERA_FPS:-30.0}" \
   pixel_format:="${CAMERA_PIXEL_FORMAT:-mjpeg2rgb}" \
-  namespace:="${CAMERA_NAMESPACE:-usb_cam}" \
-  frame_id:="${CAMERA_FRAME_ID:-usb_cam}" \
+  namespace:="${CAMERA_NAMESPACE:-camera}" \
+  compressed_topic:="${CAMERA_COMPRESSED_TOPIC:-/camera/compressed}" \
+  frame_id:="${CAMERA_FRAME_ID:-camera}" \
   camera_info_url:="${CAMERA_INFO_URL:-}" \
   port:="${CAMERA_WEB_PORT:-9000}"

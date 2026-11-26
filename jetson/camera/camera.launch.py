@@ -15,8 +15,9 @@ ARGS = {
     "image_height": ("480", "縦の画素数"),
     "framerate": ("30.0", "1 秒あたりの枚数"),
     "pixel_format": ("mjpeg2rgb", "カメラから受け取る形式（mjpeg2rgb、yuyv2rgb など）"),
-    "namespace": ("usb_cam", "トピックの名前空間（<namespace>/image_raw になる）"),
-    "frame_id": ("usb_cam", "画像の座標系の名前"),
+    "namespace": ("camera", "トピックの名前空間（<namespace>/image_raw になる）"),
+    "compressed_topic": ("/camera/compressed", "圧縮した画像のトピック（omnivla_real の robot.yaml と同じ名前）"),
+    "frame_id": ("camera", "画像の座標系の名前"),
     "camera_info_url": ("", "カメラの校正ファイル（file:///... . 空なら無し）"),
     "port": ("9000", "ブラウザで見るためのポート"),
 }
@@ -44,6 +45,8 @@ def generate_launch_description() -> LaunchDescription:
             "camera_info_url": as_str["camera_info_url"],
             "io_method": "mmap",
         }],
+        # 圧縮した画像は <namespace>/image_raw/compressed ではなく、ロボットの決まりの名前で出す
+        remappings=[("image_raw/compressed", arg["compressed_topic"])],
         on_exit=Shutdown(),
     )
     web = Node(

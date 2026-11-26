@@ -227,7 +227,7 @@ scp -r <ユーザー名>@<OrinのIP>:~/physical_ai_for_mobile_robot/jetson/log .
 ## 7. このあと（結果を見てから）
 
 - **速さが足りないとき**：問い方を変えて速くします。答えを 1 語にする、画像を小さくする、判定と指差しを同時に頼む、`--enable-prefix-caching` を付ける、などです。どれだけ速くなるかを、同じ道具で測ります。
-- **モデルが決まったら**：実機につなぎます。ロボットのカメラの圧縮画像（`/camera/compressed`）への対応、画像の時刻の扱い、カメラの取り付けの実測、指令を `/elevator/cmd_vel/raw` に出して ATMOBI 側で `/cmd_vel` に切り替える、の 4 つが要ります。
+- **モデルが決まったら**：実機につなぎます。ロボットのカメラの圧縮画像（`/camera/compressed`）への対応、画像の時刻の扱い、カメラの取り付けの実測、指令を `/elevator/cmd_vel/raw` に出して ロボット側で `/cmd_vel` に切り替える、の 4 つが要ります。
 - **omnivla_real の推論サーバ**：JetPack 7.2 用に作り直しが要ります（[jetson/README.md](README.md) の「4. 作り直しが要るもの」）。
 
 ## 困ったとき

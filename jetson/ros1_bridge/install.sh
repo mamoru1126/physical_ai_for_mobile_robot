@@ -19,7 +19,7 @@ else
 fi
 sudo systemctl enable docker > /dev/null 2>&1 || true
 
-echo "1. コンテナのイメージを作ります（初回はネットから取ってくるので数分かかります）"
+echo "1. コンテナのイメージを作ります（初回は ros1_bridge を作るので数十分かかります. ネットが要ります）"
 "${DOCKER[@]}" build -t "${IMAGE}" "${HERE}"
 
 echo "2. 設定ファイルを置きます: ${CONF_DIR}/bridge.env"
@@ -30,7 +30,11 @@ else
   sudo cp "${HERE}/bridge.env" "${CONF_DIR}/bridge.env"
 fi
 master="$(sudo sed -n 's/^ROS_MASTER_URI=//p' "${CONF_DIR}/bridge.env" | tail -n 1 || true)"
-echo "   ROS 1 の roscore: ${master}（違っていたら sudo nano ${CONF_DIR}/bridge.env で直す）"
+if [ "${master:-auto}" = "auto" ]; then
+  echo "   ROS 1 の roscore: 同じネットワークから自動で探します"
+else
+  echo "   ROS 1 の roscore: ${master}（違っていたら sudo nano ${CONF_DIR}/bridge.env で直す）"
+fi
 
 echo "3. 自動で起動するサービスを入れます: ${UNIT}"
 sudo tee "${UNIT}" > /dev/null <<UNIT_EOF
@@ -63,5 +67,5 @@ if systemctl is-active --quiet "${NAME}"; then
 else
   echo "NG: サービスが動いていません. ログ: journalctl -u ${NAME} -n 50"
 fi
-echo "roscore が動いていなければ、動くまで待ちます（ログに「roscore を待っています」と出ます）"
+echo "roscore が見つかるまで待ちます（ログに「roscore を探しています」と出ます）"
 echo "ログを見る: journalctl -u ${NAME} -f"

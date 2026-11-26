@@ -1,58 +1,72 @@
 #!/bin/bash
-# ROS 1 の roscore を待ってから、決めたトピックだけを橋渡しする.
-# roscore が止まったら、コンテナを終わらせる（サービスが起動し直し、また roscore を待つ）.
+# ROS 1 の roscore を見つけてから、決めたトピックだけを橋渡しする.
+# roscore が止まったら、コンテナを終わらせる（サービスが起動し直し、また roscore を探す）.
 set -eo pipefail
-source /opt/ros/noetic/setup.bash
-source /opt/ros/foxy/setup.bash
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export FASTRTPS_DEFAULT_PROFILES_FILE=/opt/ros1_bridge/fastdds_udp.xml
+source /opt/ros/humble/setup.bash
+source /opt/ros1_bridge_ws/install/local_setup.bash
+TOOL=/opt/ros1_bridge/ros1_master.py
 
-: "${ROS_MASTER_URI:?ROS_MASTER_URI を /etc/ros1-bridge/bridge.env に書いてください}"
-master_host="$(echo "${ROS_MASTER_URI}" | sed -E 's#^[a-z]+://([^:/]+).*#\1#')"
+want_master="${ROS_MASTER_URI:-auto}"
+unset ROS_MASTER_URI ROS_HOSTNAME
+ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
+CLOUD_TOPIC="${CLOUD_TOPIC:-/cloud}"
+CMD_VEL_TOPIC="${CMD_VEL_TOPIC:-/cmd_vel}"
 
-for pair in $(echo "${ROS1_HOSTS:-}" | tr -d '"'); do
-  echo "${pair#*:} ${pair%%:*}" >> /etc/hosts
+# 名前と IP の組（例: robot-pc:192.168.0.100）を /etc/hosts に足す. auto は下で使う
+fix_hosts=0
+for word in $(echo "${ROS1_HOSTS:-auto}" | tr -d '"'); do
+  if [ "${word}" = "auto" ]; then
+    fix_hosts=1
+  else
+    echo "${word#*:} ${word%%:*}" >> /etc/hosts
+  fi
 done
 
+echo "ROS 2: Humble、ドメイン ${ROS_DOMAIN_ID:-0}"
+echo "ROS 1 -> ROS 2: ${ODOM_TOPIC} (nav_msgs/Odometry)、${CLOUD_TOPIC} (sensor_msgs/PointCloud2)"
+echo "ROS 2 -> ROS 1: ${CMD_VEL_TOPIC} (geometry_msgs/Twist)"
+
+until uri="$(python3 "${TOOL}" find "${want_master}")"; do
+  if [ "${want_master}" = "auto" ]; then
+    echo "roscore を探しています（同じネットワークのポート 11311）"
+  else
+    echo "roscore を待っています（${want_master}）"
+  fi
+  sleep 3
+done
+export ROS_MASTER_URI="${uri}"
+
+# この PC の IP. roscore の PC へ届く IP を選ぶ（向こうのノードが、この IP でつないでくる）
 if [ -z "${ROS1_IP:-}" ] || [ "${ROS1_IP}" = "auto" ]; then
+  master_host="$(echo "${ROS_MASTER_URI}" | sed -E 's#^[a-z]+://([^:/]+).*#\1#')"
   master_ip="$(getent ahostsv4 "${master_host}" | awk 'NR==1{print $1}')"
   ROS1_IP="$(ip -4 route get "${master_ip:-${master_host}}" 2> /dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')"
 fi
 [ -n "${ROS1_IP}" ] || { echo "NG: この PC の IP が決められません. ROS1_IP を書いてください" >&2; exit 1; }
 export ROS_IP="${ROS1_IP}"
-unset ROS_HOSTNAME
+echo "roscore につながりました: ${ROS_MASTER_URI}（この PC の IP ${ROS_IP}）"
 
-echo "ROS 1: roscore ${ROS_MASTER_URI}、この PC の IP ${ROS_IP}"
-echo "ROS 2: ドメイン ${ROS_DOMAIN_ID:-0}"
-echo "ROS 1 -> ROS 2: ${ODOM_TOPIC} (nav_msgs/Odometry)、${CLOUD_TOPIC} (sensor_msgs/PointCloud2)"
-echo "ROS 2 -> ROS 1: ${CMD_VEL_TOPIC} (geometry_msgs/Twist)"
+add_hosts() {
+  [ "${fix_hosts}" = "1" ] || return 0
+  local names
+  names="$(python3 "${TOOL}" fix-hosts "${ROS_MASTER_URI}" 2> /dev/null || true)"
+  [ -z "${names}" ] || echo "名前が引けないので、roscore と同じ PC とみなしました: $(echo ${names})"
+}
+add_hosts
 
-master_up() { timeout 5 rosparam get /rosdistro > /dev/null 2>&1; }
-until master_up; do
-  echo "roscore を待っています（${ROS_MASTER_URI}）"
-  sleep 3
-done
-echo "roscore につながりました"
-
-# 橋渡しするトピックの一覧. parameter_bridge は ROS 1 のパラメーター topics を読む
-cat > /tmp/bridge.yaml <<YAML
-topics:
-  - {topic: ${ODOM_TOPIC}, type: nav_msgs/msg/Odometry, queue_size: 10}
-  - {topic: ${CLOUD_TOPIC}, type: sensor_msgs/msg/PointCloud2, queue_size: 2}
-  - {topic: ${CMD_VEL_TOPIC}, type: geometry_msgs/msg/Twist, queue_size: 1}
-YAML
-rosparam load /tmp/bridge.yaml
-
+python3 "${TOOL}" set-topics "${ROS_MASTER_URI}" "${ODOM_TOPIC}" "${CLOUD_TOPIC}" "${CMD_VEL_TOPIC}"
 ros2 run ros1_bridge parameter_bridge &
 bridge_pid=$!
 trap 'kill ${bridge_pid} 2> /dev/null || true' TERM INT
 
-# 橋渡しが止まるか、roscore が 3 回続けて見えなくなったら終わる
+# 橋渡しが止まるか、roscore が 3 回続けて見えなくなったら終わる.
+# あとから起動した向こうのノードの名前も、ここで見ておく
 miss=0
 while kill -0 "${bridge_pid}" 2> /dev/null; do
   sleep 5
-  if master_up; then
+  if python3 "${TOOL}" check "${ROS_MASTER_URI}"; then
     miss=0
+    add_hosts
   else
     miss=$((miss + 1))
     echo "roscore が見えません（${miss}/3）"

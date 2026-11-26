@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>safety_gate</name>
+  <version>0.2.0</version>
+  <description>
+    点群（base_link に直したもの）とロボットの足形から、速度の指令を安全なものにする（止める・落とす・通す）.
+    デバッグ用に、上から見た 2D の WebUI を出す.
+  </description>
+  <maintainer email="maintainer@example.com">maintainer</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>ament_index_cpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>yaml-cpp</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全ゲート</title>
+<style>
+  :root { color-scheme: dark; --bg: #111418; --panel: #1b2027; --line: #2c333d; --text: #e6e9ee; --muted: #8b95a3;
+          --pass: #2fb36b; --slow: #e2a92b; --stop: #e5484d; --idle: #6b7280; --cmd-in: #5aa9ff; --cmd-out: #3ddc84; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  #badge { font-weight: 700; font-size: 18px; padding: 2px 12px; border-radius: 6px; background: var(--idle); color: #fff; min-width: 76px; text-align: center; }
+  #reason { flex: 1; min-width: 200px; }
+  #conn { color: var(--muted); font-size: 12px; }
+  main { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px; }
+  #wrap { flex: 1 1 520px; max-width: calc(100vh - 90px); }
+  canvas { width: 100%; aspect-ratio: 1; display: block; background: #0b0d10; border: 1px solid var(--line); border-radius: 6px; }
+  aside { flex: 0 1 300px; display: grid; gap: 10px; align-content: start; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .card h2 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td { padding: 2px 0; } td:last-child { text-align: right; }
+  .k { color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; margin: 2px 12px 2px 0; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div id="badge">----</div>
+  <div id="reason">つないでいます…</div>
+  <div id="conn"></div>
+</header>
+<main>
+  <div id="wrap"><canvas id="view" width="800" height="800"></canvas></div>
+  <aside>
+    <div class="card"><h2>速度の指令（前 m/s、左 m/s、回転 rad/s）</h2>
+      <table>
+        <tr><td class="k">VLM の指令</td><td id="in">-</td></tr>
+        <tr><td class="k">出した指令</td><td id="out">-</td></tr>
+        <tr><td class="k">倍率</td><td id="scale">-</td></tr>
+        <tr><td class="k">ぶつかるまで</td><td id="tc">-</td></tr>
+      </table></div>
+    <div class="card"><h2>入力</h2>
+      <table>
+        <tr><td class="k">点群の古さ</td><td id="age_cloud">-</td></tr>
+        <tr><td class="k">指令の古さ</td><td id="age_cmd">-</td></tr>
+        <tr><td class="k">障害物のボクセル</td><td id="nvox">-</td></tr>
+        <tr><td class="k">座標系</td><td id="frames">-</td></tr>
+        <tr><td class="k">受け取った量</td><td id="bytes">-</td></tr>
+      </table></div>
+    <div class="card legend"><h2>表示（上が前、1 マス 1 m）</h2>
+      <span><i class="sw" style="background:#9aa4b2"></i>障害物</span>
+      <span><i class="sw" style="background:var(--stop)"></i>近づく先の障害物</span>
+      <span><i class="sw" style="background:#fff"></i>足形</span>
+      <span><i class="sw" style="background:rgba(226,169,43,.45)"></i>余裕</span>
+      <span><i class="sw" style="background:#7dd3fc"></i>予測した足形</span>
+      <span><i class="sw" style="background:var(--cmd-in)"></i>VLM の指令</span>
+      <span><i class="sw" style="background:var(--cmd-out)"></i>出した指令</span>
+    </div>
+  </aside>
+</main>
+<script>
+"use strict";
+const canvas = document.getElementById("view");
+const ctx = canvas.getContext("2d");
+const $ = (id) => document.getElementById(id);
+const COLORS = { PASS: "var(--pass)", SLOW: "var(--slow)", STOP: "var(--stop)", IDLE: "var(--idle)" };
+let last = null, lastTime = 0, bytes = 0;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.round(canvas.clientWidth * dpr);
+  if (canvas.width !== size) { canvas.width = size; canvas.height = size; }
+  if (last) draw(last);
+}
+window.addEventListener("resize", resize);
+
+/* 表示のマスの番号（little endian の 2 か 4 バイトを base64 にしたもの）を読む */
+function decodeCells(b64, bpi) {
+  if (!b64) return [];
+  const raw = atob(b64);
+  const out = new Array(raw.length / bpi);
+  for (let i = 0, j = 0; i < raw.length; i += bpi, j++) {
+    let v = 0;
+    for (let b = bpi - 1; b >= 0; b--) v = v * 256 + raw.charCodeAt(i + b);
+    out[j] = v;
+  }
+  return out;
+}
+
+function fmt(v, unit) { return v === null || v === undefined ? "-" : v.toFixed(2) + (unit || ""); }
+function vec(v) { return v ? v.map((x) => x.toFixed(2)).join(" , ") : "-"; }
+
+function draw(d) {
+  const W = canvas.width, half = d.half, s = W / (2 * half);   // s: 1 m あたりの画素
+  const cx = W / 2, cy = W / 2;
+  const P = (x, y) => [cx - y * s, cy - x * s];                // 上が前（x）、左が左（y）
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#0b0d10"; ctx.fillRect(0, 0, W, W);
+
+  // 1 m ごとの線
+  ctx.lineWidth = 1; ctx.strokeStyle = "#1f252d";
+  for (let m = -Math.floor(half); m <= half; m++) {
+    const [px] = P(0, m), [, py] = P(m, 0);
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, W); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+  }
+  ctx.strokeStyle = "#323b47";
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, W); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.fillStyle = "#56606d"; ctx.font = `${Math.max(10, W / 70)}px system-ui`;
+  for (let m = -Math.floor(half) + 1; m < half; m++) { if (m) { const [, py] = P(m, 0); ctx.fillText(m + " m", cx + 4, py - 3); } }
+
+  // 障害物のマス
+  const cell = d.cell, wcells = d.w, cpx = Math.max(1, cell * s);
+  const drawCells = (list, color) => {
+    ctx.fillStyle = color;
+    for (const idx of list) {
+      const ix = Math.floor(idx / wcells), iy = idx % wcells;
+      const x = (ix + 0.5) * cell - half, y = (iy + 0.5) * cell - half;
+      const [px, py] = P(x, y);
+      ctx.fillRect(px - cpx / 2, py - cpx / 2, cpx, cpx);
+    }
+  };
+  drawCells(decodeCells(d.obs, d.bpi), "#9aa4b2");
+  drawCells(decodeCells(d.thr, d.bpi), "#e5484d");
+
+  // 予測した足形
+  const fpath = (pose) => {
+    const c = Math.cos(pose[2]), sn = Math.sin(pose[2]);
+    ctx.beginPath();
+    d.fp.forEach(([x, y], i) => {
+      const [px, py] = P(pose[0] + c * x - sn * y, pose[1] + sn * x + c * y);
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    });
+    ctx.closePath();
+  };
+  (d.poses || []).slice(1).forEach((pose, i, all) => {
+    ctx.strokeStyle = `rgba(125,211,252,${0.65 - 0.5 * i / Math.max(1, all.length)})`;
+    ctx.lineWidth = 1; fpath(pose); ctx.stroke();
+  });
+
+  // 余裕（足形のまわりの帯）と足形
+  const zero = [0, 0, 0];
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(226,169,43,.45)"; ctx.lineWidth = 2 * d.margin * s; fpath(zero); ctx.stroke();
+  ctx.fillStyle = "#0b0d10"; fpath(zero); ctx.fill();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; fpath(zero); ctx.stroke();
+
+  // 速度の指令（1 秒で進む分の矢印と、1 秒で回る分の弧）
+  const arrow = (v, color) => {
+    if (!v) return;
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(2, W / 250);
+    const [x1, y1] = P(v[0], v[1]);
+    if (Math.hypot(v[0], v[1]) > 0.005) {
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x1, y1); ctx.stroke();
+      const a = Math.atan2(y1 - cy, x1 - cx), h = W / 60;
+      ctx.beginPath(); ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 - h * Math.cos(a - 0.4), y1 - h * Math.sin(a - 0.4));
+      ctx.lineTo(x1 - h * Math.cos(a + 0.4), y1 - h * Math.sin(a + 0.4)); ctx.fill();
+    }
+    if (Math.abs(v[2]) > 0.005) {
+      const r = 0.6 * s, start = -Math.PI / 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, start, start - v[2], v[2] > 0); ctx.stroke();
+    }
+  };
+  arrow(d.in, "#5aa9ff");
+  arrow(d.out, "#3ddc84");
+}
+
+function show(d) {
+  last = d; lastTime = Date.now();
+  const badge = $("badge");
+  badge.textContent = d.state; badge.style.background = COLORS[d.state] || "var(--idle)";
+  $("reason").textContent = d.reason;
+  $("in").textContent = vec(d.in); $("out").textContent = vec(d.out);
+  $("scale").textContent = fmt(d.scale);
+  $("tc").textContent = d.tc !== null && d.tc >= 0 ? fmt(d.tc, " s") : "見る範囲ではぶつからない";
+  $("age_cloud").textContent = fmt(d.age_cloud, " s"); $("age_cmd").textContent = fmt(d.age_cmd, " s");
+  $("nvox").textContent = d.nvox;
+  $("frames").textContent = d.frames ? d.frames[0] + " ← " + (d.frames[1] || "?") : "-";
+  draw(d);
+}
+
+const es = new EventSource("events");
+es.onmessage = (e) => { bytes = e.data.length; $("bytes").textContent = (bytes / 1024).toFixed(1) + " KB / 回"; show(JSON.parse(e.data)); };
+setInterval(() => {
+  const stale = Date.now() - lastTime > 3000;
+  $("conn").textContent = stale ? "安全ゲートから届いていません" : "";
+  if (stale) { $("badge").textContent = "----"; $("badge").style.background = "var(--idle)"; }
+}, 1000);
+resize();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+name: safety-gate
+
+# 安全ゲート（safety_gate/）の確認.
+#   1. Docker イメージを作る（中で colcon build と単体テストを通す）
+#   2. にせの点群と指令で、通しの確認をする（判定、TF、タイムアウト、WebUI）
+
+on:
+  push:
+    paths:
+      - "safety_gate/**"
+      - ".github/workflows/safety-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image (colcon build and unit tests run inside)
+        run: |
+          set -o pipefail
+          DOCKER_BUILDKIT=1 docker build --progress=plain -t safety-gate:ci safety_gate 2>&1 | tee /tmp/build.log
+
+      - name: Self test with a fake point cloud and fake commands
+        run: docker run --rm --network host -e ROS_DOMAIN_ID=77 safety-gate:ci selftest
+
+      - name: Image size
+        run: docker image ls safety-gate:ci

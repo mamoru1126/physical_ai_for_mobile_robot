@@ -1,0 +1,62 @@
+# 安全ゲートの設定. コンテナの外の /etc/safety-gate/config.yaml を書き換えて、
+#   sudo systemctl restart safety-gate
+# で効く. 長さは m、時間は s、角度は rad.
+
+# ROS 2 のドメイン. Orin・ロボットの PC の橋渡し（omnivla_real）と同じ 42
+ros_domain_id: 42
+
+topics:
+  cmd_in: /vlm_cmd_vel          # VLM が出す速度の指令（geometry_msgs/Twist）
+  cloud: /cloud                 # 点群（sensor_msgs/PointCloud2）
+  cmd_out: /cmd_vel             # 安全を考えた速度の指令（geometry_msgs/Twist）
+  state: /safety_gate/state     # 判定の結果（std_msgs/String）
+  debug: /safety_gate/debug     # WebUI 用（std_msgs/String）
+
+frames:
+  base: base_link               # 判定に使う座標系（ロボットの中心、x が前、y が左、z が上）
+  cloud: ""                     # 空なら点群のヘッダの座標系（cloud_link）を使う
+
+# 点群の座標系（cloud_link）と base_link の関係. TF がどこからも来ないときだけ、
+# publish_static を true にして、ここに書いた値をこのコンテナから出す
+tf:
+  publish_static: false
+  parent: base_link
+  child: cloud_link
+  xyz: [0.0, 0.0, 0.5]          # base_link から見た cloud_link の位置
+  rpy: [0.0, 0.0, 0.0]          # base_link から見た cloud_link の向き（ロール、ピッチ、ヨー）
+
+# ロボットの足形（上から見た形）. base_link の座標で、頂点を順に書く（時計回りでも反時計回りでもよい）
+footprint:
+  - [0.35, 0.30]
+  - [0.35, -0.30]
+  - [-0.35, -0.30]
+  - [-0.35, 0.30]
+
+# 障害物として見る高さ（base_link の z）. 床と天井を除く
+height_range:
+  min_z: 0.05
+  max_z: 1.5
+
+safety:
+  margin: 0.10                  # 足形のまわりの余裕. ここに入ってくる動きを止める
+  time_horizon: 2.0             # 指令のまま何秒先まで動くかを見る
+  stop_time: 0.5                # これより早くぶつかるなら止める. これより遅ければ速度を落とす
+  time_step: 0.1                # 動きを予測する刻み
+  voxel_size: 0.05              # 点をまとめるボクセルの大きさ
+  obstacle_voxel_threshold: 3   # 障害物とみなすボクセルの数（1 つ 2 つの点はノイズとみなす）
+  cmd_timeout: 0.5              # 指令がこれより長く来なければ止める
+  cloud_timeout: 0.5            # 点群がこれより長く来なければ止める
+  rate: 20.0                    # 指令を出す回数（Hz）
+
+# 速度の上限（m/s、rad/s）. これを超える指令は抑える
+limits:
+  max_linear_x: 0.5
+  max_linear_y: 0.5
+  max_angular_z: 1.0
+
+# WebUI（デバッグ用）. http://<この PC の IP>:<port>/ で見る
+web:
+  port: 9001
+  rate: 5.0                     # ブラウザに送る回数（Hz）
+  view_size: 10.0               # 表示する範囲（ロボットを中心にした正方形の一辺）
+  cell_size: 0.05               # 表示のマスの大きさ. 点はこのマスにまとめて送る

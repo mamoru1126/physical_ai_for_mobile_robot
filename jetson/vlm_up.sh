@@ -17,6 +17,8 @@
 #   VLM_DOCKER_GPUS              docker run の --gpus（既定 all. 空にすると付けない）
 #   VLM_WAIT_S                   起動を待つ時間の上限 [秒]（既定 2400）
 #   HF_TOKEN                     Hugging Face のトークン（公開のモデルなら要らない）
+#   VLM_OFFLINE=1                ネットにつながずに起動する（ダウンロード済みの重みとイメージだけを使う.
+#                                ロボットに載せた後や、載せる前にネットなしで動くかを確かめるとき）
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -57,7 +59,7 @@ fi
 power="$(nvpmodel -q 2> /dev/null || sudo -n nvpmodel -q 2> /dev/null || true)"
 power_name="$(printf '%s\n' "${power}" | grep -m 1 'Power Mode' | sed 's/.*Power Mode: *//')"
 if [ -n "${power_name}" ] && [[ "${power_name}" != MAXN* ]]; then
-  say "注意: 電源モードが ${power_name} です. 速さを測るなら MAXN にしてください（jetson/vlm.md）"
+  say "電源モード: ${power_name}（MAXN より遅くなります. 電源が足りずに落ちる環境では、このままにします）"
 fi
 
 # VLM に使わせるメモリ. Orin は CPU と GPU でメモリを分け合うので、全体に対する割合で渡す
@@ -70,6 +72,7 @@ else
 fi
 
 if ! "${DOCKER[@]}" image inspect "${IMAGE}" > /dev/null 2>&1; then
+  [ "${VLM_OFFLINE:-0}" = "1" ] && fail "vLLM のイメージ ${IMAGE} がありません. ネットにつながる場所で一度起動してください"
   say "vLLM のイメージを取ってきます（初回だけ. 大きいので時間がかかります）: ${IMAGE}"
   "${DOCKER[@]}" pull "${IMAGE}"
 fi
@@ -79,6 +82,11 @@ args=(run -d --name "${NAME}" --runtime=nvidia --network=host --ipc=host
   -v "${HOME}/.cache/huggingface:/root/.cache/huggingface")
 [ -n "${GPUS}" ] && args+=(--gpus "${GPUS}")
 [ -n "${HF_TOKEN:-}" ] && args+=(-e "HF_TOKEN=${HF_TOKEN}")
+if [ "${VLM_OFFLINE:-0}" = "1" ]; then
+  # Hugging Face に問い合わせず、~/.cache/huggingface にある重みだけを使う
+  args+=(-e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1)
+  say "ネットにつながずに起動します（ダウンロード済みの重みだけを使う）"
+fi
 # プロキシの下では、重みを落とすためにコンテナにもプロキシの設定を渡す
 for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
   [ -n "${!var:-}" ] && args+=(-e "${var}=${!var}")

@@ -128,16 +128,15 @@ class SampleCamera:
         same_place = [s for s in self.samples if s.place == view.place]
         if not same_place and view.place == "car_near":
             same_place = [s for s in self.samples if s.place == "car"]
-        candidates = [s for s in same_place if s.floor == view.floor]
-        if not candidates:
-            # 別の階の同じ場所で代用する（扉の見え方は階によらない. 階の表示だけが違う）
-            candidates = same_place
-        if not candidates:
+        if not same_place:
             name, jpeg = self._placeholder(view)
             return name, jpeg, view
-        # 全閉・途中・全開の区別を先にそろえる（閉まり始めた扉に全開の画像を出さないため）
+        # 全閉・途中・全開の区別を先にそろえる（閉まり始めた扉に全開の画像を出さないため）.
+        # 同じ階に同じ区別の画像がなければ、別の階のものを使う（閉じた扉は、階によらず同じに見える）
         label = door_label(view.door_ratio)
-        same_label = [s for s in candidates if door_label(s.door_ratio) == label]
-        pool = same_label or candidates
-        best = min(pool, key=lambda s: (abs(s.door_ratio - view.door_ratio), s.kind != "check", s.file))
+        same_label = [s for s in same_place if door_label(s.door_ratio) == label]
+        pool = ([s for s in same_label if s.floor == view.floor] or same_label
+                or [s for s in same_place if s.floor == view.floor] or same_place)
+        best = min(pool, key=lambda s: (abs(s.door_ratio - view.door_ratio), s.floor != view.floor,
+                                        s.kind != "check", s.file))
         return best.file, best.jpeg, view

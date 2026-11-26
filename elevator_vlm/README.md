@@ -32,6 +32,7 @@
 | 1回目の実験を受けた直し（条件文と目標の書き方） | 画像での比較では改善（判定 13/35 → 31/35、降りる目標 0/3 → 3/3。`log/20261111_144828`）。シミュレーションでの通しは**未確認** |
 | NVIDIA の GPU での描画 | RTX 3090 で動作（画面なしの EGL はモックの通し試験で、画面ありは1回目の実験で、カメラ画像が描画された） |
 | Jetson AGX Orin（JetPack 7.2）での VLM | 起動と測定の手順とスクリプトを用意した（[jetson/vlm.md](../jetson/vlm.md)）。Orin ではまだ測っていない |
+| Orin のベンチ（実機の代わりにダミーの世界をつないで通す） | 手順とスクリプトを用意した（[jetson/bench/](../jetson/bench/)）。モック VLM での通しは GitHub Actions で確認。Orin ではまだ |
 
 モック VLM は画像を見ずに、シミュレータの真値から答えます。「世界・制御・実行系が正しくつながっているか」は確かめられますが、「VLM が扉を見分けられるか」「正しい場所を指差せるか」は本物で試すまで分かりません。
 
@@ -339,6 +340,19 @@ docker compose run --rm shell python3 scripts/inside/export_samples.py /runs/<�
 - ふつうの通し実行
 - 扉を長く開けた通し実行（`DOOR_HOLD_S=16`）。かごの中から、出発階の開いた扉を見ている画像が入ります。
 - 扉を長く開け、かごの手前寄りで止まる計画での通し実行（`PLAN_FILE=samples/plan_closeup.json`）。扉の近くからの画像が入ります。
+
+## 実機とベンチ向けの実行系のイメージ（Gazebo なし）
+
+`docker/Dockerfile.runtime` は、Gazebo を入れない実行系のイメージです。Orin（arm64）でも作れます。実行系（`elevator_task`）と、ベンチ用のダミーの世界（`elevator_sim` の `bench_world`）が入ります。
+
+- ダミーの世界（`bench_world_node.py`）は、実時間で動く擬似世界です。`/cmd_vel` で動き、`/odom`、`/camera/compressed`（`samples/` の画像から、ロボットの場所・向きと扉の開きに合うものを選ぶ）、`/camera/camera_info`、`/cloud`、`/tf_static`、エレベーターの状態とサービスを出します。
+- 擬似世界の動き（`elevator_sim/pseudo_world.py`）は、テストの擬似世界と同じものです。
+- 実行系は、カメラを圧縮画像（`/camera/compressed`）でも受けられます（`camera.image_topic`）。
+- 使い方は [jetson/bench/](../jetson/bench/) にあります。
+
+```bash
+ros2 launch elevator_sim bench.launch.py
+```
 
 ## テスト
 

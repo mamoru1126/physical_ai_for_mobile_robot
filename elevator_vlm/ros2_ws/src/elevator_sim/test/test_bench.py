@@ -67,6 +67,13 @@ def test_in_car_facing_door(camera):
     assert name.startswith("check_car_f3_partial5")
 
 
+def test_closed_door_at_floor_without_closed_sample(camera):
+    # 3 階に着いた直後（扉はまだ閉じている）. 3 階の「閉」の画像はないので、別の階の「閉」の画像を使う
+    name, _, view = camera.select(truth(x=WP.car_center_x, yaw=math.pi, lift_floor=3, in_car=True))
+    assert view.floor == 3 and view.door_ratio == 0.0
+    assert "closed" in name
+
+
 def test_in_car_near_door(camera):
     near_x = 0.55
     name, _, view = camera.select(truth(x=near_x, yaw=math.pi, lift_floor=3, car_door=OPEN, landing={3: OPEN},

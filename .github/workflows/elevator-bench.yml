@@ -1,8 +1,8 @@
 name: elevator-bench
 
 # Orin のベンチ（実機の代わりにダミーの世界をつないで、エレベーターのタスクを通す）の確認.
-#   bench-e2e:  x86 で、実行系のイメージと安全ゲートのイメージを作り、モック VLM で1回通す
-#               （ダミーの世界 → 実行系 → 安全ゲート（Python）→ 安全ゲート（点群、C++）→ ダミーの世界）
+#   bench-e2e:   x86 で、Orin 用のスクリプト（bench_up.sh、bench_e2e.sh）をそのまま動かし、モック VLM で1回通す
+#                （ダミーの世界 → 実行系 → 安全ゲート（Python）→ 安全ゲート（点群、C++）→ ダミーの世界）
 #   build-arm64: Orin と同じ arm64 で、2つのイメージが作れるか（中の単体テストも通す）
 
 on:
@@ -13,6 +13,7 @@ on:
       - "elevator_vlm/samples/**"
       - "safety_gate/**"
       - "jetson/bench/**"
+      - "jetson/vlm_up.sh"
       - ".github/workflows/elevator-bench.yml"
   workflow_dispatch:
 
@@ -26,33 +27,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # VLM の代わりに、真値から答えるモック VLM をポート 8000 に立てる（bench_up.sh は、動いている VLM をそのまま使う）
       - name: Build the runtime image (unit tests run inside)
         run: |
           set -o pipefail
           DOCKER_BUILDKIT=1 docker build --progress=plain -f elevator_vlm/docker/Dockerfile.runtime \
-            -t elevator-runtime:ci elevator_vlm 2>&1 | tail -n 60
+            -t elevator-runtime:latest elevator_vlm 2>&1 | tail -n 60
 
-      - name: Build the safety gate image
+      - name: Start a mock VLM on port 8000
         run: |
-          set -o pipefail
-          DOCKER_BUILDKIT=1 docker build --progress=plain -t safety-gate:ci safety_gate 2>&1 | tail -n 30
+          docker run -d --name mock-vlm --network host --ipc host -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 \
+            elevator-runtime:latest ros2 run elevator_sim mock_vlm --ros-args -p port:=8000 -p latency_s:=0.5
+          for _ in $(seq 1 30); do curl -sf http://127.0.0.1:8000/v1/models && break; sleep 1; done
 
-      - name: Start the safety gate and the bench (mock VLM)
-        run: |
-          mkdir -p runs
-          docker run -d --name bench-gate --network host --ipc host -e ROS_LOCALHOST_ONLY=1 \
-            -v "$PWD/jetson/bench/safety_gate:/config:ro" safety-gate:ci
-          docker run -d --name bench-runtime --network host --ipc host \
-            -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 -v "$PWD/runs:/runs" \
-            elevator-runtime:ci ros2 launch elevator_sim bench.launch.py vlm:=mock
-          sleep 15
-          docker logs bench-gate 2>&1 | tail -n 20
-          docker logs bench-runtime 2>&1 | tail -n 40
+      - name: bench_up.sh (builds the safety gate image, starts the gate and the bench)
+        run: bash jetson/bench/bench_up.sh
 
-      - name: Run the task once through the Web UI API
-        run: |
-          docker exec -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 bench-runtime /entrypoint.sh \
-            ros2 run elevator_sim e2e_runner --ros-args -p out_dir:=/runs/bench_e2e -p task_timeout_s:=300.0
+      - name: bench_e2e.sh (runs the task once through the Web UI API)
+        run: bash jetson/bench/bench_e2e.sh
 
       - name: Check the Web UIs
         if: always()
@@ -64,16 +56,18 @@ jobs:
       - name: Logs
         if: always()
         run: |
-          echo "==== bench-runtime ===="; docker logs bench-runtime 2>&1 | tail -n 200
-          echo "==== bench-gate ===="; docker logs bench-gate 2>&1 | tail -n 60
-          docker rm -f bench-runtime bench-gate > /dev/null 2>&1 || true
+          echo "==== safety gate state changes ===="; docker logs elevator-bench-gate 2>&1 | grep "状態" | head -n 40
+          echo "==== elevator-bench ===="; docker logs elevator-bench 2>&1 | tail -n 150
+          ls -la jetson/log/ || true
+          bash jetson/bench/bench_down.sh
+          docker rm -f mock-vlm > /dev/null 2>&1 || true
 
-      - name: Upload run records
+      - name: Upload the bench records
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: elevator-bench-runs
-          path: runs
+          name: elevator-bench-log
+          path: jetson/log
           retention-days: 14
 
   build-arm64:

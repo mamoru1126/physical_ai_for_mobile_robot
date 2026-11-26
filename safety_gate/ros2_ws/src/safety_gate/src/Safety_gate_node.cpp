@@ -273,6 +273,12 @@ void SafetyGateNode::timerCallback()
     result.velocity = Velocity{};
   }
   cmdVelPublisher->publish(toTwist(result.velocity));
+  if (state != lastState) {
+    RCLCPP_INFO(
+      get_logger(), "状態: %s → %s（%s）", lastState.empty() ? "(起動)" : lastState.c_str(),
+      state.c_str(), reason.c_str());
+    lastState = state;
+  }
 
   std_msgs::msg::String state_message;
   state_message.data = state + " " + reason;

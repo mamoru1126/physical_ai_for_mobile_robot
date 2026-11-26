@@ -120,6 +120,7 @@ private:
   std::string cloudError{"点群がまだ来ていません"};
   std::string cloudFrameUsed{};
   SteadyTime lastDebugTime{};
+  std::string lastState{};      // ログに状態の変わり目だけを出すため
 };
 
 #endif

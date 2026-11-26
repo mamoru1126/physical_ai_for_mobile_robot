@@ -56,7 +56,7 @@ if [ -z "${power_name}" ]; then
 elif [[ "${power_name}" == MAXN* ]]; then
   ok "電源モード ${power_name}"
 else
-  note "電源モードが ${power_name} です. 速さを測る前に MAXN にします（jetson/vlm.md の「2. 電源モード」）"
+  note "電源モードが ${power_name} です. 速さを最大で測るなら MAXN にします（jetson/vlm.md の「2. 電源モード」）. 電源が足りずに落ちる環境では MAXN にしません（jetson/bench/README.md）"
 fi
 
 # ---- Docker -------------------------------------------------------------------

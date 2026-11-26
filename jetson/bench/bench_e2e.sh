@@ -71,7 +71,9 @@ stop_tegrastats() {
 trap stop_tegrastats EXIT
 
 # ---- 通す ------------------------------------------------------------------------
-runner_args=(-p out_dir:="/runs/${RUN_NAME}" -p task_timeout_s:="${BENCH_TIMEOUT_S:-900}")
+# ROS 2 のパラメータは型を見るので、時間は小数の形で渡す（900 ではなく 900.0）
+timeout_s="$(awk -v t="${BENCH_TIMEOUT_S:-900}" 'BEGIN { printf "%.1f", t }')"
+runner_args=(-p out_dir:="/runs/${RUN_NAME}" -p task_timeout_s:="${timeout_s}")
 if [ -n "${BENCH_PLAN_FILE:-}" ]; then
   [ -f "${BENCH_PLAN_FILE}" ] || { echo "NG: 計画のファイルがありません: ${BENCH_PLAN_FILE}" >&2; exit 1; }
   cp "${BENCH_PLAN_FILE}" "${ROOT}/elevator_vlm/runs/${RUN_NAME}_plan.json"

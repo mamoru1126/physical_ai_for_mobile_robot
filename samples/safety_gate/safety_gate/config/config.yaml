@@ -1,0 +1,9 @@
+roi_range:
+  min_x: -1.0
+  max_x: -0.4
+  min_y: -0.7
+  max_y: 0.7
+  min_z: -0.2
+  max_z: 0.8
+voxel_size: 0.05
+obstacle_voxel_threshold: 3

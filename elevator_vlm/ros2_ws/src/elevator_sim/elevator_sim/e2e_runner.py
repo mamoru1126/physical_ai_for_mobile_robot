@@ -278,7 +278,7 @@ class E2ERunner(Node):
         body = {k: v for k, v in (("from", self.arm_from), ("to", self.arm_to)) if v > 0}
         if not self._post("/api/arm", body).get("ok"):
             return self._finish("arm_rejected", loaded, path=True)
-        # 3. 外（元のシステム）からの開始の合図: ROS のトピックに start.
+        # 3. 外（ROS1システム）からの開始の合図: ROS のトピックに start.
         #    前に画面で走らせた結果（完了・失敗）が残っていても、走らせた回数（run）が増えるまで合図を出す
         t1 = time.monotonic()
         state = self._state()

@@ -260,7 +260,7 @@ def summarize(model: str, points: List[Dict[str, Any]], checks: List[Dict[str, A
               "- 道の指差しは、走行中にくり返し問いかけるもの. 1回の答えで進むのは、その方向へ最大 "
               f"{args.step_m:g} m（設定の skills.follow_path.step_m）. 何回か外しても、次の答えで向きが直る.",
               "- 道の外や避けるものの上を指す割合が高い場面は、本番でその区間を VLM に任せない"
-              "（元のシステムで走る）か、沿うもの（path）の言い回しを変えて試す（--path）.",
+              "（ROS1システムで走る）か、沿うもの（path）の言い回しを変えて試す（--path）.",
               "- 止まる条件は、yes が 2 回続いたら止まる（skills.follow_path.stop_confirm_count）. "
               "no が正解の画像で yes と答える（早く止まる）より、yes が正解の画像で no と答える（止まらない）方が危ない.",
               "- 正解の範囲は目で見て付けたおおよそのもの. 点を描いた画像（overlays/）で確かめる."]

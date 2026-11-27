@@ -34,7 +34,7 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 | ROS 1 → ROS 2（ロボットのものを Orin で受ける） | `/cloud` | `sensor_msgs/PointCloud2` |
 | ROS 2 → ROS 1（Orin からロボットへ流す） | `/cmd_vel` | `geometry_msgs/Twist` |
 | 両方向 | `/tf`、`/tf_static` | `tf2_msgs/TFMessage` |
-| ROS 1 → ROS 2（元のシステムから VLM へ、開始と終了の合図） | `/vlm_drive/command` | `std_msgs/String`（`start`、`finish`、`stop`、`ping`） |
+| ROS 1 → ROS 2（ROS1システムから VLM へ、開始と終了の合図） | `/vlm_drive/command` | `std_msgs/String`（`start`、`finish`、`stop`、`ping`） |
 | ROS 2 → ROS 1（VLM が走らせているかの知らせ） | `/vlm_drive/state` | `std_msgs/String`（JSON） |
 | ROS 2 → ROS 1（同上） | `/vlm_drive/active` | `std_msgs/Bool` |
 
@@ -111,7 +111,7 @@ sudo systemctl restart ros1-bridge
 | `ROS1_HOSTS` | auto | ROS 1 のノードが名前（ホスト名）で名乗っていて、名前が引けないときは、roscore と同じ PC とみなす |
 | `ODOM_TOPIC` / `CLOUD_TOPIC` / `CMD_VEL_TOPIC` | /odom / /cloud / /cmd_vel | 橋渡しするトピックの名前 |
 | `BRIDGE_TF` | true | `/tf` と `/tf_static` も橋渡しするか |
-| `VLM_COMMAND_TOPIC` | /vlm_drive/command | 元のシステムから VLM への開始と終了の合図（ROS 1 → ROS 2）。空なら橋渡ししない |
+| `VLM_COMMAND_TOPIC` | /vlm_drive/command | ROS1システムから VLM への開始と終了の合図（ROS 1 → ROS 2）。空なら橋渡ししない |
 | `VLM_STATE_TOPIC` / `VLM_ACTIVE_TOPIC` | /vlm_drive/state / /vlm_drive/active | VLM が走らせているかの知らせ（ROS 2 → ROS 1）。空なら橋渡ししない |
 | `ROS_DOMAIN_ID` | 42 | ROS 2 のドメイン。Orin（omnivla_real）とそろえる |
 | `ROS2_PEERS` | なし | ROS 2 の相手が自動で見つからないときだけ、Orin の IP を書く。例: `ROS2_PEERS=192.168.0.200` |

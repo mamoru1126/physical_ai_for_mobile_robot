@@ -27,9 +27,9 @@
 | `/odom` | ROS 1 → Orin | `nav_msgs/Odometry` | ロボット → 実行系 | 要る | `/etc/elevator-task/robot.env` の `ODOM_TOPIC` |
 | `/cloud` | ROS 1 → Orin | `sensor_msgs/PointCloud2` | LiDAR → 安全ゲート | 要る | `/etc/safety-gate/config.yaml` の `topics.cloud` |
 | `/tf`、`/tf_static` | ROS 1 → Orin | `tf2_msgs/TFMessage` | ロボット → 安全ゲート | `base_link` ← 点群の座標系が取れればよい（来なければ安全ゲートの設定に書ける） | `/etc/safety-gate/config.yaml` の `frames`、`tf` |
-| `/vlm_drive/command` | ROS 1 → Orin | `std_msgs/String` | 元のシステム → 実行系 | 合図で走らせるとき | `/etc/elevator-task/task.yaml` の `drive.command_topic` |
-| `/vlm_drive/state` | Orin → ROS 1 | `std_msgs/String`（JSON） | 実行系 → 元のシステム | 同上 | `drive.state_topic` |
-| `/vlm_drive/active` | Orin → ROS 1 | `std_msgs/Bool` | 実行系 → 元のシステム | 同上 | `drive.active_topic` |
+| `/vlm_drive/command` | ROS 1 → Orin | `std_msgs/String` | ROS1システム → 実行系 | 合図で走らせるとき | `/etc/elevator-task/task.yaml` の `drive.command_topic` |
+| `/vlm_drive/state` | Orin → ROS 1 | `std_msgs/String`（JSON） | 実行系 → ROS1システム | 同上 | `drive.state_topic` |
+| `/vlm_drive/active` | Orin → ROS 1 | `std_msgs/Bool` | 実行系 → ROS1システム | 同上 | `drive.active_topic` |
 
 カメラの画像は Orin の中で完結するので、橋渡しは通しません。
 
@@ -91,7 +91,7 @@ dynamic_bridge（`--bridge-all-topics` などなし）は、**片側に出すも
 
 - Orin の実行系を起動する前は、`/odom` は橋渡しされません（Orin に受けるものがいない）。`check_link.sh` は自分で受けるので、起動の前でも確かめられます。
 - ロボットの PC で `rostopic echo /vlm_drive/state` を始めると、そのときから `/vlm_drive/state` の橋渡しが始まります（知らせは 1 秒に 2 回出しているので、すぐ届きます）。
-- 合図（`/vlm_drive/command`）は、ROS 1 の側に出すものができてから橋渡しが始まるので、`rostopic pub -1` の 1 回目を落とすことがあります。合図は [ros1_bridge/tools/vlm_drive.py](../../ros1_bridge/tools/vlm_drive.py) で出します（橋渡しの準備ができるのを待ってから出し、答えを表示する）。元のシステムのノードから出すときは、出す側（Publisher）を起動のときに作っておけば、この心配はありません。
+- 合図（`/vlm_drive/command`）は、ROS 1 の側に出すものができてから橋渡しが始まるので、`rostopic pub -1` の 1 回目を落とすことがあります。合図は [ros1_bridge/tools/vlm_drive.py](../../ros1_bridge/tools/vlm_drive.py) で出します（橋渡しの準備ができるのを待ってから出し、答えを表示する）。ROS1システムのノードから出すときは、出す側（Publisher）を起動のときに作っておけば、この心配はありません。
 - `/tf_static` は、橋渡しが「とっておいて、後から来た相手にも渡す」設定にします（ros1_bridge 0.9.4 から）。
 
 ## 3. Orin: ROS 2 のドメインをそろえる
@@ -190,7 +190,7 @@ python3 vlm_drive.py ping
 
 ### 6-3. 速度の指令（Orin → ROS 1 → 台車）
 
-ロボットは止めておきます（非常停止を押しておくと確実です）。元のシステムのナビゲーションも止めておきます（`/cmd_vel` を出さない状態）。ロボットの PC で:
+ロボットは止めておきます（非常停止を押しておくと確実です）。ROS1システムのナビゲーションも止めておきます（`/cmd_vel` を出さない状態）。ロボットの PC で:
 
 ```bash
 rostopic echo /cmd_vel

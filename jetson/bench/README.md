@@ -211,7 +211,7 @@ BENCH_TASK=path BENCH_PATH_FIRST=253 bash jetson/bench/bench_up.sh
 
 ### 外からの合図で通す（途中から・ここまで）
 
-元のシステムの代わりに、コマンドで合図を出します。画面で計画を読み込み、「承認して開始の合図を待つ」を押してから、次を実行します。
+ROS1システムの代わりに、コマンドで合図を出します。画面で計画を読み込み、「承認して開始の合図を待つ」を押してから、次を実行します。
 
 ```bash
 docker exec elevator-bench /entrypoint.sh ros2 topic pub --once /vlm_drive/command std_msgs/msg/String "{data: start}"

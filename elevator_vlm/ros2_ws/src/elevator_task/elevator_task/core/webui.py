@@ -117,7 +117,7 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <table id="plan"><thead><tr><th>#</th><th>指示</th><th>いつ</th><th>何を</th><th>時間切れ</th><th>状態</th></tr></thead><tbody></tbody></table>
 <div class="row"><label>手順 <select id="rfrom"></select> から <select id="rto"></select> まで</label></div>
 <div class="row"><button class="primary" id="bexec" disabled>承認して実行</button><button id="barm" disabled>承認して開始の合図を待つ</button><button id="bdisarm" disabled>承認を取り消す</button></div>
-<div class="note">「承認して開始の合図を待つ」にすると、外（元のシステム）から <code>start</code> の合図が来たときに走り出します。合図の <code>finish</code> で止めて終えます。</div>
+<div class="note">「承認して開始の合図を待つ」にすると、外（ROS1システム）から <code>start</code> の合図が来たときに走り出します。合図の <code>finish</code> で止めて終えます。</div>
 </section>
 <section><h2>記録</h2><pre id="log"></pre></section>
 </div>

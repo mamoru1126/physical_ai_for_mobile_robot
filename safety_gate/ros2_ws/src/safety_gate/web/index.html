@@ -173,7 +173,7 @@ function show(d) {
   last = d; lastTime = Date.now();
   const badge = $("badge");
   badge.textContent = d.state; badge.style.background = COLORS[d.state] || "var(--idle)";
-  $("reason").textContent = d.reason + (d.pub === false ? "（速度指令は出していません. 元のシステムに任せています）" : "");
+  $("reason").textContent = d.reason + (d.pub === false ? "（速度指令は出していません. ROS1システムに任せています）" : "");
   $("in").textContent = vec(d.in); $("out").textContent = vec(d.out);
   $("scale").textContent = fmt(d.scale);
   $("tc").textContent = d.tc !== null && d.tc >= 0 ? fmt(d.tc, " s") : "見る範囲ではぶつからない";

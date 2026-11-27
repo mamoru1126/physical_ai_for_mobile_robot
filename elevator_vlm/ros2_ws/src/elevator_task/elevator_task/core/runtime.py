@@ -6,7 +6,7 @@
 途中から・ここまで（コースの途中で VLM の指示で走り、終える）:
   * 実行する手順の範囲（何番目から何番目まで. 1 から数える）を指定して実行できる.
   * 「承認して開始の合図を待つ」（arm）にした計画は、外からの開始の合図（command の start）で走り出す.
-    元のシステム（ROS 1 のナビゲーションなど）が、VLM に任せる区間の始まりで合図を出す使い方.
+    ROS1システム（ROS 1 のナビゲーションなど）が、VLM に任せる区間の始まりで合図を出す使い方.
   * 終了の指示（finish. 画面の「ここまで」か、command の finish）で、その場で止めて成功として終える.
 """
 from __future__ import annotations
@@ -471,7 +471,7 @@ class TaskRuntime:
         return dict(progress) if progress else None
 
     def drive_state(self) -> Dict[str, Any]:
-        """VLM の指示で走っているかの状態. ROS のトピック vlm_drive/state で外（元のシステム）に知らせる."""
+        """VLM の指示で走っているかの状態. ROS のトピック vlm_drive/state で外（ROS1システム）に知らせる."""
         with self._lock:
             plan = self.plan
             running = self.task_state == TASK_RUNNING
@@ -487,7 +487,7 @@ class TaskRuntime:
                 "result": self.last_result,
                 "steps": len(plan.steps) if plan else 0,
                 "plan_ready": plan is not None and self.plan_state == PLAN_READY,
-                # 最後に受けた合図とその答え（元のシステムから、合図が届いたかを確かめられる）
+                # 最後に受けた合図とその答え（ROS1システムから、合図が届いたかを確かめられる）
                 "last_command": dict(self.last_command) if self.last_command else None,
             }
         snap = self.executor.snapshot()

@@ -9,7 +9,7 @@
 #   ロボットの PC（ROS 1）→ 橋渡し → /odom（robot.env の ODOM_TOPIC）、/cloud、/tf
 #   実行系 → 速度の上限（このプロセスの安全ゲート）→ /vlm_cmd_vel → 点群を見る安全ゲート（safety-gate）
 #   → ⚠ 最終の速度指令 /cmd_vel（/etc/safety-gate/config.yaml の topics.cmd_out）→ 橋渡し → ロボット
-#   元のシステム ↔ 橋渡し ↔ /vlm_drive/command（start / finish / stop / ping）、/vlm_drive/state、/vlm_drive/active
+#   ROS1システム ↔ 橋渡し ↔ /vlm_drive/command（start / finish / stop / ping）、/vlm_drive/state、/vlm_drive/active
 
 vlm:
   base_url: http://127.0.0.1:8000/v1      # jetson/vlm_up.sh のサーバ
@@ -45,7 +45,7 @@ safety:
   cmd_timeout_s: 0.5
   odom_timeout_s: 1.0
   camera_timeout_s: 2.0
-  # VLM が走らせていない間は速度指令を出さない（0 を 0.5 秒出してから黙る）. 元のシステムと /cmd_vel を使い分ける
+  # VLM が走らせていない間は速度指令を出さない（0 を 0.5 秒出してから黙る）. ROS1システムと /cmd_vel を使い分ける
   publish_when_idle: false
   idle_tail_s: 0.5
 

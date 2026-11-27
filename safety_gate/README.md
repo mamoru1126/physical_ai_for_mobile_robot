@@ -54,7 +54,7 @@ VLM が出す速度の指令を、点群を見て安全なものにしてから�
   - 点群が 0.5 秒（`cloud_timeout`）来ない（`STOP`）
   - TF がない（`STOP`）
 - 指令は上限（`limits`）で抑えます。
-- 指令が来ていない（`IDLE`）間は、0 を 0.5 秒（`idle_tail`）出してから、`/cmd_vel` を出すのをやめます（`publish_when_idle: false`。既定の設定ファイル）。VLM が走らせていない間、元のシステム（ROS 1 のナビゲーション）が同じ `/cmd_vel` を使えるようにするためです（[途中から・ここまで](../elevator_vlm/docs/follow_path.md)）。指令がまた来れば、すぐに出し始めます。WebUI の理由の欄に「速度指令は出していません」と出ます。
+- 指令が来ていない（`IDLE`）間は、0 を 0.5 秒（`idle_tail`）出してから、`/cmd_vel` を出すのをやめます（`publish_when_idle: false`。既定の設定ファイル）。VLM が走らせていない間、ROS1システム（ROS 1 のナビゲーション）が同じ `/cmd_vel` を使えるようにするためです（[途中から・ここまで](../elevator_vlm/docs/follow_path.md)）。指令がまた来れば、すぐに出し始めます。WebUI の理由の欄に「速度指令は出していません」と出ます。
 
 ## 入れる
 

@@ -26,7 +26,7 @@ class SafetyConfig:
     odom_timeout_s: float = 1.0
     camera_timeout_s: float = 2.0  # 0 でカメラの監視を無効にする
     # 速度指令が来ていない（実行系が動かしていない）間も 0 を出し続けるか.
-    # false にすると、0 を idle_tail_s 秒だけ出してから黙る. 元のシステム（ROS 1 のナビゲーションなど）と
+    # false にすると、0 を idle_tail_s 秒だけ出してから黙る. ROS1システム（ROS 1 のナビゲーションなど）と
     # 同じ /cmd_vel を使い分けるとき（途中から・ここまで）は false にする
     publish_when_idle: bool = True
     idle_tail_s: float = 0.5

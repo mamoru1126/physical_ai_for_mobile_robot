@@ -5,7 +5,7 @@
 にせの指令を流し、出てくる /cmd_vel と状態、WebUI の応答を確かめる.
   python3 selftest.py <設定ファイル>
 設定の safety.publish_when_idle が false（既定の設定ファイル）なら、指令が来ていない間に
-/cmd_vel を出さないこと（元のシステムと使い分けられること）も確かめる.
+/cmd_vel を出さないこと（ROS1システムと使い分けられること）も確かめる.
 """
 import json
 import math

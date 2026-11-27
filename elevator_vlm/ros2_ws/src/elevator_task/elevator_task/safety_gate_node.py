@@ -6,7 +6,7 @@
   提供:  safety/stop、safety/reset (std_srvs/Trigger)
 
 設定の safety.publish_when_idle を false にすると、実行系が速度指令を出していない間は cmd_vel を出さない
-（0 を idle_tail_s 秒出してから黙る）. 元のシステムと同じ /cmd_vel を使い分けるとき（途中から・ここまで）に使う.
+（0 を idle_tail_s 秒出してから黙る）. ROS1システムと同じ /cmd_vel を使い分けるとき（途中から・ここまで）に使う.
 """
 from __future__ import annotations
 

@@ -327,8 +327,8 @@ def main():
     else:
         report("OK", f"⚠ 最終の速度指令 {node.cmd_out}", detail)
 
-    # ---- 5. 実行系と、元のシステムとの合図 ----
-    print("\n== 実行系と、元のシステムとの合図 ==")
+    # ---- 5. 実行系と、ROS1システムとの合図 ----
+    print("\n== 実行系と、ROS1システムとの合図 ==")
     task_running = bool(node.drive_state and node.endpoints(node.drive_state, "pub"))
     if not task_running:
         report("--", "実行系（elevator-task）", "動いていないので確かめません. bash jetson/robot/robot_up.sh の後でもう一度")

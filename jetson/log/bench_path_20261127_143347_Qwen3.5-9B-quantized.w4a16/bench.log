@@ -1,0 +1,23 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-11-27-05-25-12-984403-ubuntu-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [bench_path-1]: process started with pid [22]
+[INFO] [safety_gate-2]: process started with pid [24]
+[INFO] [task_node-3]: process started with pid [26]
+[task_node-3] [INFO] [1795757113.619700448] [elevator_task]: カメラ: /camera/compressed（圧縮）、/camera/camera_info
+[safety_gate-2] [INFO] [1795757113.624711008] [safety_gate]: 安全ゲート: 並進 0.5 m/s、旋回 1.2 rad/s まで. 指令が来ていない間は、0 を 0.5 秒出してから黙ります
+[safety_gate-2] [INFO] [1795757113.626632896] [safety_gate]: 実行系が動かしていないので、速度指令を出すのをやめました
+[safety_gate-2] [INFO] [1795757113.627336960] [safety_gate]: 状態: (起動) → odom_lost
+[task_node-3] [INFO] [1795757123.642406880] [elevator_task]: Web UI: http://localhost:8080/  VLM: http://127.0.0.1:8000/v1 (vlm)  記録: /runs/20261127_052513
+[task_node-3] [INFO] [1795757123.647834624] [elevator_task]: 途中から・ここまで: vlm_drive/command、vlm_drive/state、vlm_drive/active（開始の合図は、画面で承認して待っている計画だけ受けます）
+[bench_path-1] [INFO] [1795757125.923061696] [bench_path]: 道のベンチ: /atc_frames の frame_00001.jpg〜frame_00313.jpg（313 枚、960x540）. 前に 0.6 m 走るごとに 1 枚進めます. 速度指令 /cmd_vel を受けて動く
+[safety_gate-2] [INFO] [1795757125.943721792] [safety_gate]: 状態: odom_lost → camera_lost
+[safety_gate-2] [INFO] [1795757126.104585440] [safety_gate]: 状態: camera_lost → idle
+[safety_gate-2] [INFO] [1795757362.743919392] [safety_gate]: 速度指令を出し始めました
+[safety_gate-2] [INFO] [1795757362.744914496] [safety_gate]: 状態: idle → ok
+[safety_gate-2] [INFO] [1795757386.283533664] [safety_gate]: 状態: ok → idle
+[safety_gate-2] [INFO] [1795757386.783444192] [safety_gate]: 実行系が動かしていないので、速度指令を出すのをやめました
+[safety_gate-2] [INFO] [1795757433.384051968] [safety_gate]: 速度指令を出し始めました
+[safety_gate-2] [INFO] [1795757433.385185888] [safety_gate]: 状態: idle → ok
+[safety_gate-2] [INFO] [1795757456.864605056] [safety_gate]: 状態: ok → idle
+[safety_gate-2] [INFO] [1795757457.364619264] [safety_gate]: 実行系が動かしていないので、速度指令を出すのをやめました
+[bench_path-1] [INFO] [1795757629.033251328] [bench_path]: 映像を frame_00225.jpg に移しました

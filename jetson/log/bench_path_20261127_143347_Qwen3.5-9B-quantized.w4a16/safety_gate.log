@@ -1,0 +1,14 @@
+設定ファイル: /config/config.yaml、ROS 2 のドメイン: 43
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-11-27-05-25-12-906847-ubuntu-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [safety_gate_node-1]: process started with pid [23]
+[INFO] [safety_gate_web.py-2]: process started with pid [25]
+[safety_gate_node-1] [INFO] [1795757113.046798368] [safety_gate_node]: 設定ファイル: /config/config.yaml
+[safety_gate_node-1] [INFO] [1795757113.055026336] [safety_gate_node]: 受ける: /vlm_cmd_vel、/cloud  出す: /cmd_vel（base_link 座標系で判定）
+[safety_gate_node-1] [INFO] [1795757113.055096320] [safety_gate_node]: 指令が来ていない間は、0 を 0.50 秒出してから黙ります（元のシステムと /cmd_vel を使い分ける）
+[safety_gate_node-1] [INFO] [1795757113.105203104] [safety_gate_node]: 状態: (起動) → IDLE（指令がまだ来ていません）
+[safety_gate_web.py-2] [INFO] [1795757123.938911200] [safety_gate_web]: WebUI: http://<この PC の IP>:9001/ （/safety_gate/debug を表示）
+[safety_gate_node-1] [INFO] [1795757362.755280704] [safety_gate_node]: 速度指令を出し始めました
+[safety_gate_node-1] [INFO] [1795757387.855125216] [safety_gate_node]: 指令が来ていないので、速度指令を出すのをやめました
+[safety_gate_node-1] [INFO] [1795757433.405208544] [safety_gate_node]: 速度指令を出し始めました
+[safety_gate_node-1] [INFO] [1795757458.405137856] [safety_gate_node]: 指令が来ていないので、速度指令を出すのをやめました

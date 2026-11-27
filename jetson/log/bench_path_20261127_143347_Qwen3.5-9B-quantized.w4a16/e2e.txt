@@ -1,0 +1,135 @@
+[e2e] 準備完了（0 秒）. VLM: http://127.0.0.1:8000/v1 / vlm
+[e2e] 映像: frame_00225.jpg
+[e2e] POST /api/set_plan → {'ok': True, 'message': '計画を読み込みました'}
+[e2e] 計画:
+{
+  "steps": [
+    {
+      "instruction": "エレベーターの扉の前まで道に沿って走って",
+      "when": {
+        "type": "now"
+      },
+      "do": {
+        "skill": "follow_path",
+        "path": "the walkway or corridor ahead",
+        "distance_m": 0.0,
+        "stop_when": "Closed elevator doors are directly in front of the robot."
+      },
+      "timeout_s": 900.0
+    }
+  ]
+}
+[e2e] POST /api/arm → {'ok': True, 'message': '承認しました. 開始の合図を待ちます（手順1〜1）'}
+[e2e] event {"kind": "path_start", "path": "the paved walkway", "distance_m": 10.0, "limit_m": 10.0, "stop_when": "", "step_m": 1.0, "t": 1795757362.74}
+[e2e] event {"kind": "path_end", "ok": false, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "traveled_m": 0.0, "answers": 6, "accepted": 0, "checks": 0, "t": 1795757385.774}
+[e2e] event {"kind": "skill_end", "step": 0, "ok": false, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "finished": false, "t": 1795757385.775}
+[e2e] event {"kind": "task_failed", "step": 0, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "t": 1795757385.775}
+[e2e] event {"kind": "path_start", "path": "the walkway or corridor ahead", "distance_m": 10.0, "limit_m": 10.0, "stop_when": "", "step_m": 1.0, "t": 1795757433.369}
+[e2e] event {"kind": "path_end", "ok": false, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "traveled_m": 0.0, "answers": 6, "accepted": 0, "checks": 0, "t": 1795757456.357}
+[e2e] event {"kind": "skill_end", "step": 0, "ok": false, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "finished": false, "t": 1795757456.357}
+[e2e] event {"kind": "task_failed", "step": 0, "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）", "t": 1795757456.358}
+[e2e] event {"kind": "armed", "first": 1, "last": 1}
+[e2e] まとめ:
+{
+  "result": "FAIL",
+  "outcome": "failed",
+  "checks": {
+    "完了した": false,
+    "結果が done": false,
+    "映像が 243 枚目まで進んだ": false,
+    "外への知らせ（/vlm_drive/active）が true → false": false,
+    "外への知らせ（/vlm_drive/state）を受け取った": true
+  },
+  "task_state": "failed",
+  "task_message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+  "steps": [
+    {
+      "phase": "failed",
+      "seen_false": true,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": 1795757433.3683798,
+      "confirmed_at": null,
+      "finished_at": 1795757456.3576097,
+      "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）"
+    }
+  ],
+  "path": {
+    "active": false,
+    "path": "the walkway or corridor ahead",
+    "stop_when": "",
+    "distance_m": 10.0,
+    "limit_m": 10.0,
+    "step_m": 1.0,
+    "traveled_m": 0.0,
+    "allow_m": 0.0,
+    "answers": 6,
+    "accepted": 0,
+    "rejected": 6,
+    "checks": 0,
+    "stop_streak": 0,
+    "last_latency_s": 3.77,
+    "state": "failed",
+    "reason": "点が地平線より上にあります（v=233、地平線 v=247）",
+    "result": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）"
+  },
+  "drive": {
+    "active": false,
+    "task_state": "failed",
+    "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+    "stopped": false,
+    "armed": [
+      1,
+      1
+    ],
+    "range": [
+      1,
+      1
+    ],
+    "source": "web",
+    "run": 2,
+    "result": "failed",
+    "steps": 1,
+    "plan_ready": true,
+    "step": 0,
+    "skill": ""
+  },
+  "bench_path": {
+    "time": 505.223,
+    "frame": "frame_00225.jpg",
+    "frame_number": 225,
+    "traveled_m": 0.0,
+    "meters_per_frame": 0.6,
+    "first": 1,
+    "last": 313,
+    "summary": "frame_00225.jpg（0.0 m 走った）"
+  },
+  "active_seen": [
+    false
+  ],
+  "drive_state_last": {
+    "active": false,
+    "armed": [
+      1,
+      1
+    ],
+    "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+    "plan_ready": true,
+    "range": [
+      1,
+      1
+    ],
+    "result": "failed",
+    "run": 2,
+    "skill": "",
+    "source": "web",
+    "step": 0,
+    "steps": 1,
+    "stopped": false,
+    "task_state": "failed"
+  },
+  "run_dir": "/runs/20261127_052513"
+}
+[e2e] E2E RESULT: FAIL
+[ros2run]: Process exited with failure 1

@@ -1,0 +1,101 @@
+{
+  "result": "FAIL",
+  "outcome": "failed",
+  "checks": {
+    "完了した": false,
+    "結果が done": false,
+    "映像が 243 枚目まで進んだ": false,
+    "外への知らせ（/vlm_drive/active）が true → false": false,
+    "外への知らせ（/vlm_drive/state）を受け取った": true
+  },
+  "task_state": "failed",
+  "task_message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+  "steps": [
+    {
+      "phase": "failed",
+      "seen_false": true,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": 1795757433.3683798,
+      "confirmed_at": null,
+      "finished_at": 1795757456.3576097,
+      "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）"
+    }
+  ],
+  "path": {
+    "active": false,
+    "path": "the walkway or corridor ahead",
+    "stop_when": "",
+    "distance_m": 10.0,
+    "limit_m": 10.0,
+    "step_m": 1.0,
+    "traveled_m": 0.0,
+    "allow_m": 0.0,
+    "answers": 6,
+    "accepted": 0,
+    "rejected": 6,
+    "checks": 0,
+    "stop_streak": 0,
+    "last_latency_s": 3.77,
+    "state": "failed",
+    "reason": "点が地平線より上にあります（v=233、地平線 v=247）",
+    "result": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）"
+  },
+  "drive": {
+    "active": false,
+    "task_state": "failed",
+    "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+    "stopped": false,
+    "armed": [
+      1,
+      1
+    ],
+    "range": [
+      1,
+      1
+    ],
+    "source": "web",
+    "run": 2,
+    "result": "failed",
+    "steps": 1,
+    "plan_ready": true,
+    "step": 0,
+    "skill": ""
+  },
+  "bench_path": {
+    "time": 505.223,
+    "frame": "frame_00225.jpg",
+    "frame_number": 225,
+    "traveled_m": 0.0,
+    "meters_per_frame": 0.6,
+    "first": 1,
+    "last": 313,
+    "summary": "frame_00225.jpg（0.0 m 走った）"
+  },
+  "active_seen": [
+    false
+  ],
+  "drive_state_last": {
+    "active": false,
+    "armed": [
+      1,
+      1
+    ],
+    "message": "道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（道のベンチ（今のフレーム）: frame_00001.jpg（0.0 m 走った））",
+    "plan_ready": true,
+    "range": [
+      1,
+      1
+    ],
+    "result": "failed",
+    "run": 2,
+    "skill": "",
+    "source": "web",
+    "step": 0,
+    "steps": 1,
+    "stopped": false,
+    "task_state": "failed"
+  },
+  "run_dir": "/runs/20261127_052513"
+}

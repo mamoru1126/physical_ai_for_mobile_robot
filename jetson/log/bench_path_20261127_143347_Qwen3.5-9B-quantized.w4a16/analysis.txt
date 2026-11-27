@@ -1,0 +1,26 @@
+記録: /runs/20261127_052513   VLM: vlm（http://127.0.0.1:8000/v1）
+この記録には真値が添えられていません（古い版の記録）. 答えの並びだけを出します
+
+計画（VLM が作成、12.9 秒）
+  1. 道に沿って走って
+     [now] → follow_path path=the paved walkway distance_m=10.0 stop_when=
+
+計画（読み込み）
+  1. 道に沿って10m走って
+     [now] → follow_path path=the walkway or corridor ahead distance_m=10.0 stop_when=
+
+計画（読み込み）
+  1. エレベーターの扉の前まで道に沿って走って
+     [now] → follow_path path=the walkway or corridor ahead distance_m=0.0 stop_when=Closed elevator doors are directly in front of the robot.
+
+実行 1（開始 t=1795757362.739）
+ 手順 1「道に沿って走って」
+   動作 follow_path path=the paved walkway distance_m=10.0 stop_when=
+     結果: 失敗 — 道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（23.0 秒）
+ 終わり方: 実行系の報告は「中止（道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247））」
+
+実行 2（開始 t=1795757433.367）
+ 手順 1「道に沿って10m走って」
+   動作 follow_path path=the walkway or corridor ahead distance_m=10.0 stop_when=
+     結果: 失敗 — 道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247）（23.0 秒）
+ 終わり方: 実行系の報告は「中止（道の指差しが続けて使えません（6 回）: 点が地平線より上にあります（v=233、地平線 v=247））」

@@ -227,6 +227,6 @@ bash jetson/robot/check_link.sh --save
 | TF が取れない | ロボットの PC に TF があるか。`/tf_static` だけが届かないなら、安全ゲートの `tf.publish_static: true` と取り付けの値 |
 | ⚠ 最終の速度指令を受けるものがいない | 台車のドライバが受ける名前。dynamic_bridge は、ROS 1 の側に受けるものがいるときだけ橋渡しする。parameter_bridge なら `topics` の一覧に入っているか |
 | 指令が二重に見える、止まらない | 橋渡しが 2 つ動いていないか（2-1。Orin の `check_link.sh` の「橋渡し」） |
-| `vlm_drive.py ping` が「受け付けられませんでした」「知らない合図です」 | Orin の実行系が古い。ネットのあるところで `ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh` |
+| `vlm_drive.py ping` が「受け付けられませんでした」「知らない合図です」 | Orin の実行系が古い。`ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh` で作り直す（ネットはなくてよい） |
 | `vlm_drive.py ping` が「受けるものがいません」 | 橋渡しが `/vlm_drive/command` を通していない（parameter_bridge の一覧、dynamic_bridge なら Orin の実行系が動いているか） |
 | 「時計がずれています」 | 実行系は直して使うので動きます。両方の時計を合わせるのが確実（chrony など） |

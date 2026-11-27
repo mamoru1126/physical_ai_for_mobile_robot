@@ -19,7 +19,7 @@
 #   ROBOT_DOMAIN_ID   ROS 2 のドメイン
 #   ROBOT_ODOM_TOPIC  オドメトリのトピック
 #   ROBOT_CONFIG      実行系の設定ファイル（既定 /etc/elevator-task/task.yaml）
-#   ROBOT_REBUILD=1   実行系のイメージを作り直す（リポジトリを更新したとき. ネットが要る）
+#   ROBOT_REBUILD=1   実行系のイメージを作り直す（ソースを変えたとき. ネットはなくてよい）
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 cd "${ROOT}"
@@ -47,13 +47,15 @@ curl -sf --max-time 5 -o /dev/null https://huggingface.co 2> /dev/null && online
 # ---- 1. 実行系のイメージ ----------------------------------------------------------------
 src="$(source_stamp)"
 if [ "${ROBOT_REBUILD:-0}" = "1" ] || ! "${DOCKER[@]}" image inspect "${RUNTIME_IMAGE}" > /dev/null 2>&1; then
-  [ "${online}" = "1" ] || fail "実行系のイメージ（${RUNTIME_IMAGE}）がなく、ネットもありません. ネットのあるところで一度実行してください"
+  # ソースを変えただけなら、ネットはなくてよい（apt の段は前に作った分を使う. ソースのコピーから後ろだけやり直す）
+  [ "${online}" = "1" ] || say "ネットがありません. 前に作った分（apt の段）を使って作り直します"
   say "イメージを作ります: ${RUNTIME_IMAGE}（初回は数分〜十数分. 中で単体テストも通します）"
   "${DOCKER[@]}" build "${BUILD_ARGS[@]}" --label "elevator.src=${src}" -t "${RUNTIME_IMAGE}" \
-    -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm"
+    -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm" \
+    || fail "イメージを作れませんでした. apt の段からやり直しになった（ネットが要る）か、単体テストが落ちたかです. 上のログを見てください"
 elif [ "$(image_stamp)" != "${src}" ]; then
-  warn "実行系のイメージが、リポジトリの今の中身から作ったものではありません（git pull の後に作り直していない）."
-  warn "  ネットのあるところで作り直す: ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh"
+  warn "実行系のイメージが、リポジトリの今の中身から作ったものではありません（ソースを変えた後に作り直していない）."
+  warn "  作り直す（ネットはなくてよい）: ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh"
 fi
 
 # ---- 2. VLM のサーバ --------------------------------------------------------------------

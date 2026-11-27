@@ -76,7 +76,7 @@ if [ -z "${stamp}" ] || [ "${stamp}" = "<no value>" ]; then
 elif [ "${stamp}" = "$(source_stamp)" ]; then
   say "実行系のイメージ（${RUNTIME_IMAGE}）: リポジトリの今の中身から作ったもの"
 else
-  say "実行系のイメージ（${RUNTIME_IMAGE}）: リポジトリより古い（ネットのあるところで ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh）"
+  say "実行系のイメージ（${RUNTIME_IMAGE}）: リポジトリより古い（ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh で作り直す. ネットはなくてよい）"
 fi
 
 say ""

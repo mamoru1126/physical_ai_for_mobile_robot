@@ -180,6 +180,19 @@ bash jetson/robot/robot_down.sh --all
 | 安全ゲートが `STOP` のまま | `journalctl -u safety-gate -n 30`（「TF がありません」「点群が途切れました」） |
 | VLM で走らせてもロボットが動かない | ⚠ `topics.cmd_out` が台車の名前か（手順 7） |
 | 「道の指差しが続けて使えません」で止まる | カメラの取り付け（手順 8） |
-| `robot_up.sh` が「イメージが…古い」 | ネットのあるところで `ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh` |
+| `robot_up.sh` が「イメージが…作ったものではありません」 | `ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh`（下の「ソースを変えたとき」） |
+
+## ソースを変えたとき
+
+`elevator_vlm/` の中（実行系）を変えたら、イメージを作り直します。**ネットはなくてよい**です。
+
+```bash
+ROBOT_REBUILD=1 bash jetson/robot/robot_up.sh
+```
+
+- やり直しになるのは、ソースのコピーから後ろ（colcon build と単体テスト）だけです。apt で道具を入れる段は、前に作った分を使います。単体テストを全部通すので、Orin だと数分かかります。
+- ネットが要るのは、前に作った分を消したとき（`docker system prune` など）と、`elevator_vlm/docker/Dockerfile.runtime` の apt の行を変えたときだけです。そのときは「イメージを作れませんでした」で止まるので、ネットのあるところで同じコマンドを実行します。
+- 単体テストが落ちても「イメージを作れませんでした」で止まります（前のイメージはそのまま残る）。上のログで、どのテストが落ちたかを見ます。
+- 安全ゲート（`safety_gate/`）とカメラ（`jetson/camera/`）は別のイメージです。変えたら、それぞれの `install.sh` で作り直します。
 
 記録は `elevator_vlm/runs/<日時>/`。仕組みは [follow_path.md](../../elevator_vlm/docs/follow_path.md)。

@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import io
+from collections import deque
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Deque, List, Optional, Sequence, Tuple
 
 from .geometry import CameraModel, Pose2D
 
@@ -93,3 +94,34 @@ class RobotIO:
     def status(self) -> List[str]:
         """画面表示用の状態（不足している入力など）."""
         return []
+
+
+class StampFixer:
+    """送り手の PC と時計が合っていないときに、メッセージの時刻をこの PC の時計に直す.
+
+    source:
+      header   メッセージの時刻をそのまま使う
+      receive  受け取った時刻を使う
+      auto     「受け取った時刻 − メッセージの時刻」の最近の最小値（時計のずれ + いちばん短い届くまでの時間）が
+               tolerance_s を超えたら、その分を足して直す. 届くまでの時間のばらつきは残るので、画像の古さの検査は効く
+    """
+
+    def __init__(self, source: str = "auto", tolerance_s: float = 0.5, window: int = 200):
+        self.source = source
+        self.tolerance_s = tolerance_s
+        self._diffs: Deque[float] = deque(maxlen=max(window, 1))
+        self.offset_s = 0.0          # 直すのに足した値（画面と記録用）
+
+    def fix(self, header: float, now: float) -> Tuple[float, bool]:
+        """(使う時刻, 直したか). メッセージに時刻が入っていない（0）ときは、受け取った時刻を使う."""
+        if self.source == "receive" or header <= 0.0:
+            return now, False
+        if self.source == "header":
+            return header, False
+        self._diffs.append(now - header)
+        offset = min(self._diffs)
+        if abs(offset) <= self.tolerance_s:
+            self.offset_s = 0.0
+            return header, False
+        self.offset_s = offset
+        return header + offset, True

@@ -2,20 +2,27 @@
 
 検討資料の task_planner、task_executor、vlm_perception、skill_server に当たる部品を
 1つのプロセスの中で組み合わせる. 部品の間は Python の呼び出しでつなぐ.
+
+途中から・ここまで（コースの途中で VLM の指示で走り、終える）:
+  * 実行する手順の範囲（何番目から何番目まで. 1 から数える）を指定して実行できる.
+  * 「承認して開始の合図を待つ」（arm）にした計画は、外からの開始の合図（command の start）で走り出す.
+    元のシステム（ROS 1 のナビゲーションなど）が、VLM に任せる区間の始まりで合図を出す使い方.
+  * 終了の指示（finish. 画面の「ここまで」か、command の finish）で、その場で止めて成功として終える.
 """
 from __future__ import annotations
 
+import json
 import os
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from .config import TaskConfig
 from .events import EventLog
 from .executor import TaskExecutor
 from .geometry import ground_to_pixel, odom_to_robot
 from .perception import Perception
-from .plan import Plan, PlanError, parse_plan
+from .plan import SKILL_FOLLOW_PATH, Plan, PlanError, parse_plan
 from .planner import make_plan, split_instructions
 from .robot_io import Marker, RobotIO, encode_jpeg
 from .skills import Skills
@@ -33,6 +40,31 @@ PLAN_NONE = "none"
 PLAN_PLANNING = "planning"
 PLAN_READY = "ready"
 PLAN_ERROR = "error"
+
+# 外からの合図（ROS のトピック vlm_drive/command、Web UI の API /api/command）
+COMMAND_START = "start"      # 承認して待っている計画を走らせる. {"command": "start", "from": 2, "to": 4} で範囲も
+COMMAND_FINISH = "finish"    # ここまで: その場で止めて、成功として終える
+COMMAND_STOP = "stop"        # 停止（失敗として止め、解除されるまで動かさない）
+COMMANDS = (COMMAND_START, COMMAND_FINISH, COMMAND_STOP)
+
+
+def parse_command(raw: Union[str, Dict[str, Any]]) -> Tuple[str, Dict[str, Any]]:
+    """合図を (名前, 引数) にする. 文字列（"start"）でも JSON（{"command": "start", "from": 2}）でもよい."""
+    data: Dict[str, Any]
+    if isinstance(raw, dict):
+        data = dict(raw)
+    else:
+        text = str(raw).strip()
+        if text.startswith("{"):
+            try:
+                loaded = json.loads(text)
+            except ValueError:
+                return "", {}
+            data = loaded if isinstance(loaded, dict) else {}
+        else:
+            data = {"command": text}
+    name = str(data.pop("command", "")).strip().lower()
+    return name, data
 
 
 class TaskRuntime:
@@ -64,9 +96,12 @@ class TaskRuntime:
             self.events.context_fn = context
         self.vlm = VlmClient(cfg.vlm)
         self.cancel = threading.Event()
+        self.finish_event = threading.Event()        # 終了の指示（ここまで）
         self.perception = Perception(robot, self.vlm, cfg.perception, self.events)
-        self.skills = Skills(robot, self.perception, cfg.skills, self.events, self.cancel)
-        self.executor = TaskExecutor(robot, self.perception, self.skills, cfg.executor, self.events, self.cancel)
+        self.skills = Skills(robot, self.perception, cfg.skills, self.events, self.cancel,
+                             finish=self.finish_event, path_cap_m=cfg.limits.max_path_distance_m)
+        self.executor = TaskExecutor(robot, self.perception, self.skills, cfg.executor, self.events, self.cancel,
+                                     finish=self.finish_event)
 
         self._lock = threading.Lock()
         self.plan: Optional[Plan] = None
@@ -77,6 +112,12 @@ class TaskRuntime:
         self.task_state = TASK_IDLE
         self.task_message = ""
         self.stopped = False
+        self.armed: Optional[Tuple[int, int]] = None   # 承認して開始の合図を待っている範囲（0 から数える）
+        self.run_range: Optional[Tuple[int, int]] = None
+        self.run_source = ""                           # 今か直前の実行を始めたもの（web / command）
+        self.run_count = 0
+        self.last_result = ""                          # 直前の実行の結果（done / failed / stopped / finished）
+        self.last_command: Optional[Dict[str, Any]] = None
         self._task_thread: Optional[threading.Thread] = None
         self._plan_thread: Optional[threading.Thread] = None
 
@@ -110,6 +151,7 @@ class TaskRuntime:
             self.plan_state = PLAN_PLANNING
             self.plan_error = ""
             self.plan = None
+            self.armed = None
         self._plan_thread = threading.Thread(target=self._plan_worker, args=(instructions,),
                                              name="planner", daemon=True)
         self._plan_thread.start()
@@ -159,6 +201,7 @@ class TaskRuntime:
             self.plan_state = PLAN_READY
             self.plan_error = ""
             self.plan_text = ""
+            self.armed = None                  # 計画が変わったら、承認もやり直す
         self.events.emit("plan_loaded", plan=plan.to_dict())
         return True, "計画を読み込みました"
 
@@ -179,8 +222,21 @@ class TaskRuntime:
             return False, f"計画のファイルを読めません: {e}"
 
     # -- 実行 ---------------------------------------------------------------
-    def execute(self) -> Tuple[bool, str]:
-        """表示中の計画を承認して実行する."""
+    def _range(self, plan: Plan, first: Optional[int], last: Optional[int]) -> Tuple[Optional[Tuple[int, int]], str]:
+        """1 から数える範囲（省けば最初・最後）を、0 から数える範囲にする. 正しくなければ (None, 理由)."""
+        n = len(plan.steps)
+        try:
+            a = 1 if first in (None, "", 0) else int(first)
+            b = n if last in (None, "", 0) else int(last)
+        except (TypeError, ValueError):
+            return None, "範囲は手順の番号（1 から数える）で指定してください"
+        if not 1 <= a <= b <= n:
+            return None, f"範囲が正しくありません（{a}〜{b}、手順は 1〜{n}）"
+        return (a - 1, b - 1), ""
+
+    def execute(self, first: Optional[int] = None, last: Optional[int] = None,
+                source: str = "web") -> Tuple[bool, str]:
+        """表示中の計画を承認して実行する. first〜last（1 から数える）の手順だけを実行することもできる."""
         with self._lock:
             if self.task_state == TASK_RUNNING:
                 return False, "すでに実行中です"
@@ -188,18 +244,103 @@ class TaskRuntime:
                 return False, "承認できる計画がありません"
             if self.stopped:
                 return False, "停止中です. 先に「停止を解除」を押してください"
+            span, why = self._range(self.plan, first, last)
+            if span is None:
+                return False, why
             plan = self.plan
-            self.cancel.clear()
-            self.task_state = TASK_RUNNING
-            self.task_message = ""
-        self._task_thread = threading.Thread(target=self._task_worker, args=(plan,), name="executor", daemon=True)
+            self._begin(span, source)
+        self._task_thread = threading.Thread(target=self._task_worker, args=(plan, span), name="executor",
+                                             daemon=True)
         self._task_thread.start()
-        return True, "実行を始めました"
+        n = len(plan.steps)
+        part = "" if span == (0, n - 1) else f"（手順{span[0] + 1}〜{span[1] + 1}）"
+        return True, f"実行を始めました{part}"
 
-    def _task_worker(self, plan: Plan) -> None:
+    def _begin(self, span: Tuple[int, int], source: str) -> None:
+        """実行を始める前の片づけ（self._lock を持って呼ぶ）."""
+        self.cancel.clear()
+        self.finish_event.clear()
+        self.task_state = TASK_RUNNING
+        self.task_message = ""
+        self.run_range = span
+        self.run_source = source
+        self.run_count += 1
+        self.skills.path_progress = None
+
+    def arm(self, first: Optional[int] = None, last: Optional[int] = None) -> Tuple[bool, str]:
+        """計画を承認して、開始の合図（command の start）を待つ."""
+        with self._lock:
+            if self.task_state == TASK_RUNNING:
+                return False, "実行中です"
+            if self.plan is None or self.plan_state != PLAN_READY:
+                return False, "承認できる計画がありません"
+            if self.stopped:
+                return False, "停止中です. 先に「停止を解除」を押してください"
+            span, why = self._range(self.plan, first, last)
+            if span is None:
+                return False, why
+            self.armed = span
+        self.events.emit("armed", first=span[0] + 1, last=span[1] + 1)
+        return True, f"承認しました. 開始の合図を待ちます（手順{span[0] + 1}〜{span[1] + 1}）"
+
+    def disarm(self) -> Tuple[bool, str]:
+        with self._lock:
+            was = self.armed
+            self.armed = None
+        if was is None:
+            return True, "開始の合図は待っていません"
+        self.events.emit("disarmed")
+        return True, "承認を取り消しました（開始の合図を受けても走りません）"
+
+    def finish(self, source: str = "web") -> Tuple[bool, str]:
+        """ここまで: 実行中なら、その場で止めて成功として終える."""
+        with self._lock:
+            running = self.task_state == TASK_RUNNING
+        if not running:
+            return False, "実行していません"
+        self.finish_event.set()
+        self.robot.send_cmd(0.0, 0.0)
+        self.events.emit("finish_requested", source=source)
+        return True, "終了の指示を出しました（その場で止めて終えます）"
+
+    def command(self, raw: Union[str, Dict[str, Any]], source: str = "command") -> Tuple[bool, str]:
+        """外からの合図（start / finish / stop）. ROS のトピックと Web UI の API から呼ぶ."""
+        name, args = parse_command(raw)
+        if name == COMMAND_START:
+            ok, msg = self._command_start(args, source)
+        elif name == COMMAND_FINISH:
+            ok, msg = self.finish(source)
+        elif name == COMMAND_STOP:
+            ok, msg = self.stop()
+        else:
+            ok, msg = False, f"知らない合図です: {raw!r}（使えるもの: {', '.join(COMMANDS)}）"
+        with self._lock:
+            self.last_command = {"command": name or str(raw)[:80], "ok": ok, "message": msg, "source": source,
+                                 "time": round(self.robot.now(), 3), "wall": round(time.time(), 3)}
+        self.events.emit("command", command=name or str(raw)[:80], args=args, ok=ok, message=msg, source=source)
+        return ok, msg
+
+    def _command_start(self, args: Dict[str, Any], source: str) -> Tuple[bool, str]:
+        with self._lock:
+            armed = self.armed
+            running = self.task_state == TASK_RUNNING
+        if running:
+            return False, "すでに実行中です"
+        if self.cfg.drive.require_arm and armed is None:
+            return False, "開始の合図を受けられる計画がありません（画面で「承認して開始の合図を待つ」を押してください）"
+        first = args.get("from", armed[0] + 1 if armed else None)
+        last = args.get("to", armed[1] + 1 if armed else None)
+        ok, msg = self.execute(first, last, source=source)
+        if ok and self.cfg.drive.disarm_after_start:
+            with self._lock:
+                self.armed = None
+        return ok, msg
+
+    def _task_worker(self, plan: Plan, span: Tuple[int, int]) -> None:
+        finished = False
         try:
-            result = self.executor.run(plan)
-            ok, message = result.ok, result.message
+            result = self.executor.run(plan, span[0], span[1])
+            ok, message, finished = result.ok, result.message, result.finished
         except Exception as e:  # noqa: BLE001  想定外の例外でも必ず止めて状態を残す
             ok, message = False, f"実行中に例外が起きました: {e!r}"
             self.events.emit("task_exception", error=repr(e))
@@ -217,16 +358,20 @@ class TaskRuntime:
         with self._lock:
             if self.cancel.is_set():
                 self.task_state = TASK_STOPPED
+                self.last_result = "stopped"
             else:
                 self.task_state = TASK_DONE if ok else TASK_FAILED
+                self.last_result = "finished" if finished else ("done" if ok else "failed")
             self.task_message = message
+        self.events.emit("run_end", result=self.last_result, message=message, run=self.run_count)
 
     def stop(self) -> Tuple[bool, str]:
-        """停止. 実行を中断し、安全ゲートにも停止を要求する."""
+        """停止. 実行を中断し、安全ゲートにも停止を要求する. 承認して待っている計画も取り消す."""
         self.cancel.set()
         self.robot.send_cmd(0.0, 0.0)
         with self._lock:
             self.stopped = True
+            self.armed = None
         self.events.emit("stop_requested")
         if self._stop_hook is not None:
             ok, msg = self._stop_hook()
@@ -289,6 +434,14 @@ class TaskRuntime:
                 "plan_latency_s": round(self.plan_latency_s, 3),
             }
         out["executor"] = self.executor.snapshot()
+        out["drive"] = self.drive_state()
+        with self._lock:
+            out["last_command"] = dict(self.last_command) if self.last_command else None
+        out["path"] = self._path_progress()
+        out["follow_path_cfg"] = {"step_m": self.cfg.skills.follow_path.step_m,
+                                  "speed": min(self.cfg.skills.follow_path.speed, self.cfg.skills.max_linear),
+                                  "default_distance_m": self.cfg.limits.default_path_distance_m,
+                                  "max_distance_m": self.cfg.limits.max_path_distance_m}
         out["pose"] = None if pose is None else [round(pose.x, 3), round(pose.y, 3), round(pose.yaw, 4)]
         out["robot_status"] = self.robot.status()
         out["vlm"] = {"base_url": self.cfg.vlm.base_url, "model": self.cfg.vlm.model,
@@ -308,6 +461,41 @@ class TaskRuntime:
                           "data": status.get(str(t.get("name", "")))} for t in self.cfg.web.status_topics]
         out["run_dir"] = self.events.run_dir or ""
         out["events"] = self.events.since(since)
+        return out
+
+    def _path_progress(self) -> Optional[Dict[str, Any]]:
+        progress = self.skills.path_progress
+        return dict(progress) if progress else None
+
+    def drive_state(self) -> Dict[str, Any]:
+        """VLM の指示で走っているかの状態. ROS のトピック vlm_drive/state で外（元のシステム）に知らせる."""
+        with self._lock:
+            plan = self.plan
+            running = self.task_state == TASK_RUNNING
+            out: Dict[str, Any] = {
+                "active": running,
+                "task_state": self.task_state,
+                "message": self.task_message,
+                "stopped": self.stopped,
+                "armed": None if self.armed is None else [self.armed[0] + 1, self.armed[1] + 1],
+                "range": None if self.run_range is None else [self.run_range[0] + 1, self.run_range[1] + 1],
+                "source": self.run_source,
+                "run": self.run_count,
+                "result": self.last_result,
+                "steps": len(plan.steps) if plan else 0,
+                "plan_ready": plan is not None and self.plan_state == PLAN_READY,
+            }
+        snap = self.executor.snapshot()
+        cur = snap["current"]
+        out["step"] = cur + 1 if running and cur >= 0 else 0
+        out["skill"] = ""
+        if running and plan is not None and 0 <= cur < len(plan.steps):
+            out["skill"] = plan.steps[cur].do.skill
+            out["phase"] = snap["steps"][cur]["phase"] if cur < len(snap["steps"]) else ""
+        progress = self.skills.path_progress
+        if progress and (progress.get("active") or out["skill"] == SKILL_FOLLOW_PATH):
+            out["traveled_m"] = progress.get("traveled_m")
+            out["limit_m"] = progress.get("limit_m")
         return out
 
     def extra_jpeg(self, name: str) -> Optional[bytes]:
@@ -339,6 +527,10 @@ class TaskRuntime:
         cur = snap["current"]
         if self.task_state == TASK_RUNNING and 0 <= cur < len(snap["steps"]):
             lines.append(f"step {cur + 1}/{len(snap['steps'])}: {snap['steps'][cur]['phase']}")
+        progress = self.skills.path_progress
+        if progress and progress.get("active"):
+            lines.append(f"path {progress.get('traveled_m', 0):.1f}/{progress.get('limit_m', 0):g} m  "
+                         f"allow {progress.get('allow_m', 0):.2f} m  {progress.get('state', '')}")
         chk = self.perception.last_check
         if chk is not None and now - chk.stamp < 5.0:
             ans = "?" if chk.answer is None else ("yes" if chk.answer else "no")

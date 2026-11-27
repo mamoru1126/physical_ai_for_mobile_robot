@@ -19,7 +19,8 @@ SKILL_ROTATE = "rotate"
 SKILL_MOVE_STRAIGHT = "move_straight"
 SKILL_GO_TO_VISUAL_TARGET = "go_to_visual_target"
 SKILL_WAIT = "wait"
-SKILLS = (SKILL_ROTATE, SKILL_MOVE_STRAIGHT, SKILL_GO_TO_VISUAL_TARGET, SKILL_WAIT)
+SKILL_FOLLOW_PATH = "follow_path"
+SKILLS = (SKILL_ROTATE, SKILL_MOVE_STRAIGHT, SKILL_GO_TO_VISUAL_TARGET, SKILL_WAIT, SKILL_FOLLOW_PATH)
 
 
 class PlanError(ValueError):
@@ -33,6 +34,10 @@ class PlanLimits:
     max_wait_s: float = 600.0
     max_timeout_s: float = 1800.0
     max_steps: int = 12
+    # 道に沿って走る（follow_path）1手順の距離の上限 [m]. distance_m が 0（距離を決めない）でもここで止まる
+    max_path_distance_m: float = 100.0
+    # 距離も止まる条件も言わない「道に沿って走って」の距離 [m]. 計画を作るプロンプトに書いて VLM に使わせる
+    default_path_distance_m: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -51,9 +56,11 @@ class When:
 class Action:
     skill: str
     angle_deg: float = 0.0
-    distance_m: float = 0.0
+    distance_m: float = 0.0           # move_straight: 進む距離. follow_path: 道に沿って走る距離（0 は決めない）
     target: str = ""
     seconds: float = 0.0
+    path: str = ""                    # follow_path: 沿って走るもの（英語. 例 "the paved walkway"）
+    stop_when: str = ""               # follow_path: 成り立ったら止まる条件（英語. 空なら使わない）
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"skill": self.skill}
@@ -65,6 +72,10 @@ class Action:
             d["target"] = self.target
         elif self.skill == SKILL_WAIT:
             d["seconds"] = self.seconds
+        elif self.skill == SKILL_FOLLOW_PATH:
+            d["path"] = self.path
+            d["distance_m"] = self.distance_m
+            d["stop_when"] = self.stop_when
         return d
 
 
@@ -120,6 +131,9 @@ PLAN_JSON_SCHEMA: Dict[str, Any] = {
                         _variant("skill", [SKILL_MOVE_STRAIGHT], {"distance_m": {"type": "number"}}),
                         _variant("skill", [SKILL_GO_TO_VISUAL_TARGET], {"target": {"type": "string"}}),
                         _variant("skill", [SKILL_WAIT], {"seconds": {"type": "number"}}),
+                        _variant("skill", [SKILL_FOLLOW_PATH], {"path": {"type": "string"},
+                                                                "distance_m": {"type": "number"},
+                                                                "stop_when": {"type": "string"}}),
                     ]},
                     "timeout_s": {"type": "number"},
                 },
@@ -204,6 +218,15 @@ def parse_plan(data: Any, limits: PlanLimits = DEFAULT_LIMITS) -> Plan:
             action = Action(skill, distance_m=dist)
         elif skill == SKILL_GO_TO_VISUAL_TARGET:
             action = Action(skill, target=_text(raw_do, "target", dwhere))
+        elif skill == SKILL_FOLLOW_PATH:
+            dist = _number(raw_do, "distance_m", dwhere)
+            if not 0.0 <= dist <= limits.max_path_distance_m:
+                raise PlanError(f"{dwhere}: distance_m は 0（距離を決めない）から {limits.max_path_distance_m:g} m "
+                                f"までです（{dist:g}）")
+            stop_when = raw_do.get("stop_when", "")
+            if not isinstance(stop_when, str):
+                raise PlanError(f"{dwhere}: 'stop_when' は文字列で指定してください（使わないなら空の文字列）")
+            action = Action(skill, distance_m=dist, path=_text(raw_do, "path", dwhere), stop_when=stop_when.strip())
         else:
             sec = _number(raw_do, "seconds", dwhere)
             if not 0.0 < sec <= limits.max_wait_s:

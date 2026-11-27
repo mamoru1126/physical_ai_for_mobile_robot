@@ -12,7 +12,7 @@ import threading
 import time
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from elevator_task.core.executor import PATH_CLEAR_STATEMENT
 from elevator_task.core.geometry import CameraModel, ground_to_pixel
@@ -23,6 +23,10 @@ from .world_params import Truth, WorldParams, door_fully_open, expected_target, 
 DOOR_CONDITION = "The way directly in front of the robot is open: no door panel blocks any part of it."
 TARGET_CAR = "center of the elevator car floor"
 TARGET_HALL = "hallway floor about 1 m beyond the open doorway"
+# 道に沿って走る（モックの計画で使う言い回し）
+PATH_TARGET = "the path ahead"
+PATH_END_CONDITION = "The landmark at the end of the path is directly in front of the robot, less than 2 m away."
+DEFAULT_PATH_DISTANCE_M = 10.0
 
 
 @dataclass
@@ -51,21 +55,32 @@ def _kind(request: Dict[str, Any]) -> str:
     """問いの種類（check / point / plan）を、構造化出力の名前かシステムプロンプトから決める."""
     fmt = request.get("response_format") or {}
     name = str((fmt.get("json_schema") or {}).get("name", ""))
-    if name in ("condition_check", "point_target", "task_plan"):
-        return {"condition_check": "check", "point_target": "point", "task_plan": "plan"}[name]
+    kinds = {"condition_check": "check", "point_target": "point", "path_point": "path", "task_plan": "plan"}
+    if name in kinds:
+        return kinds[name]
     system = " ".join(str(m.get("content", "")) for m in request.get("messages", []) if m.get("role") == "system")
     if "task planner" in system:
         return "plan"
     if "point_2d" in system:
-        return "point"
+        return "path" if "drives along a path" in system else "point"
     return "check"
 
 
-def plan_from_instructions(lines: List[str]) -> Dict[str, Any]:
+def plan_from_instructions(lines: List[str], default_path_m: float = DEFAULT_PATH_DISTANCE_M) -> Dict[str, Any]:
     """指示文から計画を作る簡単な規則（モック専用. 本物では VLM が作る）."""
     steps = []
     for line in lines:
         low = line.lower()
+        if any(k in low for k in ("沿って", "沿い", "follow", "along")):
+            # 道に沿って走る: 距離を言えばその距離、「〜まで」「〜したら止まって」なら止まる条件、どちらもなければ既定の距離
+            dist = re.search(r"(\d+(?:\.\d+)?)\s*(?:m|メートル)(?![a-z])", low)
+            until = any(k in low for k in ("まで", "止まって", "until", "stop when"))
+            steps.append({"instruction": line, "when": {"type": "now"},
+                          "do": {"skill": "follow_path", "path": PATH_TARGET,
+                                 "distance_m": float(dist.group(1)) if dist else (0.0 if until else default_path_m),
+                                 "stop_when": PATH_END_CONDITION if until else ""},
+                          "timeout_s": 900})
+            continue
         again = any(k in low for k in ("再び", "もう一度", "again", "once more"))
         waits_door = any(k in low for k in ("開いたら", "door open", "door is open"))
         if again:
@@ -94,22 +109,37 @@ def plan_from_instructions(lines: List[str]) -> Dict[str, Any]:
 
 
 class MockVlm:
+    """path_fn と statement_fn を渡すと、道に沿って走る問いにも答える.
+
+      path_fn():               道の指差しの答え（0〜1000 の相対座標 (x, y)）. None なら地平線より上を返す
+      statement_fn(statement): 条件文への答え（True / False）. None なら扉の真値で答える（エレベーターの問い）
+    """
+
     def __init__(self, params: WorldParams, cfg: MockConfig,
                  truth_fn: Callable[[], Optional[Truth]], camera_fn: Callable[[], Optional[CameraModel]],
-                 missing_fn: Optional[Callable[[], List[str]]] = None):
+                 missing_fn: Optional[Callable[[], List[str]]] = None,
+                 path_fn: Optional[Callable[[], Optional[Tuple[float, float]]]] = None,
+                 statement_fn: Optional[Callable[[str], Optional[bool]]] = None):
         self.p = params
         self.cfg = cfg
         self._truth_fn = truth_fn
         self._missing_fn = missing_fn
         self._camera_fn = camera_fn
+        self._path_fn = path_fn
+        self._statement_fn = statement_fn
         self._rng = random.Random(cfg.seed)
         self._lock = threading.Lock()
-        self.calls = {"check": 0, "point": 0, "plan": 0}
+        self.calls = {"check": 0, "point": 0, "path": 0, "plan": 0}
 
     # -- 3種類の答え ---------------------------------------------------------
     def _check(self, text: str) -> str:
         m = re.search(r'Statement:\s*"(.*?)"', text, re.S)
-        statement = (m.group(1) if m else text).lower()
+        raw = m.group(1) if m else text
+        statement = raw.lower()
+        if self._statement_fn is not None:
+            given = self._statement_fn(raw)
+            if given is not None:
+                return json.dumps({"answer": "yes" if given else "no"})
         truth = self._truth_fn()
         if statement in (MARKER_STATEMENT.lower(), PATH_CLEAR_STATEMENT.lower()):
             answer = True                      # 印の確認と進路の確認は、正常系では常に yes
@@ -146,9 +176,25 @@ class MockVlm:
         y = max(0.0, min(1000.0, v / cam.height * 1000.0))
         return json.dumps({"point_2d": [round(x), round(y)]})
 
-    def _plan(self, text: str) -> str:
+    def _path(self, text: str) -> str:
+        answer = self._path_fn() if self._path_fn is not None else None
+        if answer is None:
+            return json.dumps({"point_2d": [500, 50]})      # 地平線より上 → 実行系の検査で落ちる
+        x, y = answer
+        with self._lock:
+            if self.cfg.point_noise_px > 0.0:
+                cam = self._camera_fn()
+                if cam is not None:      # 画素のずれを相対座標に直して足す
+                    x += self._rng.gauss(0.0, self.cfg.point_noise_px) / cam.width * 1000.0
+                    y += self._rng.gauss(0.0, self.cfg.point_noise_px) / cam.height * 1000.0
+        return json.dumps({"point_2d": [round(max(0.0, min(1000.0, x))), round(max(0.0, min(1000.0, y)))]})
+
+    def _plan(self, text: str, system: str = "") -> str:
         lines = [m.group(1).strip() for m in re.finditer(r"^\s*\d+\.\s*(.+)$", text, re.M)]
-        return json.dumps(plan_from_instructions(lines), ensure_ascii=False)
+        # 距離を言わない「道に沿って走って」の距離は、計画を作るプロンプトに書いてある値を使う（本物の VLM と同じ）
+        m = re.search(r"Use (\d+(?:\.\d+)?) when the instruction states neither", system)
+        default = float(m.group(1)) if m else DEFAULT_PATH_DISTANCE_M
+        return json.dumps(plan_from_instructions(lines, default), ensure_ascii=False)
 
     # -- OpenAI 互換の応答 ---------------------------------------------------
     def missing(self) -> List[str]:
@@ -163,9 +209,13 @@ class MockVlm:
             raise MockNotReady("モック VLM に真値が届いていません: " + ", ".join(missing))
         text = _user_text(request)
         if kind == "plan":
-            content = self._plan(text)
+            system = " ".join(str(m.get("content", "")) for m in request.get("messages", [])
+                              if m.get("role") == "system")
+            content = self._plan(text, system)
         elif kind == "point":
             content = self._point(text)
+        elif kind == "path":
+            content = self._path(text)
         else:
             content = self._check(text)
         with self._lock:

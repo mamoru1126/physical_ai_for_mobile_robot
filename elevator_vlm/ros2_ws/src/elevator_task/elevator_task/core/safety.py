@@ -25,6 +25,11 @@ class SafetyConfig:
     cmd_timeout_s: float = 0.5
     odom_timeout_s: float = 1.0
     camera_timeout_s: float = 2.0  # 0 でカメラの監視を無効にする
+    # 速度指令が来ていない（実行系が動かしていない）間も 0 を出し続けるか.
+    # false にすると、0 を idle_tail_s 秒だけ出してから黙る. 元のシステム（ROS 1 のナビゲーションなど）と
+    # 同じ /cmd_vel を使い分けるとき（途中から・ここまで）は false にする
+    publish_when_idle: bool = True
+    idle_tail_s: float = 0.5
 
 
 class SafetyGate:
@@ -61,6 +66,17 @@ class SafetyGate:
     def _stale(last: Optional[float], now: float, timeout: float) -> bool:
         # 時刻が巻き戻った場合（シミュレーションのリセット）も、届いていない扱いにする
         return last is None or now - last > timeout or now < last
+
+    def should_publish(self, now: float) -> bool:
+        """今の出力を出すか. publish_when_idle が false なら、指令が途絶えて idle_tail_s 秒たったら黙る."""
+        if self.cfg.publish_when_idle:
+            return True
+        if self._cmd_at is not None and not self._stale(self._cmd_at, now, self.cfg.cmd_timeout_s):
+            return True                    # 実行系が動かしている間は、止める指令（0）も含めて出す
+        last = self._cmd_at if self._cmd_at is not None and now >= self._cmd_at else None
+        if last is None:
+            return False                   # 一度も指令が来ていない. 何も出さない
+        return now - last <= self.cfg.cmd_timeout_s + self.cfg.idle_tail_s
 
     def output(self, now: float) -> Tuple[float, float, str]:
         """今出してよい速度指令と状態を返す."""

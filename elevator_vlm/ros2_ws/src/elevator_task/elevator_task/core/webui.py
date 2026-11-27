@@ -8,7 +8,11 @@
   POST /api/plan         {"instructions": "1行に1指示"}   指示文から計画を作る
   POST /api/set_plan     {"plan": {...}}                  計画の JSON を直接読み込む
   POST /api/load_preset  {"name": "x.json"}               用意済みの計画を読み込む
-  POST /api/execute      表示中の計画を承認して実行する
+  POST /api/execute      {"from": 1, "to": 3}             表示中の計画を承認して実行する（範囲は省略できる）
+  POST /api/arm          {"from": 1, "to": 3}             承認して、開始の合図（start）を待つ
+  POST /api/disarm       承認を取り消す
+  POST /api/finish       ここまで: その場で止めて、成功として終える
+  POST /api/command      {"command": "start"}             外からの合図と同じもの（start / finish / stop）
   POST /api/stop         停止
   POST /api/reset        停止を解除
   POST /api/trigger      {"name": "..."}                  設定で追加したボタン
@@ -41,7 +45,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;pad
 @media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
 section{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:0 0 14px}
 h2{font-size:.95rem;margin:0 0 8px;color:var(--vlm)}
-img#cam{width:100%;height:auto;background:#000;border-radius:4px;display:block;aspect-ratio:4/3}
+img#cam{width:100%;height:auto;background:#000;border-radius:4px;display:block;aspect-ratio:auto 4/3}
 .extras{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .extras figure{margin:0}.extras img{width:100%;height:auto;background:#000;border-radius:4px;display:block;aspect-ratio:4/3}
 .extras figcaption{font-size:.8rem;color:var(--steel)}
@@ -61,6 +65,12 @@ code,pre{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:.8r
 #log{height:260px;overflow:auto;background:var(--panel);color:#E6EDF3;padding:8px;border-radius:4px;white-space:pre-wrap;word-break:break-all;margin:0}
 #msg{min-height:1.6em;font-size:.86rem;color:var(--steel);margin-top:6px}
 details{margin-top:8px}summary{cursor:pointer;color:var(--steel);font-size:.86rem}
+tr.out td{color:#9AA4AE}
+select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.meter{height:12px;background:#E3E8ED;border-radius:6px;overflow:hidden;margin:4px 0 8px}
+.meter div{height:100%;width:0;background:var(--vlm);transition:width .4s}
+.note{font-size:.8rem;color:var(--steel)}
+button.finish{background:var(--lamp);border-color:var(--lamp);color:var(--ink)}
 dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0;font-size:.86rem}
 dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 </style>
@@ -74,6 +84,8 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <section><h2>状態</h2>
 <dl>
 <dt>実行</dt><dd><span id="task" class="badge">-</span> <span id="taskmsg"></span></dd>
+<dt>VLM の走行</dt><dd><span id="drive" class="badge">-</span> <span id="driveinfo"></span></dd>
+<dt>外からの合図</dt><dd id="lastcmd">-</dd>
 <dt>VLM</dt><dd><span id="vlm" class="badge">-</span> <span id="vlminfo"></span></dd>
 <dt>直近の判定</dt><dd id="chk">-</dd>
 <dt>オドメトリ</dt><dd id="pose">-</dd>
@@ -81,7 +93,13 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <dt>記録の保存先</dt><dd id="rundir">-</dd>
 </dl>
 <dl id="status" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:none"></dl>
-<div class="row"><button class="stop" id="bstop">停止</button><button id="breset">停止を解除</button><span id="extra" class="row" style="margin:0"></span></div>
+<div class="row"><button class="stop" id="bstop">停止</button><button id="breset">停止を解除</button><button class="finish" id="bfinish" disabled>ここまで（終了）</button><span id="extra" class="row" style="margin:0"></span></div>
+<div class="note">「ここまで（終了）」はその場で止めて、成功として終えます（残りの手順は実行しません）。「停止」は失敗として止め、解除するまで動きません。</div>
+</section>
+<section id="pathsec" style="display:none"><h2>道に沿って走る</h2>
+<div class="meter"><div id="pbar"></div></div>
+<dl id="pathinfo"></dl>
+<div class="note" id="pathnote"></div>
 </section>
 </div>
 <div>
@@ -97,16 +115,20 @@ dt{color:var(--steel)}dd{margin:0;word-break:break-all}
 <section><h2>2. 計画の確認と承認</h2>
 <div id="planstate"></div>
 <table id="plan"><thead><tr><th>#</th><th>指示</th><th>いつ</th><th>何を</th><th>時間切れ</th><th>状態</th></tr></thead><tbody></tbody></table>
-<div class="row"><button class="primary" id="bexec" disabled>承認して実行</button></div>
+<div class="row"><label>手順 <select id="rfrom"></select> から <select id="rto"></select> まで</label></div>
+<div class="row"><button class="primary" id="bexec" disabled>承認して実行</button><button id="barm" disabled>承認して開始の合図を待つ</button><button id="bdisarm" disabled>承認を取り消す</button></div>
+<div class="note">「承認して開始の合図を待つ」にすると、外（元のシステム）から <code>start</code> の合図が来たときに走り出します。合図の <code>finish</code> で止めて終えます。</div>
 </section>
 <section><h2>記録</h2><pre id="log"></pre></section>
 </div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let since=0, filled=false, buttonsMade=false, planShown="", extraNames=[], extraTick=0;
-const PH={pending:"未着手",waiting:"条件待ち",acting:"動作中",done:"完了",failed:"中止"};
+let since=0, filled=false, buttonsMade=false, planShown="", extraNames=[], extraTick=0, stepsShown=-1, fpc={};
+const PH={pending:"未着手",waiting:"条件待ち",acting:"動作中",done:"完了",failed:"中止",skipped:"対象外",finished:"ここまでで終了"};
 const TS={idle:"待機",running:"実行中",done:"完了",failed:"失敗",stopped:"停止"};
+const PS={waiting:"最初の答えを待っています",driving:"走っています",turning:"向き直しています",holding:"次の答えを待って止まっています",stalled:"進めません（安全ゲートが止めているかもしれません）",done:"終わりました",failed:"中止しました"};
+const RS={done:"完了",failed:"失敗",stopped:"停止",finished:"ここまでで終了"};
 async function post(path,body){
   try{
     const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
@@ -120,7 +142,26 @@ function whenText(w){ if(w.type==="now") return "前の手順が終わったら�
 function doText(d){ if(d.skill==="rotate") return "旋回 "+d.angle_deg+"°";
   if(d.skill==="move_straight") return "直進 "+d.distance_m+" m";
   if(d.skill==="wait") return "待機 "+d.seconds+" 秒";
+  if(d.skill==="follow_path") return "道に沿って走る<br><code>"+esc(d.path)+"</code><br>"
+    +(d.distance_m>0?d.distance_m+" m 走ったら終わり":"距離は決めない（止まる条件か「ここまで」で終わり. 上限 "+(fpc.max_distance_m||"-")+" m）")
+    +(d.stop_when?"<br>止まる条件 <code>"+esc(d.stop_when)+"</code>":"")
+    +"<br><span class=\"note\">答え1回で最大 "+(fpc.step_m||"-")+" m</span>";
   return "点へ移動<br><code>"+esc(d.target)+"</code>"; }
+function fillRange(n){ for(const id of ["rfrom","rto"]){ const el=$(id); const keep=el.value; el.innerHTML="";
+    for(let i=1;i<=n;i++){ const o=document.createElement("option"); o.value=i; o.textContent=i; el.appendChild(o); }
+    el.value=(keep&&+keep<=n)?keep:(id==="rfrom"?1:n); } }
+function rangeBody(){ return {from:+$("rfrom").value||1, to:+$("rto").value||0}; }
+function showPath(p,cfg){ const sec=$("pathsec");
+  if(!p){ sec.style.display="none"; return; } sec.style.display="";
+  const lim=p.limit_m||0; $("pbar").style.width=(lim>0?Math.min(100,100*p.traveled_m/lim):0)+"%";
+  const rows=[["沿うもの","<code>"+esc(p.path)+"</code>"],
+    ["走った距離",p.traveled_m.toFixed(1)+" m / "+(p.distance_m>0?p.distance_m+" m":"決めない（上限 "+lim+" m）")],
+    ["1回の答えで進める距離","最大 "+p.step_m+" m（今の答えで、あと "+p.allow_m.toFixed(2)+" m）"],
+    ["答え",p.answers+" 回（使った "+p.accepted+"、使えない "+p.rejected+"）"+(p.last_latency_s!=null?"、直近 "+p.last_latency_s+" 秒":"")],
+    ["状態",(PS[p.state]||p.state)+(p.reason?"<br>"+esc(p.reason):"")+(p.result?"<br><b>"+esc(p.result)+"</b>":"")]];
+  if(p.stop_when) rows.splice(4,0,["止まる条件","<code>"+esc(p.stop_when)+"</code><br>判定 "+p.checks+" 回、yes が続いた回数 "+p.stop_streak]);
+  $("pathinfo").innerHTML=rows.map(([k,v])=>"<dt>"+k+"</dt><dd>"+v+"</dd>").join("");
+  $("pathnote").textContent="VLM が道の上の次の点を指し、ロボットはその方へ進みます。答え1回で進むのは、その画像を撮った位置から最大 "+p.step_m+" m です。次の答えが来なければ止まって待ちます。"; }
 function fmtEvent(e){ const o=Object.assign({},e); delete o.id; delete o.wall; delete o.kind;
   const t=new Date(e.wall*1000).toLocaleTimeString("ja-JP",{hour12:false});
   return t+" "+e.kind+" "+JSON.stringify(o); }
@@ -136,6 +177,14 @@ async function tick(){
   if(!buttonsMade){ buttonsMade=true; for(const b of s.buttons){ const el=document.createElement("button"); el.textContent=b.label; el.onclick=()=>post("/api/trigger",{name:b.name}); $("extra").appendChild(el);} }
   const t=$("task"); t.textContent=TS[s.task_state]||s.task_state; t.className="badge"+(s.task_state==="done"?" ok":(s.task_state==="failed"||s.task_state==="stopped"?" ng":""));
   $("taskmsg").textContent=s.task_message+(s.stopped?"（停止中）":"");
+  fpc=s.follow_path_cfg||{};
+  const dr=s.drive, db=$("drive");
+  db.textContent=dr.active?"VLM が走らせています":(dr.armed?"開始の合図を待っています":"走らせていません");
+  db.className="badge"+(dr.active?" ok":"");
+  $("driveinfo").textContent=(dr.active&&dr.range?"手順 "+dr.range[0]+"〜"+dr.range[1]+(dr.step?"（今は "+dr.step+"）":""):"")
+    +(dr.armed?"承認した範囲: 手順 "+dr.armed[0]+"〜"+dr.armed[1]:"")
+    +(!dr.active&&dr.result?"　直前の結果: "+(RS[dr.result]||dr.result):"");
+  $("lastcmd").textContent=s.last_command?(s.last_command.command+"（"+(s.last_command.source==="ros"?"ROS":"画面")+"）: "+s.last_command.message):"-";
   const v=$("vlm"); v.textContent=s.vlm.ok?"接続":"未接続"; v.className="badge "+(s.vlm.ok?"ok":"ng");
   $("vlminfo").textContent=s.vlm.base_url+" / "+s.vlm.model+(s.vlm.ok?"":"（"+s.vlm.info+"）");
   $("chk").textContent=s.last_check?((s.last_check.answer||"判定できず")+"（"+s.last_check.latency_s+" 秒）"+(s.last_check.error?" "+s.last_check.error:"")):"-";
@@ -148,15 +197,23 @@ async function tick(){
   // 作った計画は編集欄にも写す（条件文や目標の言い回しを変えて試せるように）
   if(s.plan){ const pj=JSON.stringify(s.plan,null,2); if(pj!==planShown){ planShown=pj; $("pjson").value=pj; } }
   const tb=$("plan").tBodies[0]; tb.innerHTML="";
+  const n=s.plan?s.plan.steps.length:0; if(n!==stepsShown){ stepsShown=n; fillRange(n); }
+  const rf=+$("rfrom").value||1, rt=+$("rto").value||n;
+  const running=s.task_state==="running";
   if(s.plan){ s.plan.steps.forEach((st,i)=>{ const ex=s.executor.steps[i]; const tr=document.createElement("tr");
-    if(s.task_state==="running"&&s.executor.current===i) tr.className="cur";
+    if(running&&s.executor.current===i) tr.className="cur";
+    else if(running?(ex&&ex.phase==="skipped"):(i+1<rf||i+1>rt)) tr.className="out";
     let stat=ex?(PH[ex.phase]||ex.phase):"-";
     if(ex&&ex.phase==="waiting") stat+="<br>判定 "+ex.checks+" 回"+(ex.streak_answer?"（"+ex.streak_answer+"×"+ex.streak+"）":"")+(st.when.type==="after_false_then_true"?(ex.seen_false?"<br>不成立を確認済み":"<br>不成立を未確認"):"");
+    if(ex&&ex.phase==="acting"&&st.do.skill==="follow_path"&&s.path) stat+="<br>"+s.path.traveled_m.toFixed(1)+" m 走りました";
     if(ex&&ex.message) stat+="<br>"+esc(ex.message);
     tr.innerHTML="<td>"+(i+1)+"</td><td>"+esc(st.instruction)+"</td><td>"+whenText(st.when)+"</td><td>"+doText(st.do)+"</td><td>"+st.timeout_s+" 秒</td><td>"+stat+"</td>";
     tb.appendChild(tr); }); }
-  $("bexec").disabled=!(s.plan_state==="ready"&&s.task_state!=="running"&&!s.stopped);
-  $("bplan").disabled=(s.plan_state==="planning"||s.task_state==="running");
+  showPath(s.path);
+  const canRun=s.plan_state==="ready"&&!running&&!s.stopped&&rf<=rt;
+  $("bexec").disabled=!canRun; $("barm").disabled=!canRun; $("bdisarm").disabled=!dr.armed;
+  $("bfinish").disabled=!running;
+  $("bplan").disabled=(s.plan_state==="planning"||running);
   if(s.events.length){ const log=$("log"); const stick=log.scrollTop+log.clientHeight>=log.scrollHeight-8;
     for(const e of s.events){ since=Math.max(since,e.id); log.textContent+=fmtEvent(e)+"\n"; }
     if(log.textContent.length>200000) log.textContent=log.textContent.slice(-150000);
@@ -164,7 +221,10 @@ async function tick(){
 }
 $("bplan").onclick=()=>post("/api/plan",{instructions:$("inst").value});
 $("bload").onclick=()=>post("/api/set_plan",{plan:$("pjson").value});
-$("bexec").onclick=()=>post("/api/execute");
+$("bexec").onclick=()=>post("/api/execute",rangeBody());
+$("barm").onclick=()=>post("/api/arm",rangeBody());
+$("bdisarm").onclick=()=>post("/api/disarm");
+$("bfinish").onclick=()=>post("/api/finish");
 $("bstop").onclick=()=>post("/api/stop");
 $("breset").onclick=()=>post("/api/reset");
 setInterval(tick,500); tick();
@@ -260,7 +320,15 @@ def _make_handler(runtime: TaskRuntime, stream_hz: float):
             elif url.path == "/api/load_preset":
                 self._result(runtime.load_preset(str(body.get("name", ""))))
             elif url.path == "/api/execute":
-                self._result(runtime.execute())
+                self._result(runtime.execute(body.get("from"), body.get("to")))
+            elif url.path == "/api/arm":
+                self._result(runtime.arm(body.get("from"), body.get("to")))
+            elif url.path == "/api/disarm":
+                self._result(runtime.disarm())
+            elif url.path == "/api/finish":
+                self._result(runtime.finish())
+            elif url.path == "/api/command":
+                self._result(runtime.command(body if "command" in body else str(body.get("text", "")), source="web"))
             elif url.path == "/api/stop":
                 self._result(runtime.stop())
             elif url.path == "/api/reset":

@@ -3,6 +3,12 @@
 各手順は「条件待ち」→「動作中」→「完了」と進み、時間切れか異常で「中止」に移る.
 「再び扉が開いたら」のような履歴に依存する条件は、モデルの記憶ではなくここで持つ状態
 （成り立たないのを見たか）で判定する.
+
+途中から・ここまで:
+  * run(plan, start, end) で、計画の一部（start 番目から end 番目まで. 0 から数える）だけを実行できる.
+    範囲の外の手順は「対象外」になる.
+  * 終了の指示（finish を立てる）を受けると、今の手順をその場で打ち切り、残りの手順は実行せずに
+    成功として終える（「ここまで」）. 停止（cancel）とは違い、失敗にはしない.
 """
 from __future__ import annotations
 
@@ -22,6 +28,12 @@ PHASE_WAITING = "waiting"        # 条件待ち
 PHASE_ACTING = "acting"          # 動作中
 PHASE_DONE = "done"              # 完了
 PHASE_FAILED = "failed"          # 中止
+PHASE_SKIPPED = "skipped"        # 実行の範囲の外か、終了の指示の後で実行しない
+PHASE_FINISHED = "finished"      # 終了の指示（ここまで）で打ち切った
+
+_OK = "ok"
+_FAILED = "failed"
+_FINISHED = "finished"
 
 PATH_CLEAR_STATEMENT = "The path straight ahead of the robot is clear of people and obstacles."
 
@@ -67,41 +79,63 @@ class TaskResult:
     message: str = ""
     failed_step: Optional[int] = None
     steps: List[StepStatus] = field(default_factory=list)
+    finished: bool = False           # 終了の指示（ここまで）で終えた
 
 
 class TaskExecutor:
     def __init__(self, robot: RobotIO, perception: Perception, skills: Skills, cfg: ExecutorConfig,
-                 events: EventLog, cancel: threading.Event):
+                 events: EventLog, cancel: threading.Event, finish: Optional[threading.Event] = None):
         self.robot = robot
         self.perception = perception
         self.skills = skills
         self.cfg = cfg
         self.events = events
         self.cancel = cancel
+        self.finish = finish if finish is not None else skills.finish   # 終了の指示（ここまで）
         self.plan: Optional[Plan] = None
         self.statuses: List[StepStatus] = []
         self.current: int = -1
+        self.range: Optional[List[int]] = None       # 実行する手順の範囲 [最初, 最後]（0 から数える）
         self._lock = threading.Lock()
 
     # -- 画面表示用 -----------------------------------------------------------
     def snapshot(self) -> Dict[str, Any]:
         with self._lock:
-            return {"current": self.current, "steps": [s.to_dict() for s in self.statuses]}
+            return {"current": self.current, "steps": [s.to_dict() for s in self.statuses],
+                    "range": list(self.range) if self.range else None}
 
     # -- 実行 ---------------------------------------------------------------
-    def run(self, plan: Plan) -> TaskResult:
+    def run(self, plan: Plan, start: int = 0, end: Optional[int] = None) -> TaskResult:
+        """計画を実行する. start から end まで（0 から数える. end を省くと最後まで）の手順だけを実行する."""
+        n = len(plan.steps)
+        end = n - 1 if end is None else end
+        if not 0 <= start <= end < n:
+            return TaskResult(False, f"実行する手順の範囲が正しくありません（{start + 1}〜{end + 1}、手順は {n} 個）")
         with self._lock:
             self.plan = plan
-            self.statuses = [StepStatus() for _ in plan.steps]
+            self.statuses = [StepStatus() if start <= i <= end else StepStatus(phase=PHASE_SKIPPED, message="範囲の外")
+                             for i in range(n)]
             self.current = -1
-        self.events.emit("task_start", steps=len(plan.steps), t=round(self.robot.now(), 3))
-        for i, step in enumerate(plan.steps):
+            self.range = [start, end]
+        self.events.emit("task_start", steps=n, first=start + 1, last=end + 1, t=round(self.robot.now(), 3))
+        for i in range(start, end + 1):
+            step = plan.steps[i]
             status = self.statuses[i]
             with self._lock:
                 self.current = i
-            ok = self._run_step(i, step, status)
+            outcome = self._run_step(i, step, status)
             status.finished_at = self.robot.now()
-            if not ok:
+            if outcome == _FINISHED:
+                status.phase = PHASE_FINISHED
+                status.message = status.message or "終了の指示（ここまで）で止めました"
+                for j in range(i + 1, end + 1):
+                    self.statuses[j].phase = PHASE_SKIPPED
+                    self.statuses[j].message = "終了の指示の後なので実行しない"
+                self.robot.send_cmd(0.0, 0.0)
+                self.events.emit("task_finished", step=i, t=round(self.robot.now(), 3))
+                return TaskResult(True, f"終了の指示（ここまで）で、手順{i + 1}で止めました", steps=self.statuses,
+                                  finished=True)
+            if outcome != _OK:
                 status.phase = PHASE_FAILED
                 self.robot.send_cmd(0.0, 0.0)
                 self.events.emit("task_failed", step=i, message=status.message, t=round(self.robot.now(), 3))
@@ -109,9 +143,11 @@ class TaskExecutor:
             status.phase = PHASE_DONE
         self.robot.send_cmd(0.0, 0.0)
         self.events.emit("task_done", t=round(self.robot.now(), 3))
-        return TaskResult(True, "すべての手順が完了しました", steps=self.statuses)
+        if (start, end) == (0, n - 1):
+            return TaskResult(True, "すべての手順が完了しました", steps=self.statuses)
+        return TaskResult(True, f"手順{start + 1}〜{end + 1}が完了しました", steps=self.statuses)
 
-    def _run_step(self, index: int, step: Step, status: StepStatus) -> bool:
+    def _run_step(self, index: int, step: Step, status: StepStatus) -> str:
         now = self.robot.now()
         status.started_at = now
         deadline = now + step.timeout_s
@@ -120,14 +156,19 @@ class TaskExecutor:
         # 「一度成り立たないのを見る」必要があるのは after_false_then_true だけ
         status.seen_false = step.when.type != WHEN_AFTER_FALSE_THEN_TRUE
         while True:
+            if self.finish.is_set():
+                return _FINISHED
             if step.when.type != WHEN_NOW:
                 status.phase = PHASE_WAITING
-                if not self._wait_condition(index, step, status, deadline):
-                    return False
+                waited = self._wait_condition(index, step, status, deadline)
+                if waited != _OK:
+                    return waited
                 if self.cfg.pre_departure_check and not self._path_clear(index, status, deadline):
+                    if self.finish.is_set():
+                        return _FINISHED
                     if self.cancel.is_set() or self.robot.now() > deadline:
                         status.message = status.message or "進路の確認が通らないまま時間切れになりました"
-                        return False
+                        return _FAILED
                     self._reset_streak(status)
                     continue
             status.phase = PHASE_ACTING
@@ -138,16 +179,20 @@ class TaskExecutor:
             result: SkillResult = self.skills.run(step.do, deadline, confirmed_at=status.confirmed_at,
                                                   recheck=recheck)
             self.events.emit("skill_end", step=index, ok=result.ok, message=result.message,
-                             t=round(self.robot.now(), 3))
+                             finished=result.finished, t=round(self.robot.now(), 3))
             status.message = result.message
+            if result.finished:
+                return _FINISHED
             if result.ok:
-                return True
+                return _OK
+            if self.finish.is_set():
+                return _FINISHED
             if (result.retry_condition and step.when.type != WHEN_NOW
                     and not self.cancel.is_set() and self.robot.now() < deadline):
                 # 発進できなかった: 条件の確認からやり直す（扉が閉まり始めているかもしれない）
                 self._reset_streak(status)
                 continue
-            return False
+            return _FAILED
 
     @staticmethod
     def _reset_streak(status: StepStatus) -> None:
@@ -155,18 +200,21 @@ class TaskExecutor:
         status.streak_answer = None
         status.confirmed_at = None
 
-    def _wait_condition(self, index: int, step: Step, status: StepStatus, deadline: float) -> bool:
-        """条件が確定するまで判定を繰り返す. 確定したら True、時間切れや停止なら False."""
+    def _wait_condition(self, index: int, step: Step, status: StepStatus, deadline: float) -> str:
+        """条件が確定するまで判定を繰り返す. 確定したら ok、時間切れや停止なら failed、終了の指示なら finished."""
         cfg = self.cfg
         errors = 0
         while True:
             if self.cancel.is_set():
                 status.message = "停止が要求されました"
-                return False
+                return _FAILED
+            if self.finish.is_set():
+                status.message = "終了の指示（ここまで）で止めました"
+                return _FINISHED
             t0 = self.robot.now()
             if t0 > deadline:
                 status.message = "条件が成り立たないまま時間切れになりました"
-                return False
+                return _FAILED
             self.robot.send_cmd(0.0, 0.0)
             res = self.perception.check(step.when.condition)
             status.checks += 1
@@ -177,7 +225,7 @@ class TaskExecutor:
                 errors += 1
                 if errors >= cfg.max_check_errors:
                     status.message = f"判定に続けて失敗しました: {res.error}"
-                    return False
+                    return _FAILED
             else:
                 errors = 0
                 if answer == status.streak_answer:
@@ -195,7 +243,7 @@ class TaskExecutor:
                         status.confirmed_at = self.robot.now()
                         self.events.emit("condition_confirmed", step=index,
                                          condition=step.when.condition, t=round(status.confirmed_at, 3))
-                        return True
+                        return _OK
             # 推論が速いときだけ、周期を守るために待つ
             remaining = cfg.check_period_s - (self.robot.now() - t0)
             if remaining > 0.0:
@@ -215,7 +263,7 @@ class TaskExecutor:
 
     def _path_clear(self, index: int, status: StepStatus, deadline: float) -> bool:
         for _ in range(max(self.cfg.pre_departure_retries, 1)):
-            if self.cancel.is_set() or self.robot.now() > deadline:
+            if self.cancel.is_set() or self.finish.is_set() or self.robot.now() > deadline:
                 return False
             res = self.perception.check(PATH_CLEAR_STATEMENT, purpose="path_clear")
             if res.answer is True:

@@ -166,6 +166,8 @@ NodeSettings SafetyGateNode::loadSettings(const std::string & config_file_path)
   readIfPresent(safety, "cmd_timeout", s.cmdTimeout);
   readIfPresent(safety, "cloud_timeout", s.cloudTimeout);
   readIfPresent(safety, "rate", s.rate);
+  readIfPresent(safety, "publish_when_idle", s.publishWhenIdle);
+  readIfPresent(safety, "idle_tail", s.idleTail);
   const YAML::Node web = root["web"];
   readIfPresent(web, "rate", s.webRate);
   readIfPresent(web, "cell_size", s.cellSize);
@@ -182,6 +184,9 @@ NodeSettings SafetyGateNode::loadSettings(const std::string & config_file_path)
   }
   if (!(s.cmdTimeout > 0.0) || !(s.cloudTimeout > 0.0)) {
     throw std::runtime_error("cmd_timeout と cloud_timeout は 0 より大きくしてください");
+  }
+  if (s.idleTail < 0.0) {
+    throw std::runtime_error("idle_tail は 0 以上にしてください");
   }
   return s;
 }
@@ -238,6 +243,14 @@ SafetyGateNode::SafetyGateNode()
   RCLCPP_INFO(
     get_logger(), "受ける: %s、%s  出す: %s（%s 座標系で判定）", settings.cmdInTopic.c_str(),
     settings.cloudTopic.c_str(), settings.cmdOutTopic.c_str(), settings.baseFrame.c_str());
+  if (settings.publishWhenIdle) {
+    RCLCPP_INFO(get_logger(), "指令が来ていない間も 0 を出し続けます");
+  } else {
+    RCLCPP_INFO(
+      get_logger(), "指令が来ていない間は、0 を %.2f 秒出してから黙ります（元のシステムと /cmd_vel を使い分ける）",
+      settings.idleTail);
+    lastPublishing = false;
+  }
 }
 
 /* 概要：最新の点群と速度指令値から安全な速度指令値を生成し配信する。 */
@@ -272,7 +285,24 @@ void SafetyGateNode::timerCallback()
   if (state != "PASS" && state != "SLOW") {
     result.velocity = Velocity{};
   }
-  cmdVelPublisher->publish(toTwist(result.velocity));
+  // 指令が途絶えたら（IDLE）、設定によっては 0 を少し出してから黙る
+  if (!cmd_fresh && !wasIdle) {
+    idleSince = std::chrono::steady_clock::now();
+  }
+  wasIdle = !cmd_fresh;
+  bool publishing = true;
+  if (!settings.publishWhenIdle && !cmd_fresh) {
+    publishing = vlmCmdVel.has_value() && secondsSince(idleSince) <= settings.idleTail;
+  }
+  if (publishing) {
+    cmdVelPublisher->publish(toTwist(result.velocity));
+  }
+  if (publishing != lastPublishing) {
+    RCLCPP_INFO(
+      get_logger(), "%s", publishing ? "速度指令を出し始めました" :
+      "指令が来ていないので、速度指令を出すのをやめました");
+    lastPublishing = publishing;
+  }
   if (state != lastState) {
     RCLCPP_INFO(
       get_logger(), "状態: %s → %s（%s）", lastState.empty() ? "(起動)" : lastState.c_str(),
@@ -419,6 +449,7 @@ void SafetyGateNode::publishDebug(
       fmt2(config.footprint[i].y) << "]";
   }
   json << "],\"margin\":" << fmt2(config.margin);
+  json << ",\"pub\":" << (lastPublishing ? "true" : "false");
   json << ",\"poses\":[";
   bool first = true;
   for (std::size_t i = 0; i < result.predictedPoses.size(); i += 2) {

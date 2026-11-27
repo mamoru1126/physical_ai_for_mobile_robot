@@ -1,6 +1,9 @@
-"""VLM への2種類の問い: 条件の判定（yes / no）と、指差し（画像の上の点）.
+"""VLM への問い: 条件の判定（yes / no）と、指差し（画像の上の点）. 指差しには2通りある.
 
-どちらも最新の画像1枚だけを使う. エレベーターに固有の知識は持たない.
+  * 場所の指差し（point）: 「かごの床の中央」のような、止まる場所を指す.
+  * 道の指差し（point_path）: 道に沿って走るとき、次に進む道の上の点を指す.
+
+どれも最新の画像1枚だけを使う. エレベーターに固有の知識は持たない.
 """
 from __future__ import annotations
 
@@ -61,6 +64,16 @@ POINT_SCHEMA: Dict[str, Any] = {
     "required": ["point_2d"],
     "additionalProperties": False,
 }
+# 道に沿って走るときの指差し. 答え1回で進むのは、この点の方向へ最大 skills.follow_path.step_m だけ
+PATH_SYSTEM = (
+    "You are the visual perception module of a wheeled mobile robot that drives along a path, such as a "
+    "walkway, sidewalk, corridor or road. You receive one image from the robot's forward-facing camera. "
+    "Point at the spot on the ground where the robot should drive next to keep following the path: a spot "
+    "on the path a few metres ahead, in the middle of its free part, away from people, obstacles and the "
+    "edges of the path. If the path bends, point at the spot where it continues. Never point at walls, "
+    "objects, people or the sky. {coords} "
+    'Reply with JSON only, like this: {{"point_2d": [x, y]}}'
+)
 MARKER_STATEMENT = ("The red circle marker is drawn on the floor (ground surface), "
                     "not on a wall, a door, a mirror or any object.")
 
@@ -77,6 +90,7 @@ class PerceptionConfig:
     check_prompt: str = "basic"       # 判定のシステムプロンプト: basic / guided（上の説明を参照）
     check_system: str = ""            # 空でなければ、check_prompt の代わりにこの文をそのまま使う
     point_system: str = POINT_SYSTEM
+    path_system: str = PATH_SYSTEM    # 道に沿って走るときの指差しのシステムプロンプト
 
     def check_system_text(self) -> str:
         return self.check_system or CHECK_SYSTEMS.get(self.check_prompt, CHECK_SYSTEM_BASIC)
@@ -165,8 +179,33 @@ class Perception:
         return res
 
     # -- 指差し -------------------------------------------------------------
+    def _coords_text(self, frame: Frame) -> str:
+        if self.cfg.point_scale > 0:
+            coords = (f"Coordinates are relative to the image size and range from 0 to {self.cfg.point_scale:g} "
+                      "(x from left to right, y from top to bottom).")
+        else:
+            coords = (f"Coordinates are in pixels of the {frame.width}x{frame.height} image "
+                      "(x from left to right, y from top to bottom).")
+        if self.cfg.point_order == "yx":
+            coords += " Give the point as [y, x]."
+        return coords
+
     def point(self, target: str, frame: Optional[Frame] = None, purpose: str = "point") -> PointResult:
         """対象の記述に当たる床の上の点を、画素の座標で得る."""
+        return self._point(self.cfg.point_system, target,
+                           f"Locate this place with one point on the floor: {target}. "
+                           "Output the point coordinates in JSON format.",
+                           "point_target", frame, purpose)
+
+    def point_path(self, path: str, frame: Optional[Frame] = None, purpose: str = "path") -> PointResult:
+        """道に沿って走るとき、次に進む道の上の点を、画素の座標で得る."""
+        return self._point(self.cfg.path_system, path,
+                           f"Path to follow: {path}. Point at the spot on this path where the robot should "
+                           "drive next. Output the point coordinates in JSON format.",
+                           "path_point", frame, purpose)
+
+    def _point(self, system: str, target: str, text: str, schema_name: str, frame: Optional[Frame],
+               purpose: str) -> PointResult:
         if frame is None:
             frame = self._fresh_frame()
         if frame is None:
@@ -177,24 +216,12 @@ class Perception:
         ctx = self.events.context()
         jpeg = encode_jpeg(frame, self.cfg.jpeg_quality)
         image_path = self.events.save_image(purpose, jpeg)
-        if self.cfg.point_scale > 0:
-            coords = (f"Coordinates are relative to the image size and range from 0 to {self.cfg.point_scale:g} "
-                      "(x from left to right, y from top to bottom).")
-        else:
-            coords = (f"Coordinates are in pixels of the {frame.width}x{frame.height} image "
-                      "(x from left to right, y from top to bottom).")
-        if self.cfg.point_order == "yx":
-            coords += " Give the point as [y, x]."
         messages = [
-            {"role": "system", "content": self.cfg.point_system.format(coords=coords)},
-            {"role": "user", "content": [
-                image_part(jpeg),
-                {"type": "text", "text": f"Locate this place with one point on the floor: {target}. "
-                                         "Output the point coordinates in JSON format."},
-            ]},
+            {"role": "system", "content": system.format(coords=self._coords_text(frame))},
+            {"role": "user", "content": [image_part(jpeg), {"type": "text", "text": text}]},
         ]
         try:
-            reply = self.vlm.chat(messages, max_tokens=48, schema_name="point_target", schema=POINT_SCHEMA)
+            reply = self.vlm.chat(messages, max_tokens=48, schema_name=schema_name, schema=POINT_SCHEMA)
         except VlmError as e:
             res = PointResult(False, stamp=frame.stamp, error=str(e), image=image_path)
             self.events.emit("point_error", purpose=purpose, target=target, error=res.error)

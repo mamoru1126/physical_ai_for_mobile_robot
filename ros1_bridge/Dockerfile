@@ -65,10 +65,10 @@ RUN source /opt/ros/humble/setup.bash \
 RUN source /opt/ros/humble/setup.bash \
     && source /opt/ros1_bridge_ws/install/local_setup.bash \
     && timeout 60 ros2 run ros1_bridge dynamic_bridge --print-pairs > /tmp/pairs.txt \
-    && for t in nav_msgs/msg/Odometry sensor_msgs/msg/PointCloud2 geometry_msgs/msg/Twist tf2_msgs/msg/TFMessage; do \
+    && for t in nav_msgs/msg/Odometry sensor_msgs/msg/PointCloud2 geometry_msgs/msg/Twist tf2_msgs/msg/TFMessage std_msgs/msg/String std_msgs/msg/Bool; do \
          grep -q "${t}" /tmp/pairs.txt || { echo "NG: ${t} を橋渡しできません"; exit 1; }; \
        done \
-    && echo "OK: Odometry、PointCloud2、Twist、TFMessage を橋渡しできます"
+    && echo "OK: Odometry、PointCloud2、Twist、TFMessage、String、Bool を橋渡しできます"
 
 COPY entrypoint.sh ros1_master.py /opt/ros1_bridge/
 RUN chmod +x /opt/ros1_bridge/entrypoint.sh

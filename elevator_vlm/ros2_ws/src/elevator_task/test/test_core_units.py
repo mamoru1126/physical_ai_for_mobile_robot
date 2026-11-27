@@ -88,11 +88,43 @@ def _step(**over):
     _step(do={"skill": "go_to_visual_target", "target": " "}),
     _step(do={"skill": "wait", "seconds": -1}),
     _step(timeout_s=0),
+    _step(do={"skill": "follow_path", "path": "the walkway", "distance_m": -1, "stop_when": ""}),
+    _step(do={"skill": "follow_path", "path": "the walkway", "distance_m": 101, "stop_when": ""}),   # 100 m を超える
+    _step(do={"skill": "follow_path", "path": " ", "distance_m": 5, "stop_when": ""}),
+    _step(do={"skill": "follow_path", "path": "the walkway", "stop_when": ""}),                    # 距離がない
+    _step(do={"skill": "follow_path", "path": "the walkway", "distance_m": 5, "stop_when": 3}),
     "not json",
 ])
 def test_invalid_plans_are_rejected(bad):
     with pytest.raises(PlanError):
         parse_plan(bad)
+
+
+def test_follow_path_steps():
+    from elevator_task.core.plan import SKILL_FOLLOW_PATH, PlanLimits
+
+    plan = parse_plan(_step(do={"skill": "follow_path", "path": " the walkway ", "distance_m": 12,
+                                "stop_when": " A gate is ahead. "}))
+    do = plan.steps[0].do
+    assert (do.skill, do.path, do.distance_m, do.stop_when) == (SKILL_FOLLOW_PATH, "the walkway", 12.0, "A gate is ahead.")
+    assert parse_plan(plan.to_dict()).to_dict() == plan.to_dict()
+    # 止まる条件は省略できる（空）. 距離 0 は「決めない」
+    plan = parse_plan(_step(do={"skill": "follow_path", "path": "the corridor", "distance_m": 0}))
+    assert plan.steps[0].do.stop_when == "" and plan.steps[0].do.distance_m == 0.0
+    # 上限は設定で変えられる
+    with pytest.raises(PlanError):
+        parse_plan(_step(do={"skill": "follow_path", "path": "x", "distance_m": 30, "stop_when": ""}),
+                   PlanLimits(max_path_distance_m=20.0))
+
+
+def test_planner_prompt_has_the_default_path_distance():
+    from elevator_task.core.plan import PlanLimits
+    from elevator_task.core.planner import PLANNER_SYSTEM, planner_system
+
+    assert "<DEFAULT_PATH_M>" in PLANNER_SYSTEM and "follow_path" in PLANNER_SYSTEM
+    text = planner_system(PlanLimits(default_path_distance_m=7.5))
+    assert "Use 7.5 when the instruction states neither" in text and "<DEFAULT_PATH_M>" not in text
+    assert "Use 10 when the instruction states neither" in planner_system()
 
 
 def test_plan_schema_has_one_variant_per_skill_and_when_type():
@@ -170,7 +202,74 @@ def test_safety_gate_limits_and_watchdogs():
     assert gate.output(2.1) == (0.2, 0.0, STATE_OK)
 
 
+def test_safety_gate_can_stay_quiet_when_idle():
+    # 既定: 指令が来ていない間も 0 を出し続ける
+    gate = SafetyGate(SafetyConfig())
+    assert gate.should_publish(0.0)
+    # 途中から・ここまで: 実行系が動かしている間だけ出し、途絶えたら 0 を少し出してから黙る
+    gate = SafetyGate(SafetyConfig(publish_when_idle=False, cmd_timeout_s=0.5, idle_tail_s=0.5))
+    assert not gate.should_publish(0.0)                 # まだ一度も指令が来ていない
+    gate.on_odom(1.0)
+    gate.on_camera(1.0)
+    gate.on_cmd(1.0, 0.2, 0.0)
+    assert gate.should_publish(1.2)
+    assert gate.should_publish(1.9)                     # 途絶えて 0.9 秒: 0 を出している（0.5 + 0.5 まで）
+    assert gate.output(1.9)[:2] == (0.0, 0.0)
+    assert not gate.should_publish(2.1)                 # 黙る
+    gate.stop("test")
+    gate.on_cmd(3.0, 0.2, 0.0)
+    assert gate.should_publish(3.1) and gate.output(3.1) == (0.0, 0.0, STATE_STOPPED)
+    assert not gate.should_publish(4.5)
+    gate.reset()
+    assert not gate.should_publish(4.6)
+
+
+def test_stamp_fixer_corrects_clock_offsets():
+    from elevator_task.core.robot_io import StampFixer
+
+    fixer = StampFixer("auto", tolerance_s=0.5)
+    assert fixer.fix(100.0, 100.05) == (100.0, False)  # 時計が合っている: そのまま
+    assert fixer.fix(0.0, 100.1) == (100.1, False)     # 時刻が入っていない: 受け取った時刻
+    # 送り手の時計が 30 秒遅れている. ずれ（+ いちばん短い届くまでの時間）を足して直す
+    fixer = StampFixer("auto", tolerance_s=0.5)
+    for i in range(10):
+        fixer.fix(70.0 + i * 0.1, 100.0 + i * 0.1 + 0.02 + (0.03 if i % 2 else 0.0))
+    stamp, fixed = fixer.fix(71.0, 101.07)
+    assert fixed and stamp == pytest.approx(101.02, abs=1e-6)   # 届くまでのばらつき（0.05 秒古い）は残る
+    assert fixer.offset_s == pytest.approx(30.02, abs=1e-6)
+    assert StampFixer("header").fix(70.0, 100.0) == (70.0, False)
+    assert StampFixer("receive").fix(70.0, 100.0) == (100.0, False)
+
+
+def test_parse_command():
+    from elevator_task.core.runtime import parse_command
+
+    assert parse_command("start") == ("start", {})
+    assert parse_command(" FINISH ") == ("finish", {})
+    assert parse_command('{"command": "start", "from": 2, "to": 4}') == ("start", {"from": 2, "to": 4})
+    assert parse_command({"command": "stop"}) == ("stop", {})
+    assert parse_command("{broken") == ("", {})
+
+
 # -- 設定 -------------------------------------------------------------------
+def test_follow_path_and_drive_config(tmp_path):
+    path = tmp_path / "c.yaml"
+    path.write_text(json.dumps({"skills": {"follow_path": {"step_m": 0.8}},
+                                "drive": {"command_topic": "", "require_arm": False},
+                                "limits": {"default_path_distance_m": 15},
+                                "safety": {"publish_when_idle": False}}), encoding="utf-8")
+    cfg = config_mod.load_config(str(path), env={})
+    assert cfg.skills.follow_path.step_m == 0.8 and cfg.skills.follow_path.speed == 0.3
+    assert cfg.drive.command_topic == "" and not cfg.drive.require_arm and cfg.drive.state_topic == "vlm_drive/state"
+    assert cfg.limits.default_path_distance_m == 15.0 and not cfg.safety.publish_when_idle
+    path.write_text(json.dumps({"skills": {"follow_path": {"stepm": 1}}}), encoding="utf-8")
+    with pytest.raises(config_mod.ConfigError):
+        config_mod.load_config(str(path), env={})
+    path.write_text(json.dumps({"stamp_source": "gps"}), encoding="utf-8")
+    with pytest.raises(config_mod.ConfigError):
+        config_mod.load_config(str(path), env={})
+
+
 def test_bundled_config_loads_and_env_overrides():
     cfg = config_mod.load_config(os.path.join(PKG, "config", "task.yaml"), env={})
     assert cfg.vlm.base_url.endswith("/v1") and cfg.web.port == 8080 and len(cfg.instructions) == 3

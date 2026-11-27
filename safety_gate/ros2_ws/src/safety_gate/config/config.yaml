@@ -47,6 +47,11 @@ safety:
   cmd_timeout: 0.5              # 指令がこれより長く来なければ止める
   cloud_timeout: 0.5            # 点群がこれより長く来なければ止める
   rate: 20.0                    # 指令を出す回数（Hz）
+  # 指令が来ていない（VLM が走らせていない）間も 0 を出し続けるか. false なら 0 を idle_tail 秒だけ出してから黙る.
+  # 元のシステム（ROS 1 のナビゲーションなど）と同じ /cmd_vel を使い分ける（途中から・ここまで）ので false にする.
+  # true にすると、VLM が走らせていない間も 0 が流れ続け、元のシステムの指令とぶつかる
+  publish_when_idle: false
+  idle_tail: 0.5
 
 # 速度の上限（m/s、rad/s）. これを超える指令は抑える
 limits:

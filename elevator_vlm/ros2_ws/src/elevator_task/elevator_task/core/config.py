@@ -55,6 +55,21 @@ class WebConfig:
 
 
 @dataclass
+class DriveConfig:
+    """途中から・ここまで: 外（元のシステム）からの開始と終了の合図、VLM の指示で走っているかの知らせ.
+
+    トピックの名前が空なら、そのトピックは使わない. ROS 1 のシステムとは ros1_bridge で橋渡しする.
+    """
+
+    command_topic: str = "vlm_drive/command"   # 受ける std_msgs/String: start / finish / stop（JSON も可）
+    state_topic: str = "vlm_drive/state"       # 出す std_msgs/String（JSON. 実行の状態、範囲、走った距離）
+    active_topic: str = "vlm_drive/active"     # 出す std_msgs/Bool: VLM の指示で走らせている間 true
+    state_hz: float = 2.0                      # state と active を出す回数（変わったときは、すぐにも出す）
+    require_arm: bool = True                   # 開始の合図は、画面で「承認して開始の合図を待つ」にした計画だけ受ける
+    disarm_after_start: bool = False           # 開始の合図で1回走らせたら承認を取り消す（区間ごとに承認し直す）
+
+
+@dataclass
 class TaskConfig:
     vlm: VlmConfig = field(default_factory=VlmConfig)
     perception: PerceptionConfig = field(default_factory=PerceptionConfig)
@@ -63,12 +78,18 @@ class TaskConfig:
     safety: SafetyConfig = field(default_factory=SafetyConfig)
     camera: CameraMount = field(default_factory=CameraMount)
     web: WebConfig = field(default_factory=WebConfig)
+    drive: DriveConfig = field(default_factory=DriveConfig)
     limits: PlanLimits = field(default_factory=PlanLimits)
     instructions: List[str] = field(default_factory=lambda: list(DEFAULT_INSTRUCTIONS))
     planner_thinking: bool = False
     log_dir: str = "runs"
     # 画面から読み込める、用意済みの計画（JSON ファイル）の置き場所. 空なら使わない
     plan_dir: str = ""
+    # 画像とオドメトリの時刻. header: メッセージの時刻を使う / receive: 受け取った時刻を使う /
+    # auto: 送り手の PC との時計のずれが stamp_tolerance_s を超えていたら、そのずれを足して直す
+    # （ROS 1 のロボットの PC と時計が合っていないとき. 合っていないと、撮影した時点の位置を引けない）
+    stamp_source: str = "auto"
+    stamp_tolerance_s: float = 0.5
 
 
 def _coerce(value: Any, current: Any, where: str) -> Any:
@@ -146,4 +167,6 @@ def load_config(path: Optional[str] = None, overrides: Optional[Dict[str, Any]] 
         vlm_changes["api_key"] = env["VLM_API_KEY"]
     if vlm_changes:
         cfg = dataclasses.replace(cfg, vlm=dataclasses.replace(cfg.vlm, **vlm_changes))
+    if cfg.stamp_source not in ("auto", "header", "receive"):
+        raise ConfigError(f"stamp_source: auto / header / receive のどれかです（{cfg.stamp_source!r}）")
     return cfg

@@ -35,6 +35,8 @@ struct NodeSettings
   double cmdTimeout{0.5};
   double cloudTimeout{0.5};
   double rate{20.0};
+  bool publishWhenIdle{true};   // 指令が来ていない間も 0 を出し続けるか（false: 0 を idleTail 秒出してから黙る）
+  double idleTail{0.5};
   double webRate{5.0};
   double cellSize{0.05};
 };
@@ -51,6 +53,8 @@ public:
 private:
   /* 概要：最新の点群と速度指令値から安全な速度指令値を生成し配信する。
    *       指令や点群が古い・TF がないときは、止める指令を配信する。
+   *       publish_when_idle が false なら、指令が途絶えて idle_tail 秒たった後は何も配信しない
+   *       （元のシステムと同じ /cmd_vel を使い分けるため）。
    * 入力：なし
    * 出力：なし
    */
@@ -121,6 +125,9 @@ private:
   std::string cloudFrameUsed{};
   SteadyTime lastDebugTime{};
   std::string lastState{};      // ログに状態の変わり目だけを出すため
+  bool wasIdle{false};
+  SteadyTime idleSince{};       // 指令が途絶えた（IDLE になった）時刻
+  bool lastPublishing{true};    // ログに、出す・黙るの変わり目だけを出すため
 };
 
 #endif

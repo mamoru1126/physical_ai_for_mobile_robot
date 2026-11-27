@@ -1,7 +1,7 @@
 name: ros1-bridge
 
 # ROS 1 との橋渡し（ros1_bridge/）のイメージが作れるかの確認.
-# イメージの中で ros1_bridge を作り、Odometry、PointCloud2、Twist、TFMessage を橋渡しできるかを確かめる.
+# イメージの中で ros1_bridge を作り、Odometry、PointCloud2、Twist、TFMessage、String、Bool を橋渡しできるかを確かめる.
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
         run: |
           docker run --rm --entrypoint bash ros1-bridge:ci -c \
             "source /opt/ros/humble/setup.bash; source /opt/ros1_bridge_ws/install/local_setup.bash; \
-             ros2 run ros1_bridge dynamic_bridge --print-pairs | grep -E 'Odometry|PointCloud2|Twist|TFMessage'"
+             ros2 run ros1_bridge dynamic_bridge --print-pairs | grep -E 'Odometry|PointCloud2|Twist|TFMessage|std_msgs/msg/String|std_msgs/msg/Bool'"
 
       - name: Image size
         run: docker image ls ros1-bridge:ci

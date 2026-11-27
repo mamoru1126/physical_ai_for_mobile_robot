@@ -40,6 +40,8 @@ safety:
   cmd_timeout: 0.5
   cloud_timeout: 0.5
   rate: 20.0
+  publish_when_idle: false      # 実機と同じく、VLM が走らせていない間は黙る（0 を 0.5 秒出してから）
+  idle_tail: 0.5
 
 limits:
   max_linear_x: 0.5

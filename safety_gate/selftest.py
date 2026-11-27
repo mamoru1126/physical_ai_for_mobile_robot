@@ -4,6 +4,8 @@
 にせの点群（cloud_link 座標系. base_link から見て前に 0.1 m、高さ 0.5 m、後ろ向きに付いている）と
 にせの指令を流し、出てくる /cmd_vel と状態、WebUI の応答を確かめる.
   python3 selftest.py <設定ファイル>
+設定の safety.publish_when_idle が false（既定の設定ファイル）なら、指令が来ていない間に
+/cmd_vel を出さないこと（元のシステムと使い分けられること）も確かめる.
 """
 import json
 import math
@@ -127,10 +129,15 @@ def main():
         node = Tester(topics)
         time.sleep(3.0)
         run(node, 1.0)
+        quiet = not (config.get("safety") or {}).get("publish_when_idle", True)
 
         outs, states = run(node, 1.0)
-        check("指令なし → IDLE で 0", bool(outs) and all(o[1] == 0.0 for o in outs) and
-              bool(states) and states[-1].startswith("IDLE"), f"{states[-1:] or '状態なし'}")
+        if quiet:
+            check("指令なし → IDLE で何も出さない", not outs and bool(states) and states[-1].startswith("IDLE"),
+                  f"{states[-1:] or '状態なし'} 出力 {len(outs)} 件")
+        else:
+            check("指令なし → IDLE で 0", bool(outs) and all(o[1] == 0.0 for o in outs) and
+                  bool(states) and states[-1].startswith("IDLE"), f"{states[-1:] or '状態なし'}")
 
         near = wall_at(0.5)
         outs, states = run(node, 1.5, cloud=near, cmd=(0.3,))
@@ -168,9 +175,18 @@ def main():
         check("点群が途切れる → STOP", bool(outs) and all(o[1] == 0.0 for o in outs) and
               states[-1].startswith("STOP"), f"{states[-1:]}")
 
+        stopped_at = time.time()
         outs, states = run(node, 1.5)
-        check("指令が途切れる → IDLE で 0", bool(outs) and all(o[1] == 0.0 for o in outs) and
-              states[-1].startswith("IDLE"), f"{states[-1:]}")
+        if quiet:
+            tail = [o for o in node.outs if stopped_at <= o[0] <= stopped_at + 0.9]
+            check("指令が途切れる → 0 を少し出してから黙る",
+                  bool(tail) and all(o[1] == 0.0 for o in tail) and not outs and states[-1].startswith("IDLE"),
+                  f"{states[-1:]} 途切れた直後の 0: {len(tail)} 件、その後: {len(outs)} 件")
+            outs, states = run(node, 1.0, cloud=wall_at(4.0), cmd=(0.3,))
+            check("指令がまた来る → 出し始める", bool(outs) and abs(outs[-1][1] - 0.3) < 1e-6, f"{states[-1:]}")
+        else:
+            check("指令が途切れる → IDLE で 0", bool(outs) and all(o[1] == 0.0 for o in outs) and
+                  states[-1].startswith("IDLE"), f"{states[-1:]}")
         node.destroy_node()
         rclpy.shutdown()
     finally:

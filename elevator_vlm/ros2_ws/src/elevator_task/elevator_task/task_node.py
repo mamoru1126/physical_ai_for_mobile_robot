@@ -7,6 +7,11 @@
   配信:  cmd_vel_raw (geometry_msgs/Twist)  ← safety_gate が制限をかけて cmd_vel に流す
   呼出:  safety/stop、safety/reset (std_srvs/Trigger)
 
+途中から・ここまで（設定の drive. トピックの名前を空にすれば使わない）:
+  購読:  vlm_drive/command (std_msgs/String)   start / finish / stop か、{"command": "start", "from": 2, "to": 4}
+  配信:  vlm_drive/state (std_msgs/String、JSON)   VLM の指示で走っているか、範囲、走った距離、結果
+         vlm_drive/active (std_msgs/Bool)           VLM の指示で走らせている間 true
+
 Web UI もこのプロセスの中で動く（既定は http://<ホスト>:8080/）.
 """
 from __future__ import annotations
@@ -27,14 +32,14 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
-from std_msgs.msg import String
+from std_msgs.msg import Bool, String
 from std_srvs.srv import Trigger
 
 from .core.config import TaskConfig, load_config
 from .core.geometry import CameraModel, Pose2D, PoseHistory
-from .core.robot_io import Frame, RobotIO, encode_jpeg
+from .core.robot_io import Frame, RobotIO, StampFixer, encode_jpeg
 from .core.runtime import TaskRuntime
 from .core.webui import WebUI
 
@@ -93,6 +98,9 @@ class RosRobotIO(RobotIO):
         self._info_camera: Optional[CameraModel] = None
         self._history = PoseHistory(horizon_s=15.0)
         self._warned_encoding = False
+        self._warned_clock: Dict[str, bool] = {}
+        self._stamp_fixers = {what: StampFixer(cfg.stamp_source, cfg.stamp_tolerance_s)
+                              for what in ("カメラ画像", "オドメトリ")}
         self._cmd_pub = node.create_publisher(Twist, "cmd_vel_raw", 10)
         image_topic = cfg.camera.image_topic
         if is_compressed_topic(image_topic):
@@ -105,6 +113,16 @@ class RosRobotIO(RobotIO):
         node.create_subscription(Odometry, "odom", self._on_odom, qos_profile_sensor_data)
 
     # -- 受信 ---------------------------------------------------------------
+    def _stamp(self, header_stamp, what: str) -> float:
+        fixer = self._stamp_fixers[what]
+        stamp, fixed = fixer.fix(_stamp_to_sec(header_stamp), self.now())
+        if fixed and not self._warned_clock.get(what):
+            self._warned_clock[what] = True
+            self._node.get_logger().warn(
+                f"{what}の時刻が、この PC の時計と {fixer.offset_s:+.2f} 秒ずれています. ずれを足して直して使います"
+                "（送り手の PC と時計を合わせるのが確実です）")
+        return stamp
+
     def _on_image(self, msg: Image) -> None:
         rgb = image_to_rgb8(msg)
         if rgb is None:
@@ -112,7 +130,7 @@ class RosRobotIO(RobotIO):
                 self._warned_encoding = True
                 self._node.get_logger().error(f"対応していない画像の形式です: {msg.encoding}")
             return
-        stamp = _stamp_to_sec(msg.header.stamp) or self.now()
+        stamp = self._stamp(msg.header.stamp, "カメラ画像")
         with self._lock:
             self._frame = Frame(stamp, int(msg.width), int(msg.height), rgb)
 
@@ -124,7 +142,7 @@ class RosRobotIO(RobotIO):
                 self._node.get_logger().error(f"圧縮画像を展開できません（形式: {msg.format}）")
             return
         width, height, rgb = decoded
-        stamp = _stamp_to_sec(msg.header.stamp) or self.now()
+        stamp = self._stamp(msg.header.stamp, "カメラ画像")
         with self._lock:
             self._frame = Frame(stamp, width, height, rgb)
 
@@ -142,7 +160,7 @@ class RosRobotIO(RobotIO):
         p = msg.pose.pose.position
         q = msg.pose.pose.orientation
         yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-        stamp = _stamp_to_sec(msg.header.stamp) or self.now()
+        stamp = self._stamp(msg.header.stamp, "オドメトリ")
         self._history.add(Pose2D(stamp, float(p.x), float(p.y), yaw))
 
     # -- RobotIO ------------------------------------------------------------
@@ -263,6 +281,53 @@ class TaskNode(Node):
         self.get_logger().info(
             f"Web UI: http://localhost:{self.web.port}/  VLM: {cfg.vlm.base_url} ({cfg.vlm.model})  "
             f"記録: {self.runtime.events.run_dir or '保存しない'}")
+        self._setup_drive(cfg)
+
+    # -- 途中から・ここまで（外からの開始と終了の合図） ---------------------------
+    def _setup_drive(self, cfg: TaskConfig) -> None:
+        drive = cfg.drive
+        # 状態は後から参加した相手（橋渡しの起動が遅れた、など）にも最後の値が届くようにする
+        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                             durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self._drive_state_pub = self.create_publisher(String, drive.state_topic, latched) if drive.state_topic else None
+        self._drive_active_pub = self.create_publisher(Bool, drive.active_topic, latched) if drive.active_topic else None
+        self._drive_last = ""
+        self._drive_last_at = 0.0
+        if drive.command_topic:
+            self.create_subscription(String, drive.command_topic, self._on_drive_command, 10)
+        if self._drive_state_pub is not None or self._drive_active_pub is not None:
+            self.create_timer(0.1, self._publish_drive)
+        names = [n for n in (drive.command_topic, drive.state_topic, drive.active_topic) if n]
+        if names:
+            self.get_logger().info("途中から・ここまで: " + "、".join(names)
+                                   + ("（開始の合図は、画面で承認して待っている計画だけ受けます）" if drive.require_arm else ""))
+
+    def _on_drive_command(self, msg: String) -> None:
+        # 実行の開始は時間がかかることがあるので、受け取りのスレッドを止めないよう別のスレッドで処理する
+        data = msg.data
+        threading.Thread(target=self._handle_drive_command, args=(data,), name="drive_command", daemon=True).start()
+
+    def _handle_drive_command(self, data: str) -> None:
+        ok, message = self.runtime.command(data, source="ros")
+        log = self.get_logger().info if ok else self.get_logger().warn
+        log(f"外からの合図 {data!r}: {message}")
+        self._drive_last = ""              # すぐに状態を出し直す
+
+    def _publish_drive(self) -> None:
+        state = self.runtime.drive_state()
+        text = json.dumps(state, ensure_ascii=False, sort_keys=True)
+        now = time.monotonic()
+        # 中身が変わったとき（走った距離は除く）と、決まった周期で出す
+        key = json.dumps({k: v for k, v in state.items() if k not in ("traveled_m",)}, sort_keys=True)
+        period = 1.0 / max(self.runtime.cfg.drive.state_hz, 0.1)
+        if key == self._drive_last and now - self._drive_last_at < period:
+            return
+        self._drive_last = key
+        self._drive_last_at = now
+        if self._drive_state_pub is not None:
+            self._drive_state_pub.publish(String(data=text))
+        if self._drive_active_pub is not None:
+            self._drive_active_pub.publish(Bool(data=bool(state["active"])))
 
     def _on_status(self, name: str, msg: String) -> None:
         try:

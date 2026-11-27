@@ -4,6 +4,9 @@
          camera/camera_info (sensor_msgs/CameraInfo、カメラが生きているかの監視用. 設定の camera.info_topic)
   配信:  cmd_vel (geometry_msgs/Twist、50 Hz)、safety/state (std_msgs/String)
   提供:  safety/stop、safety/reset (std_srvs/Trigger)
+
+設定の safety.publish_when_idle を false にすると、実行系が速度指令を出していない間は cmd_vel を出さない
+（0 を idle_tail_s 秒出してから黙る）. 元のシステムと同じ /cmd_vel を使い分けるとき（途中から・ここまで）に使う.
 """
 from __future__ import annotations
 
@@ -32,6 +35,7 @@ class SafetyGateNode(Node):
         cfg = load_config(config_file or None)
         self.gate = SafetyGate(cfg.safety)
         self._gate_state = ""
+        self._publishing = True
         self._ticks = 0
         self._cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self._state_pub = self.create_publisher(String, "safety/state", 10)
@@ -42,7 +46,9 @@ class SafetyGateNode(Node):
         self.create_service(Trigger, "safety/reset", self._on_reset)
         self.create_timer(0.02, self._tick)
         self.get_logger().info(
-            f"安全ゲート: 並進 {cfg.safety.max_linear} m/s、旋回 {cfg.safety.max_angular} rad/s まで")
+            f"安全ゲート: 並進 {cfg.safety.max_linear} m/s、旋回 {cfg.safety.max_angular} rad/s まで. "
+            + ("指令が来ていない間も 0 を出し続けます" if cfg.safety.publish_when_idle
+               else f"指令が来ていない間は、0 を {cfg.safety.idle_tail_s} 秒出してから黙ります"))
 
     def _now(self) -> float:
         return self.get_clock().now().nanoseconds * 1e-9
@@ -71,18 +77,26 @@ class SafetyGateNode(Node):
         return response
 
     def _tick(self) -> None:
-        linear, angular, state = self.gate.output(self._now())
-        msg = Twist()
-        msg.linear.x = linear
-        msg.angular.z = angular
-        self._cmd_pub.publish(msg)
+        now = self._now()
+        linear, angular, state = self.gate.output(now)
+        publishing = self.gate.should_publish(now)
+        if publishing:
+            msg = Twist()
+            msg.linear.x = linear
+            msg.angular.z = angular
+            self._cmd_pub.publish(msg)
+        if publishing != self._publishing:
+            self.get_logger().info("速度指令を出し始めました" if publishing
+                                   else "実行系が動かしていないので、速度指令を出すのをやめました")
+            self._publishing = publishing
         if state != self._gate_state:
             self.get_logger().info(f"状態: {self._gate_state or '(起動)'} → {state}")
             self._gate_state = state
         self._ticks += 1
         if self._ticks % 25 == 0:
             self._state_pub.publish(String(data=json.dumps(
-                {"state": state, "linear": round(linear, 3), "angular": round(angular, 3)})))
+                {"state": state, "linear": round(linear, 3), "angular": round(angular, 3),
+                 "publishing": publishing})))
 
 
 def main(args=None) -> None:

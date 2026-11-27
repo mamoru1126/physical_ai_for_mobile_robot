@@ -74,7 +74,8 @@ if ! vlm_ready; then
 fi
 
 # ---- 3. 安全ゲート（点群を見るもの）を確かめる ------------------------------------------------
-if systemctl list-unit-files 2> /dev/null | grep -q '^safety-gate\.service'; then
+# パイプで grep -q に渡すと、pipefail の下では systemctl が SIGPIPE で終わり「入っていない」と誤る
+if systemctl cat safety-gate.service > /dev/null 2>&1; then
   systemctl is-active --quiet safety-gate || warn "安全ゲート（safety-gate）が動いていません: sudo systemctl start safety-gate"
   gate_conf=/etc/safety-gate/config.yaml
   if ! sudo -n grep -Eq '^[[:space:]]*publish_when_idle:[[:space:]]*false' "${gate_conf}" 2> /dev/null \

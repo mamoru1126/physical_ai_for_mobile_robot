@@ -537,8 +537,9 @@ class Skills:
                             self.robot.send_cmd(0.0, w)
                             progress["state"] = "turning"
                         else:
-                            linear = min(speed, math.sqrt(2.0 * cfg.linear_decel * remaining))
-                            linear = max(linear, cfg.min_linear)
+                            # 進んでよい距離の端（の arrive_tol_m 手前）で止まれるように、早めに減速する
+                            brake = max(remaining - pcfg.arrive_tol_m, 0.0)
+                            linear = max(min(speed, math.sqrt(2.0 * cfg.linear_decel * brake)), cfg.min_linear)
                             self.robot.send_cmd(linear, w)
                             progress["state"] = "driving"
 
@@ -602,13 +603,17 @@ class _PathWorker(threading.Thread):
                 time.sleep(0.005)        # 新しい画像を待つ（実時間. 擬似世界の時刻は進めない）
                 continue
             last_stamp = frame.stamp
-            if self.stop_when and points_since_check >= self.points_per_check:
-                points_since_check = 0
-                res: Any = self.perception.check(self.stop_when, frame=frame, purpose="stop_check")
-                kind = "check"
-            else:
-                points_since_check += 1
-                res = self.perception.point_path(self.path, frame=frame)
-                kind = "point"
+            try:
+                if self.stop_when and points_since_check >= self.points_per_check:
+                    points_since_check = 0
+                    kind = "check"
+                    res: Any = self.perception.check(self.stop_when, frame=frame, purpose="stop_check")
+                else:
+                    points_since_check += 1
+                    kind = "point"
+                    res = self.perception.point_path(self.path, frame=frame)
+            except Exception as e:  # noqa: BLE001  想定外の失敗も、使えない答えとして数える（スレッドを止めない）
+                res = (CheckResult(None, stamp=frame.stamp, error=repr(e)) if kind == "check"
+                       else PointResult(False, stamp=frame.stamp, error=f"問いかけに失敗しました: {e!r}"))
             if not self.halt.is_set():
                 self.results.put((kind, res))

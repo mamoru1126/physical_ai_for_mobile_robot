@@ -54,6 +54,7 @@ VLM が出す速度の指令を、点群を見て安全なものにしてから�
   - 点群が 0.5 秒（`cloud_timeout`）来ない（`STOP`）
   - TF がない（`STOP`）
 - 指令は上限（`limits`）で抑えます。
+- 指令が来ていない（`IDLE`）間は、0 を 0.5 秒（`idle_tail`）出してから、`/cmd_vel` を出すのをやめます（`publish_when_idle: false`。既定の設定ファイル）。VLM が走らせていない間、元のシステム（ROS 1 のナビゲーション）が同じ `/cmd_vel` を使えるようにするためです（[途中から・ここまで](../elevator_vlm/docs/follow_path.md)）。指令がまた来れば、すぐに出し始めます。WebUI の理由の欄に「速度指令は出していません」と出ます。
 
 ## 入れる
 
@@ -116,6 +117,7 @@ sudo systemctl restart safety-gate
 | `safety.time_horizon` / `stop_time` | 2.0 s / 0.5 s | 何秒先まで見るか / これより早くぶつかるなら止める |
 | `safety.obstacle_voxel_threshold` | 3 | 障害物とみなすボクセルの数 |
 | `safety.cmd_timeout` / `cloud_timeout` | 0.5 s / 0.5 s | 指令・点群がこれより長く来なければ止める |
+| `safety.publish_when_idle` / `idle_tail` | false / 0.5 s | 指令が来ていない間も 0 を出し続けるか。false なら 0 を `idle_tail` 秒出してから黙る（設定に書かなければ true） |
 | `limits` | 0.5 m/s、0.5 m/s、1.0 rad/s | 速度の上限 |
 | `web.port` | 9001 | WebUI のポート |
 | `web.rate` | 5 Hz | ブラウザに送る回数 |

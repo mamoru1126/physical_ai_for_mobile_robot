@@ -1,11 +1,15 @@
-# Orin のベンチ（ロボットに載せる前に、エレベーターのタスクを通す）
+# Orin のベンチ（ロボットに載せる前に、エレベーターのタスクと「道に沿って走って」を通す）
 
 ロボットに載せる前の Orin（ネットにはつながるが、電源モードを最大にはできない）で、エレベーターのタスクを1回通します。実機（ロボットとエレベーター）の代わりに「ダミーの世界」をつなぎます。VLM・実行系・安全ゲートは本物です。画面（WebUI）で操作して通すことも、自動で通すこともできます。
+
+「道に沿って走って」（[説明](../../elevator_vlm/docs/follow_path.md)）は、実写の映像を流す「道のベンチ」（7.）と、実写の画像での VLM の机上検証（8.）で確かめます。
 
 | 項目 | 状態 |
 | --- | --- |
 | Orin での通し | まだ（この手順で行う） |
 | スクリプトの通し（x86、モックの VLM） | GitHub Actions で、`bench_up.sh` → `bench_e2e.sh` をそのまま動かして PASS。ダミーの世界 → 実行系 → 安全ゲート 2 段 → ダミーの世界の順に、指令が通ることも確かめた（[.github/workflows/elevator-bench.yml](../../.github/workflows/elevator-bench.yml)） |
+| 道のベンチの通し（x86、モックの VLM） | GitHub Actions で、`BENCH_TASK=path` の `bench_up.sh` → `bench_e2e.sh` を動かして確かめる（承認して開始の合図を待つ → ROS で start → 扉の前で止まる） |
+| 実写での VLM の机上検証（`path_eval.sh`） | スクリプトはモックの VLM で通した。本物の VLM ではまだ |
 | arm64（Orin と同じ）でイメージを作る | GitHub Actions で確かめた（中の単体テストも通る） |
 
 ## 何が本物で、何がダミーか
@@ -176,6 +180,90 @@ bash jetson/bench/bench_e2e.sh
 ```
 
 PASS すれば、VLM の重みとイメージ、実行系と安全ゲートのイメージは、すべて Orin に入っています。ロボットに載せた後も、VLM は `VLM_OFFLINE=1` を付けて起動します。
+
+## 7. 道のベンチ（「道に沿って走って」を通す）
+
+ATC のコースの実写の映像（リポジトリの `atc_frames/`、313 枚）を、ロボットが前に走った道のりに合わせて流します（既定は 0.6 m ごとに 1 枚）。VLM は実写の画像を見て道の上の点を指し、ロボットは答え 1 回につき最大 1.0 m 進みます。点群は空（障害物なし）にしてあります。
+
+エレベーターのベンチが動いていれば、先に止めます。
+
+```bash
+bash jetson/bench/bench_down.sh
+```
+
+道のベンチを起動します。
+
+```bash
+BENCH_TASK=path bash jetson/bench/bench_up.sh
+```
+
+映像を始めるフレームを変えるときは、番号を付けます（例: 屋外の歩道は 1、屋内のロビーは 224、モールの通路は 253）。
+
+```bash
+BENCH_TASK=path BENCH_PATH_FIRST=253 bash jetson/bench/bench_up.sh
+```
+
+### 画面で通す
+
+1. 「計画を作る」を押す（指示文は「道に沿って走って」）。計画に「道に沿って走る、10 m 走ったら終わり、答え 1 回で最大 1 m」と出ます。用意済みの計画（「計画の JSON を直接編集する／読み込む」の `path_10m.json` など）を読み込んでもよいです。
+2. 「承認して実行」を押す。
+3. 左下の「道に沿って走る」に、走った距離、1 回の答えで進める距離の残り、答えの数と応答時間が出ます。途中で止めて終えるときは「ここまで（終了）」を押します。
+
+### 外からの合図で通す（途中から・ここまで）
+
+元のシステムの代わりに、コマンドで合図を出します。画面で計画を読み込み、「承認して開始の合図を待つ」を押してから、次を実行します。
+
+```bash
+docker exec elevator-bench /entrypoint.sh ros2 topic pub --once /vlm_drive/command std_msgs/msg/String "{data: start}"
+```
+
+終えるときは `finish` を出します。
+
+```bash
+docker exec elevator-bench /entrypoint.sh ros2 topic pub --once /vlm_drive/command std_msgs/msg/String "{data: finish}"
+```
+
+VLM が走らせているかの知らせを見ます。
+
+```bash
+docker exec elevator-bench /entrypoint.sh ros2 topic echo /vlm_drive/state
+```
+
+### 自動で通す
+
+映像をエレベーターの手前のロビー（225 枚目）に移し、「エレベーターの扉の前まで道に沿って走って」を、承認して開始の合図を待つ → `start` の順で走らせます。扉の前（243 枚目以降）で止まれば PASS です。
+
+```bash
+BENCH_TASK=path bash jetson/bench/bench_e2e.sh
+```
+
+結果は `jetson/log/bench_path_<日時>_<モデル>/` に残ります（中身は 3. と同じ。`summary.json` に走った距離と答えの数、確かめた項目）。
+
+- 映像は、前に走った道のりだけで進みます。ロボットが曲がっても映像は変わらないので、向きを直す動き（閉ループ）は確かめられません（擬似世界の試験で確かめています）。ロボットはオドメトリの上では曲がりながら進みます。
+- カメラの取り付けは、映像に合わせたおおよその値です（高さ 0.8 m、下向き 3 度）。
+
+## 8. 実写での VLM の机上検証（ロボットは動かさない）
+
+ATC のコースのフレーム 33 枚に付けた正解（走れる範囲と、避けるもの）と、止まる条件の文 5 つ（エレベーターの扉が目の前、コーンでふさがれている、人が目の前、上りの段が目の前、ガラスの入口が目の前）の正解で、本物の VLM を測ります。
+
+```bash
+bash jetson/bench/path_eval.sh
+```
+
+指差しだけを、5 枚で試すこともできます。
+
+```bash
+bash jetson/bench/path_eval.sh --only point --limit 5
+```
+
+結果は `jetson/log/path_eval_<日時>_<モデル>/` に残ります。
+
+| ファイル | 中身 |
+| --- | --- |
+| `report.md` | 道の上を指した割合、避けるものの上・道の外を指した数、端からの余裕、応答時間、止まる条件の正しさ、計画の確認 |
+| `overlays/` | 正解の範囲（緑）と避けるもの（赤）に、VLM の点を描いた画像 |
+| `results.json` | 1 枚ずつの結果 |
+| `eval.txt`、`power.txt`、`env.txt` | 経過、消費電力、電源モードとモデル |
 
 ## ベンチで分かること、分からないこと
 

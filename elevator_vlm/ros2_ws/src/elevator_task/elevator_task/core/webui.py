@@ -156,7 +156,7 @@ function showPath(p,cfg){ const sec=$("pathsec");
   const lim=p.limit_m||0; $("pbar").style.width=(lim>0?Math.min(100,100*p.traveled_m/lim):0)+"%";
   const rows=[["沿うもの","<code>"+esc(p.path)+"</code>"],
     ["走った距離",p.traveled_m.toFixed(1)+" m / "+(p.distance_m>0?p.distance_m+" m":"決めない（上限 "+lim+" m）")],
-    ["1回の答えで進める距離","最大 "+p.step_m+" m（今の答えで、あと "+p.allow_m.toFixed(2)+" m）"],
+    ["1回の答えで進める距離","最大 "+p.step_m+" m"+(p.active?"（今の答えで、あと "+p.allow_m.toFixed(2)+" m）":"")],
     ["答え",p.answers+" 回（使った "+p.accepted+"、使えない "+p.rejected+"）"+(p.last_latency_s!=null?"、直近 "+p.last_latency_s+" 秒":"")],
     ["状態",(PS[p.state]||p.state)+(p.reason?"<br>"+esc(p.reason):"")+(p.result?"<br><b>"+esc(p.result)+"</b>":"")]];
   if(p.stop_when) rows.splice(4,0,["止まる条件","<code>"+esc(p.stop_when)+"</code><br>判定 "+p.checks+" 回、yes が続いた回数 "+p.stop_streak]);
@@ -181,9 +181,9 @@ async function tick(){
   const dr=s.drive, db=$("drive");
   db.textContent=dr.active?"VLM が走らせています":(dr.armed?"開始の合図を待っています":"走らせていません");
   db.className="badge"+(dr.active?" ok":"");
-  $("driveinfo").textContent=(dr.active&&dr.range?"手順 "+dr.range[0]+"〜"+dr.range[1]+(dr.step?"（今は "+dr.step+"）":""):"")
-    +(dr.armed?"承認した範囲: 手順 "+dr.armed[0]+"〜"+dr.armed[1]:"")
-    +(!dr.active&&dr.result?"　直前の結果: "+(RS[dr.result]||dr.result):"");
+  $("driveinfo").textContent=[dr.active&&dr.range?"手順 "+dr.range[0]+"〜"+dr.range[1]+(dr.step?"（今は "+dr.step+"）":""):"",
+    dr.armed?"承認した範囲: 手順 "+dr.armed[0]+"〜"+dr.armed[1]:"",
+    !dr.active&&dr.result?"直前の結果: "+(RS[dr.result]||dr.result):""].filter(x=>x).join("　");
   $("lastcmd").textContent=s.last_command?(s.last_command.command+"（"+(s.last_command.source==="ros"?"ROS":"画面")+"）: "+s.last_command.message):"-";
   const v=$("vlm"); v.textContent=s.vlm.ok?"接続":"未接続"; v.className="badge "+(s.vlm.ok?"ok":"ng");
   $("vlminfo").textContent=s.vlm.base_url+" / "+s.vlm.model+(s.vlm.ok?"":"（"+s.vlm.info+"）");

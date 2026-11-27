@@ -36,7 +36,12 @@ v4l2-ctl --device "${device}" --list-formats-ext 2> /dev/null | head -n 40 || tr
 echo "トピック: /${CAMERA_NAMESPACE:-camera}/image_raw、/${CAMERA_NAMESPACE:-camera}/camera_info（圧縮: ${CAMERA_COMPRESSED_TOPIC:-/camera/compressed}）"
 echo "ブラウザ: http://<このPCのIP>:${CAMERA_WEB_PORT:-9000}/"
 
+# ros2 launch は空の値（camera_info_url:=）を受け付けないので、校正ファイルがあるときだけ渡す
+extra=()
+[ -n "${CAMERA_INFO_URL:-}" ] && extra+=(camera_info_url:="${CAMERA_INFO_URL}")
+
 exec ros2 launch /opt/usb_camera/camera.launch.py \
+  "${extra[@]}" \
   video_device:="${device}" \
   image_width:="${CAMERA_WIDTH:-640}" \
   image_height:="${CAMERA_HEIGHT:-480}" \
@@ -45,5 +50,4 @@ exec ros2 launch /opt/usb_camera/camera.launch.py \
   namespace:="${CAMERA_NAMESPACE:-camera}" \
   compressed_topic:="${CAMERA_COMPRESSED_TOPIC:-/camera/compressed}" \
   frame_id:="${CAMERA_FRAME_ID:-camera}" \
-  camera_info_url:="${CAMERA_INFO_URL:-}" \
   port:="${CAMERA_WEB_PORT:-9000}"

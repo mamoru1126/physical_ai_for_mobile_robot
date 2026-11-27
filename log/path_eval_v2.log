@@ -1,0 +1,30 @@
+Status: Downloaded newer image for vllm/vllm-openai:v0.22.0-ubuntu2404
+docker.io/vllm/vllm-openai:v0.22.0-ubuntu2404
+VLM のサーバを起動します
+  モデル: RedHatAI/Qwen3.5-9B-quantized.w4a16
+  イメージ: vllm/vllm-openai:v0.22.0-ubuntu2404
+  メモリの割合: 0.67（全体 29.8 GiB のうち）
+答えられるようになるまで待ちます. 初回はモデルの重みを落とすので、長くかかります（止めるときは Ctrl+C. サーバは動き続けます）
+  30 秒:
+  60 秒: (APIServer pid=1) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  91 秒: (APIServer pid=1) [transformers] `Qwen2VLImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Qwen2VLImageProcessor`
+  121 秒: (APIServer pid=1) [transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fas
+  151 秒: (EngineCore pid=152) INFO 11-27 04:54:56 [topk_topp_sampler.py:45] Using FlashInfer for top-p & top-k sampling.
+  182 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  212 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  243 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  273 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  303 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  334 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  364 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  395 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  425 秒: (EngineCore pid=152) INFO 11-27 04:55:25 [flash_attn.py:636] Using FlashAttention version 2
+  455 秒: (EngineCore pid=152) INFO 11-27 04:59:52 [gpu_model_runner.py:6136] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image i
+  486 秒: (EngineCore pid=152) INFO 11-27 05:00:18 [backends.py:1148] Dynamo bytecode transform time: 16.19 s
+  516 秒: (EngineCore pid=152) INFO 11-27 05:00:18 [backends.py:1148] Dynamo bytecode transform time: 16.19 s
+  547 秒: (EngineCore pid=152) INFO 11-27 05:00:18 [backends.py:1148] Dynamo bytecode transform time: 16.19 s
+  577 秒: (EngineCore pid=152) INFO 11-27 05:00:18 [backends.py:1148] Dynamo bytecode transform time: 16.19 s
+  607 秒: (EngineCore pid=152) INFO 11-27 05:02:24 [backends.py:378] Cache the graph of compile range (1, 2048) for later use
+  638 秒: (EngineCore pid=152) INFO 11-27 05:02:24 [backends.py:378] Cache the graph of compile range (1, 2048) for later use
+  668 秒: (EngineCore pid=152) INFO 11-27 05:03:28 [monitor.py:53] torch.compile took 206.19 s in total
+  698 秒: (EngineCore pid=152) INFO 11-27 05:03:28 [monitor.py:53] torch.compile took 206.19 s in total

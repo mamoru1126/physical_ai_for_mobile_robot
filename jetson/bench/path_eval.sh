@@ -26,6 +26,12 @@ if docker info > /dev/null 2>&1; then
 else
   DOCKER=(sudo docker)
 fi
+# プロキシの下では、イメージを作るコンテナ（apt-get、pip）にもプロキシの設定を渡す.
+# プロキシがこの PC の上（127.0.0.1 など）にあっても届くよう、作るときもホストのネットワークを使う
+BUILD_ARGS=(--network host)
+for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+  [ -n "${!var:-}" ] && BUILD_ARGS+=(--build-arg "${var}=${!var}")
+done
 [ -f "${ROOT}/atc_frames/labels.json" ] || fail "正解のファイルがありません: ${ROOT}/atc_frames/labels.json"
 
 # ---- 電源モード（MAXN では始めない）-------------------------------------------------
@@ -38,7 +44,7 @@ fi
 # ---- イメージと VLM ------------------------------------------------------------------
 if ! "${DOCKER[@]}" image inspect "${RUNTIME_IMAGE}" > /dev/null 2>&1; then
   say "イメージを作ります: ${RUNTIME_IMAGE}（初回は数分〜十数分）"
-  "${DOCKER[@]}" build -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm" \
+  "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm" \
     || fail "イメージを作れません"
 fi
 vlm_ready() { curl -sf --noproxy '*' --max-time 3 "http://127.0.0.1:${VLM_PORT}/v1/models" > /dev/null 2>&1; }

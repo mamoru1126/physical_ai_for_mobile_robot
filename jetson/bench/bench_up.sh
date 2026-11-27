@@ -42,6 +42,12 @@ if docker info > /dev/null 2>&1; then
 else
   DOCKER=(sudo docker)
 fi
+# プロキシの下では、イメージを作るコンテナ（apt-get、pip）にもプロキシの設定を渡す.
+# プロキシがこの PC の上（127.0.0.1 など）にあっても届くよう、作るときもホストのネットワークを使う
+BUILD_ARGS=(--network host)
+for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+  [ -n "${!var:-}" ] && BUILD_ARGS+=(--build-arg "${var}=${!var}")
+done
 [ "${DOMAIN}" = "42" ] && fail "BENCH_DOMAIN_ID を本番と同じ 42 にはできません（ロボットに指令が届くおそれがある）"
 case "${TASK}" in
   elevator) ;;
@@ -87,7 +93,7 @@ build() {
   shift 2
   if [ "${BENCH_REBUILD:-0}" = "1" ] || ! "${DOCKER[@]}" image inspect "${image}" > /dev/null 2>&1; then
     say "イメージを作ります: ${image}（初回は数分〜十数分. 中で単体テストも通します）"
-    "${DOCKER[@]}" build -t "${image}" "$@" "${context}"
+    "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${image}" "$@" "${context}"
   fi
 }
 build "${RUNTIME_IMAGE}" "${ROOT}/elevator_vlm" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime"

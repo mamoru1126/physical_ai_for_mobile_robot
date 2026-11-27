@@ -19,6 +19,12 @@ if docker info > /dev/null 2>&1; then
 else
   DOCKER=(sudo docker)
 fi
+# プロキシの下では、イメージを作るコンテナ（apt-get、pip）にもプロキシの設定を渡す.
+# プロキシがこの PC の上（127.0.0.1 など）にあっても届くよう、作るときもホストのネットワークを使う
+BUILD_ARGS=(--network host)
+for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+  [ -n "${!var:-}" ] && BUILD_ARGS+=(--build-arg "${var}=${!var}")
+done
 sudo systemctl enable docker > /dev/null 2>&1 || true
 
 echo "1. コンテナのイメージを入れます"
@@ -30,7 +36,7 @@ if [ -f "${TARBALL}" ]; then
   "${DOCKER[@]}" load -i "${TARBALL}"
 elif [ -f "${HERE}/Dockerfile" ]; then
   echo "   この PC で作ります（初回は数分〜十数分. ネットが要ります）"
-  "${DOCKER[@]}" build -t "${IMAGE}" "${HERE}"
+  "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${IMAGE}" "${HERE}"
 elif "${DOCKER[@]}" image inspect "${IMAGE}" > /dev/null 2>&1; then
   echo "   すでに入っているイメージを使います"
 else

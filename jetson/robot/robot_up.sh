@@ -35,6 +35,12 @@ if docker info > /dev/null 2>&1; then
 else
   DOCKER=(sudo docker)
 fi
+# プロキシの下では、イメージを作るコンテナ（apt-get、pip）にもプロキシの設定を渡す.
+# プロキシがこの PC の上（127.0.0.1 など）にあっても届くよう、作るときもホストのネットワークを使う
+BUILD_ARGS=(--network host)
+for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+  [ -n "${!var:-}" ] && BUILD_ARGS+=(--build-arg "${var}=${!var}")
+done
 [ -f "${CONFIG}" ] || fail "設定がありません: ${CONFIG}"
 online=0
 curl -sf --max-time 5 -o /dev/null https://huggingface.co 2> /dev/null && online=1
@@ -43,7 +49,7 @@ curl -sf --max-time 5 -o /dev/null https://huggingface.co 2> /dev/null && online
 if [ "${ROBOT_REBUILD:-0}" = "1" ] || ! "${DOCKER[@]}" image inspect "${RUNTIME_IMAGE}" > /dev/null 2>&1; then
   [ "${online}" = "1" ] || fail "実行系のイメージ（${RUNTIME_IMAGE}）がなく、ネットもありません. ネットのあるところで一度実行してください"
   say "イメージを作ります: ${RUNTIME_IMAGE}（初回は数分〜十数分. 中で単体テストも通します）"
-  "${DOCKER[@]}" build -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm"
+  "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm"
 fi
 
 # ---- 2. VLM のサーバ --------------------------------------------------------------------

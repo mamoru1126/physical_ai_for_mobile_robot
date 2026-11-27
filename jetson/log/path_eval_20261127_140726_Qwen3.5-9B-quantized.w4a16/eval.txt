@@ -1,0 +1,177 @@
+VLM サーバ: http://127.0.0.1:8000/v1  モデル名: vlm  接続 OK
+
+[1] 道の指差し（33 枚）
+  frame_00003.jpg  on_path      (500, 500) 余裕 52.7  3.74 秒
+  frame_00020.jpg  on_path      (411, 650) 余裕 108.7  4.07 秒
+  frame_00027.jpg  on_path      (372, 712) 余裕 116.6  4.07 秒
+  frame_00033.jpg  on_path      (439, 630) 余裕 100.0  4.08 秒
+  frame_00044.jpg  on_path      (411, 581) 余裕 61.7  4.09 秒
+  frame_00055.jpg  on_path      (500, 729) 余裕 70.8  4.08 秒
+  frame_00068.jpg  on_path      (488, 773) 余裕 136.3  4.09 秒
+  frame_00079.jpg  on_path      (486, 651) 余裕 33.7  4.07 秒
+  frame_00084.jpg  on_path      (272, 723) 余裕 96.5  4.08 秒
+  frame_00092.jpg  on_path      (424, 630) 余裕 35.9  4.07 秒
+  frame_00106.jpg  on_path      (421, 751) 余裕 70.6  4.07 秒
+  frame_00118.jpg  on_path      (485, 712) 余裕 108.8  4.06 秒
+  frame_00130.jpg  on_path      (388, 781) 余裕 58.0  4.07 秒
+  frame_00135.jpg  on_path      (426, 781) 余裕 80.8  4.07 秒
+  frame_00143.jpg  on_path      (558, 781) 余裕 219.0  4.09 秒
+  frame_00147.jpg  on_path      (471, 712) 余裕 167.4  4.09 秒
+  frame_00154.jpg  on_path      (482, 578) 余裕 171.5  4.09 秒
+  frame_00170.jpg  on_path      (428, 555) 余裕 24.1  4.09 秒
+  frame_00177.jpg  on_path      (372, 666) 余裕 60.9  4.08 秒
+  frame_00184.jpg  on_path      (411, 714) 余裕 52.5  4.08 秒
+  frame_00198.jpg  on_path      (528, 781) 余裕 130.0  4.08 秒
+  frame_00202.jpg  on_path      (451, 781) 余裕 46.6  4.08 秒
+  frame_00209.jpg  on_path      (372, 781) 余裕 129.4  4.09 秒
+  frame_00214.jpg  on_path      (448, 650) 余裕 94.1  4.07 秒
+  frame_00224.jpg  on_path      (500, 622) 余裕 102.0  4.07 秒
+  frame_00257.jpg  on_path      (411, 614) 余裕 94.0  4.07 秒
+  frame_00268.jpg  on_path      (439, 570) 余裕 30.0  4.08 秒
+  frame_00273.jpg  on_path      (353, 714) 余裕 80.6  4.07 秒
+  frame_00278.jpg  on_path      (100, 821) 余裕 100.0  4.07 秒
+  frame_00290.jpg  off_path     (482, 541) 余裕 -29.0  4.08 秒
+  frame_00293.jpg  on_path      (411, 814) 余裕 145.3  4.07 秒
+  frame_00304.jpg  on_path      (269, 810) 余裕 190.0  4.07 秒
+  frame_00311.jpg  on_path      (500, 768) 余裕 128.0  4.08 秒
+
+[2] 止まる条件の判定
+  OK  frame_00243.jpg  正解 yes 答え yes  Closed elevator doors are directly in front of the
+  OK  frame_00247.jpg  正解 yes 答え yes  Closed elevator doors are directly in front of the
+  OK  frame_00248.jpg  正解 yes 答え yes  Closed elevator doors are directly in front of the
+  OK  frame_00249.jpg  正解 yes 答え yes  Closed elevator doors are directly in front of the
+  OK  frame_00003.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00044.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00092.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00130.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00177.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00224.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00257.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00290.jpg  正解 no 答え no  Closed elevator doors are directly in front of the
+  OK  frame_00138.jpg  正解 yes 答え yes  Traffic cones or a barrier block the path directly
+  OK  frame_00139.jpg  正解 yes 答え yes  Traffic cones or a barrier block the path directly
+  OK  frame_00003.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00020.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00068.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00106.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00154.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00177.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00224.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00268.jpg  正解 no 答え no  Traffic cones or a barrier block the path directly
+  OK  frame_00145.jpg  正解 yes 答え yes  A person is on the path directly in front of the r
+  OK  frame_00146.jpg  正解 yes 答え yes  A person is on the path directly in front of the r
+  OK  frame_00259.jpg  正解 yes 答え yes  A person is on the path directly in front of the r
+  OK  frame_00003.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00020.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00106.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00130.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00177.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00214.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00290.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00304.jpg  正解 no 答え no  A person is on the path directly in front of the r
+  OK  frame_00311.jpg  正解 yes 答え yes  Steps or stairs go up directly in front of the rob
+  OK  frame_00312.jpg  正解 yes 答え yes  Steps or stairs go up directly in front of the rob
+  NG  frame_00003.jpg  正解 no 答え yes  Steps or stairs go up directly in front of the rob
+  OK  frame_00044.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00130.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00177.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00224.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00268.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00304.jpg  正解 no 答え no  Steps or stairs go up directly in front of the rob
+  OK  frame_00223.jpg  正解 yes 答え yes  Glass entrance doors of a building are directly in
+  OK  frame_00298.jpg  正解 yes 答え yes  Glass entrance doors of a building are directly in
+  OK  frame_00300.jpg  正解 yes 答え yes  Glass entrance doors of a building are directly in
+  OK  frame_00301.jpg  正解 yes 答え yes  Glass entrance doors of a building are directly in
+  OK  frame_00003.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00020.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00130.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00177.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00214.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00268.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00290.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+  OK  frame_00304.jpg  正解 no 答え no  Glass entrance doors of a building are directly in
+
+[3] 計画
+  OK  道に沿って走って → {"skill": "follow_path", "path": "the path", "distance_m": 10.0, "stop_when": ""}
+  OK  道に沿って20m走って → {"skill": "follow_path", "path": "the path", "distance_m": 20.0, "stop_when": ""}
+  OK  エレベーターの扉の前まで道に沿って走って → {"skill": "follow_path", "path": "the path", "distance_m": 0.0, "stop_when": "An elevator door is directly in front of the robot."}
+
+# 道に沿って走る: 机上検証（2026-11-27 05:12）
+
+- モデル: RedHatAI/Qwen3.5-9B-quantized.w4a16
+- 画像: /atc_frames（幅 960 画素に縮めて問いかけ）
+- 沿うもの（path）: the walkway or corridor ahead
+- 同時に問いかける数: 1
+
+## 1. 道の指差し
+
+- 道の上: **32 / 33 枚（97%）**
+- 避けるもの（人、コーン、柱）の上: 0 枚、道の外: 1 枚、答えが読めない: 0 枚
+- 道の端からの余裕（道の上のとき、0〜1000 の相対）: 中央値 95、最小 24
+- 指した高さ（y、0〜1000）: 中央値 712（大きいほどロボットの近く）
+- 応答時間: 中央値 4.08 秒、90% 4.09 秒、最大 4.09 秒（33 回）
+
+| 画像 | 場面 | 結果 | 点 (x, y) | 余裕 |
+| --- | --- | --- | --- | --- |
+| frame_00003.jpg | 屋外の歩道（ガラスの建物沿い、左に階段） | 道の上 | (500, 500) | 52.7 |
+| frame_00020.jpg | 屋外の歩道（左に階段と芝生） | 道の上 | (411, 650) | 108.7 |
+| frame_00027.jpg | 屋外の歩道（左にコーンと階段） | 道の上 | (372, 712) | 116.6 |
+| frame_00033.jpg | 手すりにはさまれて右へ曲がるれんがの道（中央にコーン） | 道の上 | (439, 630) | 100.0 |
+| frame_00044.jpg | 広場（右に店の看板と植木鉢） | 道の上 | (411, 581) | 61.7 |
+| frame_00055.jpg | 植え込みの間の道（右に大きな植え込み） | 道の上 | (500, 729) | 70.8 |
+| frame_00068.jpg | 店の前の歩道（右にいすとテーブル） | 道の上 | (488, 773) | 136.3 |
+| frame_00079.jpg | 建物の前の道（中央にコーン、右に手すり） | 道の上 | (486, 651) | 33.7 |
+| frame_00084.jpg | 建物の前の広場（青い柱） | 道の上 | (272, 723) | 96.5 |
+| frame_00092.jpg | 建物の下の通路（右に柱と人） | 道の上 | (424, 630) | 35.9 |
+| frame_00106.jpg | ガラスの建物と手すりにはさまれて右へ曲がる歩道 | 道の上 | (421, 751) | 70.6 |
+| frame_00118.jpg | 開けた舗装（左下に階段、右にごみ箱） | 道の上 | (485, 712) | 108.8 |
+| frame_00130.jpg | 手すりと壁にはさまれた細い歩道 | 道の上 | (388, 781) | 58.0 |
+| frame_00135.jpg | 細い歩道（奥にコーンと柵） | 道の上 | (426, 781) | 80.8 |
+| frame_00143.jpg | 広場（左にバス、前を人が歩く） | 道の上 | (558, 781) | 219.0 |
+| frame_00147.jpg | ひさしの下の通路（右に人） | 道の上 | (471, 712) | 167.4 |
+| frame_00154.jpg | 高架の下の広い舗装（左に丸い植木鉢、右に階段） | 道の上 | (482, 578) | 171.5 |
+| frame_00170.jpg | 駐車場の出入口の前（道にコーン、右に壁） | 道の上 | (428, 555) | 24.1 |
+| frame_00177.jpg | 高架の下の道（左に草、右に歩道と壁） | 道の上 | (372, 666) | 60.9 |
+| frame_00184.jpg | 高架の下の道（左に自転車） | 道の上 | (411, 714) | 52.5 |
+| frame_00198.jpg | 壁沿いの歩道（左に車止めのポール） | 道の上 | (528, 781) | 130.0 |
+| frame_00202.jpg | 車止めと太い柱の間の歩道 | 道の上 | (451, 781) | 46.6 |
+| frame_00209.jpg | 歩道（警備員、右に階段） | 道の上 | (372, 781) | 129.4 |
+| frame_00214.jpg | 両側が階段のスロープ | 道の上 | (448, 650) | 94.1 |
+| frame_00224.jpg | 屋内のロビー | 道の上 | (500, 622) | 102.0 |
+| frame_00257.jpg | 店の並ぶ通路（奥に人） | 道の上 | (411, 614) | 94.0 |
+| frame_00268.jpg | 屋内の通路（左に柱と案内板） | 道の上 | (439, 570) | 30.0 |
+| frame_00273.jpg | 手すりのあるスロープ（奥から人） | 道の上 | (353, 714) | 80.6 |
+| frame_00278.jpg | 閉まった店の前（通路は左へ曲がる） | 道の上 | (100, 821) | 100.0 |
+| frame_00290.jpg | 長い屋内の通路（右に消火器と立て看板） | 道の外 | (482, 541) | -29.0 |
+| frame_00293.jpg | 長い屋内の通路（奥に人） | 道の上 | (411, 814) | 145.3 |
+| frame_00304.jpg | 屋外のデッキ（奥に柵） | 道の上 | (269, 810) | 190.0 |
+| frame_00311.jpg | 屋外のデッキ（前に上りの段） | 道の上 | (500, 768) | 128.0 |
+
+## 2. 止まる条件の判定
+
+| 条件の文 | yes が正解 | no が正解 | 応答時間（中央値） |
+| --- | --- | --- | --- |
+| Closed elevator doors are directly in front of the robot. | 4 / 4 | 8 / 8 | 2.39 秒 |
+| Traffic cones or a barrier block the path directly in front of the robot. | 2 / 2 | 8 / 8 | 2.43 秒 |
+| A person is on the path directly in front of the robot, less than 3 m away. | 3 / 3 | 8 / 8 | 2.25 秒 |
+| Steps or stairs go up directly in front of the robot, less than 3 m away. | 2 / 2 | 6 / 7 | 2.23 秒 |
+| Glass entrance doors of a building are directly in front of the robot, less than 3 m away. | 4 / 4 | 8 / 8 | 2.25 秒 |
+
+間違えたもの: frame_00003.jpg（Steps or stairs go up directly… 正解 no、答え yes）
+
+## 3. 計画
+
+| 指示 | 結果 | 期待 | 作られた手順 |
+| --- | --- | --- | --- |
+| 道に沿って走って | OK | follow_path、distance_m=10、止まる条件なし | `{"skill": "follow_path", "path": "the path", "distance_m": 10.0, "stop_when": ""}` |
+| 道に沿って20m走って | OK | follow_path、distance_m=20、止まる条件なし | `{"skill": "follow_path", "path": "the path", "distance_m": 20.0, "stop_when": ""}` |
+| エレベーターの扉の前まで道に沿って走って | OK | follow_path、distance_m=0、止まる条件あり | `{"skill": "follow_path", "path": "the path", "distance_m": 0.0, "stop_when": "An elevator door is directly in front of the robot."}` |
+
+## 読み方
+
+- 道の指差しは、走行中にくり返し問いかけるもの. 1回の答えで進むのは、その方向へ最大 1 m（設定の skills.follow_path.step_m）. 何回か外しても、次の答えで向きが直る.
+- 道の外や避けるものの上を指す割合が高い場面は、本番でその区間を VLM に任せない（元のシステムで走る）か、沿うもの（path）の言い回しを変えて試す（--path）.
+- 止まる条件は、yes が 2 回続いたら止まる（skills.follow_path.stop_confirm_count）. no が正解の画像で yes と答える（早く止まる）より、yes が正解の画像で no と答える（止まらない）方が危ない.
+- 正解の範囲は目で見て付けたおおよそのもの. 点を描いた画像（overlays/）で確かめる.
+
+保存しました: /out/path_eval_20261127_050726（report.md、results.json、overlays/）

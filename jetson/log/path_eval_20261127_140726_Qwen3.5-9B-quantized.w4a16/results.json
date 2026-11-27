@@ -1,0 +1,794 @@
+{
+ "model": "RedHatAI/Qwen3.5-9B-quantized.w4a16",
+ "path": "the walkway or corridor ahead",
+ "width": 960,
+ "points": [
+  {
+   "frame": "frame_00003.jpg",
+   "scene": "屋外の歩道（ガラスの建物沿い、左に階段）",
+   "latency_s": 3.74,
+   "text": "{\"point_2d\": [500, 500]}",
+   "verdict": "on_path",
+   "x": 500,
+   "y": 500,
+   "margin": 52.7
+  },
+  {
+   "frame": "frame_00020.jpg",
+   "scene": "屋外の歩道（左に階段と芝生）",
+   "latency_s": 4.072,
+   "text": "{\"point_2d\": [411, 650]}",
+   "verdict": "on_path",
+   "x": 411,
+   "y": 650,
+   "margin": 108.7
+  },
+  {
+   "frame": "frame_00027.jpg",
+   "scene": "屋外の歩道（左にコーンと階段）",
+   "latency_s": 4.065,
+   "text": "{\"point_2d\": [372, 712]}",
+   "verdict": "on_path",
+   "x": 372,
+   "y": 712,
+   "margin": 116.6
+  },
+  {
+   "frame": "frame_00033.jpg",
+   "scene": "手すりにはさまれて右へ曲がるれんがの道（中央にコーン）",
+   "latency_s": 4.078,
+   "text": "{\"point_2d\": [439, 630]}",
+   "verdict": "on_path",
+   "x": 439,
+   "y": 630,
+   "margin": 100.0
+  },
+  {
+   "frame": "frame_00044.jpg",
+   "scene": "広場（右に店の看板と植木鉢）",
+   "latency_s": 4.089,
+   "text": "{\"point_2d\": [411, 581]}",
+   "verdict": "on_path",
+   "x": 411,
+   "y": 581,
+   "margin": 61.7
+  },
+  {
+   "frame": "frame_00055.jpg",
+   "scene": "植え込みの間の道（右に大きな植え込み）",
+   "latency_s": 4.084,
+   "text": "{\"point_2d\": [500, 729]}",
+   "verdict": "on_path",
+   "x": 500,
+   "y": 729,
+   "margin": 70.8
+  },
+  {
+   "frame": "frame_00068.jpg",
+   "scene": "店の前の歩道（右にいすとテーブル）",
+   "latency_s": 4.088,
+   "text": "{\"point_2d\": [488, 773]}",
+   "verdict": "on_path",
+   "x": 488,
+   "y": 773,
+   "margin": 136.3
+  },
+  {
+   "frame": "frame_00079.jpg",
+   "scene": "建物の前の道（中央にコーン、右に手すり）",
+   "latency_s": 4.065,
+   "text": "{\"point_2d\": [486, 651]}",
+   "verdict": "on_path",
+   "x": 486,
+   "y": 651,
+   "margin": 33.7
+  },
+  {
+   "frame": "frame_00084.jpg",
+   "scene": "建物の前の広場（青い柱）",
+   "latency_s": 4.076,
+   "text": "{\"point_2d\": [272, 723]}",
+   "verdict": "on_path",
+   "x": 272,
+   "y": 723,
+   "margin": 96.5
+  },
+  {
+   "frame": "frame_00092.jpg",
+   "scene": "建物の下の通路（右に柱と人）",
+   "latency_s": 4.069,
+   "text": "{\"point_2d\": [424, 630]}",
+   "verdict": "on_path",
+   "x": 424,
+   "y": 630,
+   "margin": 35.9
+  },
+  {
+   "frame": "frame_00106.jpg",
+   "scene": "ガラスの建物と手すりにはさまれて右へ曲がる歩道",
+   "latency_s": 4.065,
+   "text": "{\"point_2d\": [421, 751]}",
+   "verdict": "on_path",
+   "x": 421,
+   "y": 751,
+   "margin": 70.6
+  },
+  {
+   "frame": "frame_00118.jpg",
+   "scene": "開けた舗装（左下に階段、右にごみ箱）",
+   "latency_s": 4.056,
+   "text": "{\"point_2d\": [485, 712]}",
+   "verdict": "on_path",
+   "x": 485,
+   "y": 712,
+   "margin": 108.8
+  },
+  {
+   "frame": "frame_00130.jpg",
+   "scene": "手すりと壁にはさまれた細い歩道",
+   "latency_s": 4.066,
+   "text": "{\"point_2d\": [388, 781]}",
+   "verdict": "on_path",
+   "x": 388,
+   "y": 781,
+   "margin": 58.0
+  },
+  {
+   "frame": "frame_00135.jpg",
+   "scene": "細い歩道（奥にコーンと柵）",
+   "latency_s": 4.072,
+   "text": "{\"point_2d\": [426, 781]}",
+   "verdict": "on_path",
+   "x": 426,
+   "y": 781,
+   "margin": 80.8
+  },
+  {
+   "frame": "frame_00143.jpg",
+   "scene": "広場（左にバス、前を人が歩く）",
+   "latency_s": 4.087,
+   "text": "{\"point_2d\": [558, 781]}",
+   "verdict": "on_path",
+   "x": 558,
+   "y": 781,
+   "margin": 219.0
+  },
+  {
+   "frame": "frame_00147.jpg",
+   "scene": "ひさしの下の通路（右に人）",
+   "latency_s": 4.087,
+   "text": "{\"point_2d\": [471, 712]}",
+   "verdict": "on_path",
+   "x": 471,
+   "y": 712,
+   "margin": 167.4
+  },
+  {
+   "frame": "frame_00154.jpg",
+   "scene": "高架の下の広い舗装（左に丸い植木鉢、右に階段）",
+   "latency_s": 4.095,
+   "text": "{\"point_2d\": [482, 578]}",
+   "verdict": "on_path",
+   "x": 482,
+   "y": 578,
+   "margin": 171.5
+  },
+  {
+   "frame": "frame_00170.jpg",
+   "scene": "駐車場の出入口の前（道にコーン、右に壁）",
+   "latency_s": 4.092,
+   "text": "{\"point_2d\": [428, 555]}",
+   "verdict": "on_path",
+   "x": 428,
+   "y": 555,
+   "margin": 24.1
+  },
+  {
+   "frame": "frame_00177.jpg",
+   "scene": "高架の下の道（左に草、右に歩道と壁）",
+   "latency_s": 4.084,
+   "text": "{\"point_2d\": [372, 666]}",
+   "verdict": "on_path",
+   "x": 372,
+   "y": 666,
+   "margin": 60.9
+  },
+  {
+   "frame": "frame_00184.jpg",
+   "scene": "高架の下の道（左に自転車）",
+   "latency_s": 4.075,
+   "text": "{\"point_2d\": [411, 714]}",
+   "verdict": "on_path",
+   "x": 411,
+   "y": 714,
+   "margin": 52.5
+  },
+  {
+   "frame": "frame_00198.jpg",
+   "scene": "壁沿いの歩道（左に車止めのポール）",
+   "latency_s": 4.082,
+   "text": "{\"point_2d\": [528, 781]}",
+   "verdict": "on_path",
+   "x": 528,
+   "y": 781,
+   "margin": 130.0
+  },
+  {
+   "frame": "frame_00202.jpg",
+   "scene": "車止めと太い柱の間の歩道",
+   "latency_s": 4.083,
+   "text": "{\"point_2d\": [451, 781]}",
+   "verdict": "on_path",
+   "x": 451,
+   "y": 781,
+   "margin": 46.6
+  },
+  {
+   "frame": "frame_00209.jpg",
+   "scene": "歩道（警備員、右に階段）",
+   "latency_s": 4.088,
+   "text": "{\"point_2d\": [372, 781]}",
+   "verdict": "on_path",
+   "x": 372,
+   "y": 781,
+   "margin": 129.4
+  },
+  {
+   "frame": "frame_00214.jpg",
+   "scene": "両側が階段のスロープ",
+   "latency_s": 4.074,
+   "text": "{\"point_2d\": [448, 650]}",
+   "verdict": "on_path",
+   "x": 448,
+   "y": 650,
+   "margin": 94.1
+  },
+  {
+   "frame": "frame_00224.jpg",
+   "scene": "屋内のロビー",
+   "latency_s": 4.072,
+   "text": "{\"point_2d\": [500, 622]}",
+   "verdict": "on_path",
+   "x": 500,
+   "y": 622,
+   "margin": 102.0
+  },
+  {
+   "frame": "frame_00257.jpg",
+   "scene": "店の並ぶ通路（奥に人）",
+   "latency_s": 4.068,
+   "text": "{\"point_2d\": [411, 614]}",
+   "verdict": "on_path",
+   "x": 411,
+   "y": 614,
+   "margin": 94.0
+  },
+  {
+   "frame": "frame_00268.jpg",
+   "scene": "屋内の通路（左に柱と案内板）",
+   "latency_s": 4.078,
+   "text": "{\"point_2d\": [439, 570]}",
+   "verdict": "on_path",
+   "x": 439,
+   "y": 570,
+   "margin": 30.0
+  },
+  {
+   "frame": "frame_00273.jpg",
+   "scene": "手すりのあるスロープ（奥から人）",
+   "latency_s": 4.07,
+   "text": "{\"point_2d\": [353, 714]}",
+   "verdict": "on_path",
+   "x": 353,
+   "y": 714,
+   "margin": 80.6
+  },
+  {
+   "frame": "frame_00278.jpg",
+   "scene": "閉まった店の前（通路は左へ曲がる）",
+   "latency_s": 4.072,
+   "text": "{\"point_2d\": [100, 821]}",
+   "verdict": "on_path",
+   "x": 100,
+   "y": 821,
+   "margin": 100.0
+  },
+  {
+   "frame": "frame_00290.jpg",
+   "scene": "長い屋内の通路（右に消火器と立て看板）",
+   "latency_s": 4.078,
+   "text": "{\"point_2d\": [482, 541]}",
+   "verdict": "off_path",
+   "x": 482,
+   "y": 541,
+   "margin": -29.0
+  },
+  {
+   "frame": "frame_00293.jpg",
+   "scene": "長い屋内の通路（奥に人）",
+   "latency_s": 4.07,
+   "text": "{\"point_2d\": [411, 814]}",
+   "verdict": "on_path",
+   "x": 411,
+   "y": 814,
+   "margin": 145.3
+  },
+  {
+   "frame": "frame_00304.jpg",
+   "scene": "屋外のデッキ（奥に柵）",
+   "latency_s": 4.068,
+   "text": "{\"point_2d\": [269, 810]}",
+   "verdict": "on_path",
+   "x": 269,
+   "y": 810,
+   "margin": 190.0
+  },
+  {
+   "frame": "frame_00311.jpg",
+   "scene": "屋外のデッキ（前に上りの段）",
+   "latency_s": 4.084,
+   "text": "{\"point_2d\": [500, 768]}",
+   "verdict": "on_path",
+   "x": 500,
+   "y": 768,
+   "margin": 128.0
+  }
+ ],
+ "checks": [
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00243.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.639,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00247.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.624,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00248.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.626,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00249.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.636,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00003.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.576,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00044.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.587,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00092.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.203,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00130.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.201,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00177.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.208,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00224.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.205,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00257.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.204,
+   "error": ""
+  },
+  {
+   "statement": "Closed elevator doors are directly in front of the robot.",
+   "frame": "frame_00290.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.203,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00138.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.657,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00139.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.663,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00003.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.225,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00020.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.608,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00068.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.606,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00106.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.606,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00154.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.226,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00177.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.228,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00224.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.226,
+   "error": ""
+  },
+  {
+   "statement": "Traffic cones or a barrier block the path directly in front of the robot.",
+   "frame": "frame_00268.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.253,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00145.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.628,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00146.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.63,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00259.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.634,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00003.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.222,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00020.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.228,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00106.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.255,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00130.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.252,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00177.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.255,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00214.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.255,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00290.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.256,
+   "error": ""
+  },
+  {
+   "statement": "A person is on the path directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00304.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.244,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00311.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.231,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00312.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.676,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00003.jpg",
+   "expected": "no",
+   "answer": "yes",
+   "latency_s": 2.225,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00044.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.242,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00130.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.228,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00177.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.238,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00224.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.235,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00268.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.228,
+   "error": ""
+  },
+  {
+   "statement": "Steps or stairs go up directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00304.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.228,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00223.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.66,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00298.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.681,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00300.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.678,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00301.jpg",
+   "expected": "yes",
+   "answer": "yes",
+   "latency_s": 2.668,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00003.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.238,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00020.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.235,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00130.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.253,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00177.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.246,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00214.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.239,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00268.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.246,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00290.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.245,
+   "error": ""
+  },
+  {
+   "statement": "Glass entrance doors of a building are directly in front of the robot, less than 3 m away.",
+   "frame": "frame_00304.jpg",
+   "expected": "no",
+   "answer": "no",
+   "latency_s": 2.238,
+   "error": ""
+  }
+ ],
+ "plans": [
+  {
+   "instruction": "道に沿って走って",
+   "ok": true,
+   "latency_s": 27.3,
+   "detail": "{\"skill\": \"follow_path\", \"path\": \"the path\", \"distance_m\": 10.0, \"stop_when\": \"\"}",
+   "expected": "follow_path、distance_m=10、止まる条件なし"
+  },
+  {
+   "instruction": "道に沿って20m走って",
+   "ok": true,
+   "latency_s": 27.3,
+   "detail": "{\"skill\": \"follow_path\", \"path\": \"the path\", \"distance_m\": 20.0, \"stop_when\": \"\"}",
+   "expected": "follow_path、distance_m=20、止まる条件なし"
+  },
+  {
+   "instruction": "エレベーターの扉の前まで道に沿って走って",
+   "ok": true,
+   "latency_s": 27.3,
+   "detail": "{\"skill\": \"follow_path\", \"path\": \"the path\", \"distance_m\": 0.0, \"stop_when\": \"An elevator door is directly in front of the robot.\"}",
+   "expected": "follow_path、distance_m=0、止まる条件あり"
+  }
+ ]
+}

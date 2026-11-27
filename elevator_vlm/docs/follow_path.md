@@ -34,7 +34,9 @@
 
 止まる条件（`stop_when`）があるときは、問いかけの 1 回目と、指差し 1 回ごとに 1 回、その条件を yes / no で判定します。yes が 2 回続いたら止まります。
 
-使わない答え（検査で落とすもの）: 読めない答え、画像の外や端の点、地平線より上の点（床ではない）、ロボットの真下（0.3 m より近い）、真横に近い点（60 度より横）。
+使わない答え（検査で落とすもの）: 読めない答え、画像の外や端の点、地平線よりはっきり上の点（床ではない）、ロボットの真下（0.3 m より近い）、真横に近い点（60 度より横）。
+
+地平線のすぐ上（画像の高さの 15% まで）を指した答えは、長い道の奥の消える点を指したものとみなし、方向だけを使います（Orin の道のベンチで、まっすぐな歩道では VLM がよく奥の消える点を指したため）。
 
 ## 3. 終わり方
 
@@ -175,6 +177,7 @@ BENCH_TASK=path bash jetson/bench/bench_e2e.sh
 | `skills.follow_path.turn_in_place_deg` | 35 | 向きのずれがこれより大きければ、止まって向き直す |
 | `skills.follow_path.max_point_failures` | 6 | 使えない答えがこれだけ続いたら中止 |
 | `skills.follow_path.max_answer_wait_s` | 30 | 使える答えがこれだけ来なければ中止 |
+| `skills.follow_path.above_horizon_frac` | 0.15 | 地平線のすぐ上（画像の高さのこの割合まで）の点は、方向だけを使う |
 | `limits.default_path_distance_m` | 10 | 距離も終わりも言わない「道に沿って走って」の距離 [m] |
 | `limits.max_path_distance_m` | 100 | 1 手順の上限 [m] |
 | `drive.command_topic` / `state_topic` / `active_topic` | `vlm_drive/...` | 合図と知らせのトピック。空なら使わない |

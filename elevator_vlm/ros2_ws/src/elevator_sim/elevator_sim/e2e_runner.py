@@ -202,8 +202,8 @@ class E2ERunner(Node):
         if not self._post("/api/trigger", {"name": self.call_button}).get("ok"):
             return self._finish("call_failed", state)
 
-        # 4. 終わるまで見守る
-        since = 0
+        # 4. 終わるまで見守る（記録は、この実行の分だけ出す）
+        since = max([e["id"] for e in self._state()["events"]] or [0])
         t2 = time.monotonic()
         last_report = 0.0
         while True:
@@ -278,10 +278,12 @@ class E2ERunner(Node):
         body = {k: v for k, v in (("from", self.arm_from), ("to", self.arm_to)) if v > 0}
         if not self._post("/api/arm", body).get("ok"):
             return self._finish("arm_rejected", loaded, path=True)
-        # 3. 外（元のシステム）からの開始の合図: ROS のトピックに start
+        # 3. 外（元のシステム）からの開始の合図: ROS のトピックに start.
+        #    前に画面で走らせた結果（完了・失敗）が残っていても、走らせた回数（run）が増えるまで合図を出す
         t1 = time.monotonic()
         state = self._state()
-        while not state["drive"]["active"] and state["task_state"] not in ("done", "failed", "stopped"):
+        runs_before = int(state["drive"].get("run") or 0)
+        while int(state["drive"].get("run") or 0) <= runs_before:
             if time.monotonic() - t1 > 15.0:
                 self._log("開始の合図を受け付けません: " + json.dumps(state.get("last_command"), ensure_ascii=False))
                 return self._finish("start_not_accepted", state, path=True)
@@ -289,8 +291,8 @@ class E2ERunner(Node):
             self._command_pub.publish(String(data="start"))
             time.sleep(1.0)
             state = self._state()
-        # 4. 終わるまで見守る
-        since = 0
+        # 4. 終わるまで見守る（記録は、この実行の分だけ出す）
+        since = max([e["id"] for e in self._state()["events"]] or [0])
         finished_sent = False
         t2 = time.monotonic()
         last_report = 0.0

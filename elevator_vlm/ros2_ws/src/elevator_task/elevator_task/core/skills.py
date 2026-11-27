@@ -46,6 +46,10 @@ class FollowPathConfig:
     stop_confirm_count: int = 2       # 止まる条件に yes がこの回数続いたら止まる
     arrive_tol_m: float = 0.08        # 指差した点（か、進める距離の端）にここまで近づいたら、次の答えを待つ
     stall_s: float = 8.0              # 進めと言っても進まない時間がこれを超えたら、記録と画面に出す（安全ゲートが止めている、など）
+    # 地平線のすぐ上（画像の高さのこの割合まで）を指した答えは、遠くの道の続き（消える点）を指したものとみなし、
+    # 方向だけを使う（距離は aim_max_m として扱う）. 長いまっすぐな道で、VLM は奥の消える点を指しやすい.
+    # カメラの下向きの角度が少しずれていても、地平線の近くの点を捨てずに済む. 0 なら地平線より上は使わない
+    above_horizon_frac: float = 0.15
 
 
 @dataclass
@@ -369,11 +373,23 @@ class Skills:
         if not in_image(cam, res.u, res.v, self.cfg.image_margin_px):
             return None, f"点が画像の外か端にあります（u={res.u:.0f}, v={res.v:.0f}）"
         ground = pixel_to_ground(cam, res.u, res.v)
-        if ground is None:
+        if ground is not None:
+            dist = math.hypot(ground[0], ground[1])
+            bearing = math.atan2(ground[1], ground[0])
+            self.events.emit("point_ground", image=res.image, ahead_m=round(ground[0], 3), left_m=round(ground[1], 3))
+        elif cam.horizon_v() - res.v <= cfg.above_horizon_frac * cam.height:
+            # 地平線の近く（奥の道の続き）: 視線の方向だけを使い、遠くの点とみなす
+            a = (res.u - cam.cx) / cam.fx
+            b = (res.v - cam.cy) / cam.fy
+            forward = math.cos(cam.pitch_rad) - b * math.sin(cam.pitch_rad)
+            if forward <= 0.0:
+                return None, f"点の方向が後ろ向きです（u={res.u:.0f}, v={res.v:.0f}）"
+            bearing = math.atan2(-a, forward)
+            dist = cfg.aim_max_m
+            self.events.emit("point_far", image=res.image, bearing_deg=round(math.degrees(bearing), 1),
+                             v=round(res.v, 1), horizon_v=round(cam.horizon_v(), 1))
+        else:
             return None, f"点が地平線より上にあります（v={res.v:.0f}、地平線 v={cam.horizon_v():.0f}）"
-        dist = math.hypot(ground[0], ground[1])
-        bearing = math.atan2(ground[1], ground[0])
-        self.events.emit("point_ground", image=res.image, ahead_m=round(ground[0], 3), left_m=round(ground[1], 3))
         if dist < cfg.min_point_m:
             return None, f"点が近すぎます（{dist:.2f} m）"
         if abs(bearing) > math.radians(cfg.max_bearing_deg):

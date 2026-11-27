@@ -302,3 +302,20 @@ def test_runtime_and_webui_arm_start_finish(make_road):
     finally:
         web.stop()
         runtime.close()
+
+
+def test_points_just_above_the_horizon_mean_straight_on(make_road):
+    # 長いまっすぐな道で、VLM が奥の消える点（地平線のすぐ上）を指す. 方向だけを使って進む
+    holder = {}
+
+    def vanishing_point():
+        cam = holder["world"].camera
+        v = cam.horizon_v() - 0.05 * cam.height
+        return 500.0, v / cam.height * 1000.0
+
+    st = make_road(RoadParams(points=[(0.0, 0.0), (40.0, 0.0)]), path_fn=vanishing_point)
+    holder["world"] = st.world
+    res = st.executor.run(plan_of(path_step(4.0)))
+    assert res.ok, res.message
+    assert 3.9 <= st.world.travelled <= 4.3 and st.world.max_lateral < 0.1
+    assert st.of("point_far") and not st.of("path_point_rejected")

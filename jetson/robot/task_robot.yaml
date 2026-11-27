@@ -1,13 +1,15 @@
-# 実機（ロボットに載せた Orin）で動かす実行系の設定. jetson/robot/robot_up.sh が使う.
+# 実機（ロボットに載せた Orin）で動かす実行系の設定の雛形.
+# 使うのは /etc/elevator-task/task.yaml（jetson/robot/robot_up.sh を初めて実行したときに、これをコピーして作る.
+# リポジトリを更新しても上書きされない）. 書き換えるのは /etc の方: sudo nano /etc/elevator-task/task.yaml
 # 書いていない項目は既定値（elevator_vlm/ros2_ws/src/elevator_task/elevator_task/core/ の各 Config）.
 # 書き換えたら: bash jetson/robot/robot_up.sh（実行系だけを起動し直す）
 #
-# つながり（ROS 2 のドメイン 42）:
+# つながり（ROS 2 のドメインは /etc/elevator-task/robot.env. 既定 42）:
 #   カメラ（jetson/camera のサービス）→ /camera/compressed
-#   ロボットの PC（ROS 1）→ 橋渡し → /odom、/cloud、/tf
+#   ロボットの PC（ROS 1）→ 橋渡し → /odom（robot.env の ODOM_TOPIC）、/cloud、/tf
 #   実行系 → 速度の上限（このプロセスの安全ゲート）→ /vlm_cmd_vel → 点群を見る安全ゲート（safety-gate）
-#   → /cmd_vel → 橋渡し → ロボット
-#   元のシステム ↔ 橋渡し ↔ /vlm_drive/command（start / finish / stop）、/vlm_drive/state、/vlm_drive/active
+#   → ⚠ 最終の速度指令 /cmd_vel（/etc/safety-gate/config.yaml の topics.cmd_out）→ 橋渡し → ロボット
+#   元のシステム ↔ 橋渡し ↔ /vlm_drive/command（start / finish / stop / ping）、/vlm_drive/state、/vlm_drive/active
 
 vlm:
   base_url: http://127.0.0.1:8000/v1      # jetson/vlm_up.sh のサーバ
@@ -56,15 +58,17 @@ drive:
   require_arm: true            # 開始の合図は、画面で「承認して開始の合図を待つ」にした計画だけ受ける
   disarm_after_start: false    # true なら、合図で1回走らせるたびに承認し直す
 
-# ロボットのカメラの取り付け. 指差した点を床の上の点に直すのに使う. 実機で測った値に書き換える
-#   height_m: 床からレンズまでの高さ、pitch_deg: 下向きの角度、x_offset_m: ロボットの中心からレンズまでの前後の距離
+# ロボットのカメラの取り付け. 指差した点を床の上の点に直すのに使う. 実機で測った値に書き換える（いまは仮の値）
+#   height_m: 床からレンズまでの高さ、pitch_deg: 下向きの角度（水平なら 0）、
+#   x_offset_m: ロボットの中心（base_link）からレンズまでの前後の距離（前が +）、y_offset_m: 左右（左が +）
 camera:
   image_topic: /camera/compressed
   info_topic: /camera/camera_info
   height_m: 0.50
   pitch_deg: 15.0
   x_offset_m: 0.20
-  hfov_deg: 90.0               # カメラ情報（camera_info）が届かないときだけ使う
+  y_offset_m: 0.0
+  hfov_deg: 90.0               # 水平画角[度]. カメラの校正がない（camera_info が届かないか K が 0）ときに使う. 仕様書の値にする
 
 # ロボットの PC と時計が合っていないときは、オドメトリの時刻をずれの分だけ直して使う
 stamp_source: auto

@@ -19,6 +19,8 @@
 #   HF_TOKEN                     Hugging Face のトークン（公開のモデルなら要らない）
 #   VLM_OFFLINE=1                ネットにつながずに起動する（ダウンロード済みの重みとイメージだけを使う.
 #                                ロボットに載せた後や、載せる前にネットなしで動くかを確かめるとき）
+#   VLM_RESTART                  コンテナの再起動の決まり（例 unless-stopped: 電源を入れ直しても自動で起動する.
+#                                実機の jetson/robot/robot_up.sh が付ける. 既定は付けない）
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -80,6 +82,7 @@ fi
 mkdir -p "${HOME}/.cache/huggingface"
 args=(run -d --name "${NAME}" --runtime=nvidia --network=host --ipc=host
   -v "${HOME}/.cache/huggingface:/root/.cache/huggingface")
+[ -n "${VLM_RESTART:-}" ] && args+=(--restart "${VLM_RESTART}")
 [ -n "${GPUS}" ] && args+=(--gpus "${GPUS}")
 [ -n "${HF_TOKEN:-}" ] && args+=(-e "HF_TOKEN=${HF_TOKEN}")
 if [ "${VLM_OFFLINE:-0}" = "1" ]; then

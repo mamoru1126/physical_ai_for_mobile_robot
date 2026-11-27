@@ -44,7 +44,8 @@ fi
 # ---- イメージと VLM ------------------------------------------------------------------
 if ! "${DOCKER[@]}" image inspect "${RUNTIME_IMAGE}" > /dev/null 2>&1; then
   say "イメージを作ります: ${RUNTIME_IMAGE}（初回は数分〜十数分）"
-  "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" "${ROOT}/elevator_vlm" \
+  "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${RUNTIME_IMAGE}" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" \
+    --label "elevator.src=$(git -C "${ROOT}" rev-parse HEAD:elevator_vlm 2> /dev/null || echo unknown)" "${ROOT}/elevator_vlm" \
     || fail "イメージを作れません"
 fi
 vlm_ready() { curl -sf --noproxy '*' --max-time 3 "http://127.0.0.1:${VLM_PORT}/v1/models" > /dev/null 2>&1; }

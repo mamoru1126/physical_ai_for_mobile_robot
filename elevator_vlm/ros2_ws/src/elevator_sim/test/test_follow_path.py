@@ -274,6 +274,11 @@ def test_runtime_and_webui_arm_start_finish(make_road):
         s = _state(web.port)
         assert s["drive"]["armed"] == [1, 1] and not s["drive"]["active"]
         assert s["follow_path_cfg"]["step_m"] == 1.0 and s["follow_path_cfg"]["default_distance_m"] == 10.0
+        # 届くかを確かめる合図（何もしない）. 答えは知らせ（vlm_drive/state）の last_command に出る
+        ok, msg = runtime.command("ping", source="ros")
+        assert ok, msg
+        d = runtime.drive_state()
+        assert d["last_command"]["command"] == "ping" and d["last_command"]["ok"] and not d["active"]
         # ROS のトピックから来るのと同じ合図（文字列）
         ok, msg = runtime.command("start", source="ros")
         assert ok, msg

@@ -8,7 +8,7 @@
   呼出:  safety/stop、safety/reset (std_srvs/Trigger)
 
 途中から・ここまで（設定の drive. トピックの名前を空にすれば使わない）:
-  購読:  vlm_drive/command (std_msgs/String)   start / finish / stop か、{"command": "start", "from": 2, "to": 4}
+  購読:  vlm_drive/command (std_msgs/String)   start / finish / stop / ping か、{"command": "start", "from": 2, "to": 4}
   配信:  vlm_drive/state (std_msgs/String、JSON)   VLM の指示で走っているか、範囲、走った距離、結果
          vlm_drive/active (std_msgs/Bool)           VLM の指示で走らせている間 true
 

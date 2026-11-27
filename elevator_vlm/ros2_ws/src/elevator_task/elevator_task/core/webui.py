@@ -12,7 +12,7 @@
   POST /api/arm          {"from": 1, "to": 3}             承認して、開始の合図（start）を待つ
   POST /api/disarm       承認を取り消す
   POST /api/finish       ここまで: その場で止めて、成功として終える
-  POST /api/command      {"command": "start"}             外からの合図と同じもの（start / finish / stop）
+  POST /api/command      {"command": "start"}             外からの合図と同じもの（start / finish / stop / ping）
   POST /api/stop         停止
   POST /api/reset        停止を解除
   POST /api/trigger      {"name": "..."}                  設定で追加したボタン

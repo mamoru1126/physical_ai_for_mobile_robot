@@ -82,17 +82,18 @@
 
 | トピック | 型 | 向き | 中身 |
 | --- | --- | --- | --- |
-| `/vlm_drive/command` | std_msgs/String | 元のシステム → VLM | `start`、`finish`、`stop`。範囲つきの開始は `{"command": "start", "from": 2, "to": 4}` |
+| `/vlm_drive/command` | std_msgs/String | 元のシステム → VLM | `start`、`finish`、`stop`、`ping`（届くかを確かめる。何もしない）。範囲つきの開始は `{"command": "start", "from": 2, "to": 4}` |
 | `/vlm_drive/state` | std_msgs/String（JSON） | VLM → 元のシステム | 下の例。変わったときと、2 Hz で出す |
 | `/vlm_drive/active` | std_msgs/Bool | VLM → 元のシステム | VLM の指示で走らせている間 true |
 
 ```json
 {"active": true, "armed": [1, 1], "range": [1, 1], "step": 1, "skill": "follow_path",
  "traveled_m": 3.4, "limit_m": 100.0, "task_state": "running", "result": "", "run": 1,
- "message": "", "source": "ros", "stopped": false, "steps": 1, "plan_ready": true}
+ "message": "", "source": "ros", "stopped": false, "steps": 1, "plan_ready": true,
+ "last_command": {"command": "start", "ok": true, "message": "...", "source": "ros", "time": 12.3, "wall": 1764200000.0}}
 ```
 
-`result` は終わった後に `done`（完了）、`finished`（ここまでで終了）、`failed`（失敗）、`stopped`（停止）のどれかになります。`run` は走らせた回数で、元のシステムは自分の出した `start` の結果かを、これで見分けられます。
+`result` は終わった後に `done`（完了）、`finished`（ここまでで終了）、`failed`（失敗）、`stopped`（停止）のどれかになります。`run` は走らせた回数で、元のシステムは自分の出した `start` の結果かを、これで見分けられます。`last_command` は最後に受けた合図と、その答え（受け付けたか、理由）です。
 
 ROS 1 の側から合図を出す例です。
 
@@ -108,6 +109,8 @@ rostopic pub -1 /vlm_drive/command std_msgs/String "data: 'finish'"
 rostopic echo /vlm_drive/active
 ```
 
+橋渡しが dynamic_bridge のときは、`rostopic pub -1` の 1 回目を落とすことがあります（出す側ができてから橋渡しが始まるため）。手で出すときは [ros1_bridge/tools/vlm_drive.py](../../ros1_bridge/tools/vlm_drive.py)（`python3 vlm_drive.py start` など。橋渡しの準備を待ってから出し、答えを表示する）を使います。元のシステムのノードから出すときは、Publisher を起動のときに作っておきます。
+
 - 開始の合図は、画面で「承認して開始の合図を待つ」にした計画だけ受けます（`drive.require_arm`）。人が確かめていない計画では走りません。
 - 「停止」は承認も取り消します。停止の後は、画面で「停止を解除」を押し、承認し直すまで走りません。
 
@@ -115,7 +118,7 @@ rostopic echo /vlm_drive/active
 
 VLM が走らせていない間、VLM の側（実行系の速度の安全ゲートと、点群を見る安全ゲート）は `/cmd_vel` を出しません（終わったときに 0 を 0.5 秒出してから黙る）。設定は `safety.publish_when_idle: false`（実行系）と `safety: publish_when_idle: false`（点群を見る安全ゲート）です。
 
-元のシステムは、`/vlm_drive/active` が true の間、自分の `/cmd_vel` を出さないでください。両方が出すと、ロボットは 2 つの指令を交互に受けます。元のシステムに速度指令の切り替え（twist_mux など）があるなら、VLM の側の出力を別の名前（例 `/vlm/cmd_vel`）にして切り替えに入れる方が確実です（橋渡しの `CMD_VEL_TOPIC`）。
+元のシステムは、`/vlm_drive/active` が true の間、自分の `/cmd_vel` を出さないでください。両方が出すと、ロボットは 2 つの指令を交互に受けます。元のシステムに速度指令の切り替え（twist_mux など）があるなら、VLM の側の出力を別の名前（例 `/vlm/cmd_vel`）にして切り替えに入れる方が確実です（Orin の `/etc/safety-gate/config.yaml` の `topics.cmd_out`。このリポジトリの橋渡しなら、その `CMD_VEL_TOPIC` も）。
 
 VLM の側の「停止」は、VLM の側の指令を止めるだけです。ロボット全体の非常停止は、台車の非常停止ボタンで行います。
 
@@ -187,7 +190,7 @@ BENCH_TASK=path bash jetson/bench/bench_e2e.sh
 | `perception.path_system` | （英語のプロンプト） | 道の指差しのシステムプロンプト |
 | `stamp_source` | auto | 画像とオドメトリの時刻。auto なら時計のずれを直す |
 
-実機の設定は [jetson/robot/task_robot.yaml](../../jetson/robot/task_robot.yaml)、道のベンチの設定は `ros2_ws/src/elevator_sim/config/task_bench_path.yaml` です。
+実機の設定は Orin の `/etc/elevator-task/task.yaml`（雛形は [jetson/robot/task_robot.yaml](../../jetson/robot/task_robot.yaml)。設定の場所の一覧は [jetson/robot/README.md](../../jetson/robot/README.md#設定の一覧)）、道のベンチの設定は `ros2_ws/src/elevator_sim/config/task_bench_path.yaml` です。
 
 ## 9. ファイル
 

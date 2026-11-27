@@ -8,7 +8,9 @@ ros_domain_id: 42
 topics:
   cmd_in: /vlm_cmd_vel          # VLM が出す速度の指令（geometry_msgs/Twist）
   cloud: /cloud                 # 点群（sensor_msgs/PointCloud2）
-  cmd_out: /cmd_vel             # 安全を考えた速度の指令（geometry_msgs/Twist）
+  # ⚠ 最終の速度指令（geometry_msgs/Twist）. ロボットへ出る速度の指令はこれだけ.
+  #   ロボットの台車（ROS 1）が受けるトピックと同じ名前にする（橋渡しは名前を変えられない）
+  cmd_out: /cmd_vel
   state: /safety_gate/state     # 判定の結果（std_msgs/String）
   debug: /safety_gate/debug     # WebUI 用（std_msgs/String）
 
@@ -25,7 +27,9 @@ tf:
   xyz: [0.0, 0.0, 0.5]          # base_link から見た cloud_link の位置
   rpy: [0.0, 0.0, 0.0]          # base_link から見た cloud_link の向き（ロール、ピッチ、ヨー）
 
-# ロボットの足形（上から見た形）. base_link の座標で、頂点を順に書く（時計回りでも反時計回りでもよい）
+# ⚠ ロボットの足形（上から見た形）. base_link の座標で、頂点を順に書く（時計回りでも反時計回りでもよい）.
+#   x が前、y が左 [m]. バンパーや出っ張りも含める. 既定は前後 0.70 m × 左右 0.60 m の仮の四角なので、
+#   必ず実機を測った値にする
 footprint:
   - [0.35, 0.30]
   - [0.35, -0.30]

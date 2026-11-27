@@ -61,7 +61,7 @@ class DriveConfig:
     トピックの名前が空なら、そのトピックは使わない. ROS 1 のシステムとは ros1_bridge で橋渡しする.
     """
 
-    command_topic: str = "vlm_drive/command"   # 受ける std_msgs/String: start / finish / stop（JSON も可）
+    command_topic: str = "vlm_drive/command"   # 受ける std_msgs/String: start / finish / stop / ping（JSON も可）
     state_topic: str = "vlm_drive/state"       # 出す std_msgs/String（JSON. 実行の状態、範囲、走った距離）
     active_topic: str = "vlm_drive/active"     # 出す std_msgs/Bool: VLM の指示で走らせている間 true
     state_hz: float = 2.0                      # state と active を出す回数（変わったときは、すぐにも出す）

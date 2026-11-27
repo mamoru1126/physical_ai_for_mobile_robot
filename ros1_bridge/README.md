@@ -4,6 +4,9 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 
 ロボットの PC はネットにつながっていないので、イメージは手元の x86 の PC で作り、ファイルにしてロボットの PC に運びます。
 
+> [!NOTE]
+> **ロボットの PC に、すでに橋渡しが入っているとき**（Foxy 用の `dynamic_bridge` など）は、それを使えます。このリポジトリの橋渡しは入れません（2 つ同時に動かすと、指令が二重になったりループしたりする）。すでにある橋渡しを調べて、Orin とつながるかを確かめる手順は [jetson/robot/link_check.md](../jetson/robot/link_check.md) です。
+
 | 項目 | 状態 |
 | --- | --- |
 | イメージ | GitHub Actions（x86）で作れることを確かめた（[.github/workflows/ros1-bridge.yml](../.github/workflows/ros1-bridge.yml)）。`Odometry`、`PointCloud2`、`Twist`、`TFMessage`、`String`、`Bool` を橋渡しできる。大きさは圧縮して約 380 MB |
@@ -31,12 +34,13 @@ ROS 1 で動いているロボットのシステムと、Orin などの ROS 2（
 | ROS 1 → ROS 2（ロボットのものを Orin で受ける） | `/cloud` | `sensor_msgs/PointCloud2` |
 | ROS 2 → ROS 1（Orin からロボットへ流す） | `/cmd_vel` | `geometry_msgs/Twist` |
 | 両方向 | `/tf`、`/tf_static` | `tf2_msgs/TFMessage` |
-| ROS 1 → ROS 2（元のシステムから VLM へ、開始と終了の合図） | `/vlm_drive/command` | `std_msgs/String`（`start`、`finish`、`stop`） |
+| ROS 1 → ROS 2（元のシステムから VLM へ、開始と終了の合図） | `/vlm_drive/command` | `std_msgs/String`（`start`、`finish`、`stop`、`ping`） |
 | ROS 2 → ROS 1（VLM が走らせているかの知らせ） | `/vlm_drive/state` | `std_msgs/String`（JSON） |
 | ROS 2 → ROS 1（同上） | `/vlm_drive/active` | `std_msgs/Bool` |
 
 - TF は、[安全ゲート](../safety_gate/) が点群を `cloud_link` から `base_link` に直すのに使います。要らなければ `BRIDGE_TF=false` にします。
 - `/vlm_drive/...` は、コースの途中で VLM に走行を任せ、決めたところで終える（途中から・ここまで）ための合図と知らせです（[説明](../elevator_vlm/docs/follow_path.md)）。要らなければ `VLM_COMMAND_TOPIC=` のように空にします。
+- 合図は、ロボットの PC で [tools/vlm_drive.py](tools/vlm_drive.py) を使って出せます（`python3 vlm_drive.py ping` で届くかを確かめる、`start`、`finish`）。橋渡しの準備ができるのを待ってから出し、Orin からの答えを表示します。
 - `/tf_static` は、ros1_bridge が自動で「全部とっておき、あとから起動した相手にも渡す」設定（keep all、transient local）にします。ROS 2 の側で、安全ゲートをあとから起動しても受け取れます。
 
 ## 中身

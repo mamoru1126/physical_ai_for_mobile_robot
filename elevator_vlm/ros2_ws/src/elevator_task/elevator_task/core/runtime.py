@@ -45,7 +45,8 @@ PLAN_ERROR = "error"
 COMMAND_START = "start"      # 承認して待っている計画を走らせる. {"command": "start", "from": 2, "to": 4} で範囲も
 COMMAND_FINISH = "finish"    # ここまで: その場で止めて、成功として終える
 COMMAND_STOP = "stop"        # 停止（失敗として止め、解除されるまで動かさない）
-COMMANDS = (COMMAND_START, COMMAND_FINISH, COMMAND_STOP)
+COMMAND_PING = "ping"        # 届くかを確かめる（何もしない）. 答えは vlm_drive/state の last_command に出る
+COMMANDS = (COMMAND_START, COMMAND_FINISH, COMMAND_STOP, COMMAND_PING)
 
 
 def parse_command(raw: Union[str, Dict[str, Any]]) -> Tuple[str, Dict[str, Any]]:
@@ -304,7 +305,7 @@ class TaskRuntime:
         return True, "終了の指示を出しました（その場で止めて終えます）"
 
     def command(self, raw: Union[str, Dict[str, Any]], source: str = "command") -> Tuple[bool, str]:
-        """外からの合図（start / finish / stop）. ROS のトピックと Web UI の API から呼ぶ."""
+        """外からの合図（start / finish / stop / ping）. ROS のトピックと Web UI の API から呼ぶ."""
         name, args = parse_command(raw)
         if name == COMMAND_START:
             ok, msg = self._command_start(args, source)
@@ -312,6 +313,8 @@ class TaskRuntime:
             ok, msg = self.finish(source)
         elif name == COMMAND_STOP:
             ok, msg = self.stop()
+        elif name == COMMAND_PING:
+            ok, msg = True, "届きました（何もしません）"
         else:
             ok, msg = False, f"知らない合図です: {raw!r}（使えるもの: {', '.join(COMMANDS)}）"
         with self._lock:
@@ -484,6 +487,8 @@ class TaskRuntime:
                 "result": self.last_result,
                 "steps": len(plan.steps) if plan else 0,
                 "plan_ready": plan is not None and self.plan_state == PLAN_READY,
+                # 最後に受けた合図とその答え（元のシステムから、合図が届いたかを確かめられる）
+                "last_command": dict(self.last_command) if self.last_command else None,
             }
         snap = self.executor.snapshot()
         cur = snap["current"]

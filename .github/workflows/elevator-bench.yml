@@ -6,6 +6,7 @@ name: elevator-bench
 #   bench-path-e2e: 道のベンチ（ATC のコースの映像）で「エレベーターの扉の前まで道に沿って走って」を通す.
 #                   承認して開始の合図を待つ → ROS のトピックで start → 止まる条件で止まる、までの流れ
 #                   （モック VLM は、映像のフレームの正解 atc_frames/labels.json から答える）
+#                   bench-e2e では、実機の疎通確認（jetson/robot/check_link.sh）もベンチのトピックを相手に通す
 #   build-arm64:    Orin と同じ arm64 で、2つのイメージが作れるか（中の単体テストも通す）
 
 on:
@@ -16,6 +17,7 @@ on:
       - "elevator_vlm/samples/**"
       - "safety_gate/**"
       - "jetson/bench/**"
+      - "jetson/robot/**"
       - "jetson/vlm_up.sh"
       - "atc_frames/**"
       - ".github/workflows/elevator-bench.yml"
@@ -51,6 +53,24 @@ jobs:
 
       - name: bench_e2e.sh (runs the task once through the Web UI API)
         run: bash jetson/bench/bench_e2e.sh
+
+      # 実機の疎通確認が ROS 2 の上で最後まで動き、ベンチのトピック（オドメトリ、カメラ、点群、TF、
+      # 安全ゲート、知らせ）を OK と判定し、速度 0 を安全ゲートに通せるか. 橋渡しとサービスはないので、その注意は出てよい
+      - name: check_link.sh against the bench
+        run: |
+          set +e
+          ROBOT_DOMAIN_ID=43 ROS_LOCALHOST_ONLY=1 \
+            ROBOT_CONFIG="$PWD/elevator_vlm/ros2_ws/src/elevator_sim/config/task_bench.yaml" \
+            GATE_CONFIG="$PWD/jetson/bench/safety_gate/config.yaml" \
+            bash jetson/robot/check_link.sh --zero 2>&1 | tee /tmp/link_check.txt
+          rc=${PIPESTATUS[0]}
+          echo "exit code: ${rc}"
+          if grep -q Traceback /tmp/link_check.txt; then exit 1; fi
+          [ "${rc}" = 0 ] || [ "${rc}" = 3 ] || exit 1
+          for want in "OK.*カメラ画像" "OK.*オドメトリ" "OK.*点群" "OK.*TF base_link ← cloud_link" \
+                      "OK.*安全ゲートの状態" "OK.*最終の速度指令" "OK.*知らせ" "OK.*合図" "OK.*速度 0"; do
+            grep -q "${want}" /tmp/link_check.txt || { echo "NG: not found: ${want}"; exit 1; }
+          done
 
       - name: Check the Web UIs
         if: always()

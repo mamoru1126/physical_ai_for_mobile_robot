@@ -96,7 +96,9 @@ build() {
     "${DOCKER[@]}" build "${BUILD_ARGS[@]}" -t "${image}" "$@" "${context}"
   fi
 }
-build "${RUNTIME_IMAGE}" "${ROOT}/elevator_vlm" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime"
+# 印（elevator.src）は、実機の robot_up.sh が「リポジトリの今の中身から作ったイメージか」を見るのに使う
+build "${RUNTIME_IMAGE}" "${ROOT}/elevator_vlm" -f "${ROOT}/elevator_vlm/docker/Dockerfile.runtime" \
+  --label "elevator.src=$(git -C "${ROOT}" rev-parse HEAD:elevator_vlm 2> /dev/null || echo unknown)"
 build "${GATE_IMAGE}" "${ROOT}/safety_gate"
 
 # ---- 2. VLM のサーバ --------------------------------------------------------------------

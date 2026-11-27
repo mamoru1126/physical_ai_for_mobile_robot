@@ -254,6 +254,7 @@ def test_parse_command():
 
     assert parse_command("start") == ("start", {})
     assert parse_command(" FINISH ") == ("finish", {})
+    assert parse_command("ping") == ("ping", {})
     assert parse_command('{"command": "start", "from": 2, "to": 4}') == ("start", {"from": 2, "to": 4})
     assert parse_command({"command": "stop"}) == ("stop", {})
     assert parse_command("{broken") == ("", {})

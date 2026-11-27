@@ -14,7 +14,7 @@ import bisect
 import math
 import threading
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 def wrap_angle(a: float) -> float:
@@ -109,6 +109,33 @@ def odom_to_robot(pose: Pose2D, xo: float, yo: float) -> Tuple[float, float]:
     c, s = math.cos(pose.yaw), math.sin(pose.yaw)
     dx, dy = xo - pose.x, yo - pose.y
     return c * dx + s * dy, -s * dx + c * dy
+
+
+def point_in_polygon(poly: Sequence[Sequence[float]], x: float, y: float) -> bool:
+    """点が多角形の中か（偶奇規則）. 画像の上の範囲（0〜1000 の相対座標など）に使う."""
+    hit = False
+    n = len(poly)
+    for i in range(n):
+        x0, y0 = poly[i][0], poly[i][1]
+        x1, y1 = poly[(i + 1) % n][0], poly[(i + 1) % n][1]
+        if (y0 > y) != (y1 > y):
+            if x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+                hit = not hit
+    return hit
+
+
+def polygon_edge_distance(poly: Sequence[Sequence[float]], x: float, y: float) -> float:
+    """点から多角形の辺までの、いちばん近い距離."""
+    best = float("inf")
+    n = len(poly)
+    for i in range(n):
+        x0, y0 = poly[i][0], poly[i][1]
+        x1, y1 = poly[(i + 1) % n][0], poly[(i + 1) % n][1]
+        dx, dy = x1 - x0, y1 - y0
+        seg = dx * dx + dy * dy
+        t = 0.0 if seg <= 0.0 else max(0.0, min(1.0, ((x - x0) * dx + (y - y0) * dy) / seg))
+        best = min(best, math.hypot(x - (x0 + t * dx), y - (y0 + t * dy)))
+    return best
 
 
 class PoseHistory:

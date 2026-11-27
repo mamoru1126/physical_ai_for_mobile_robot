@@ -1,10 +1,14 @@
 """モック VLM の ROS 2 ノード（シミュレーション専用）. 真値を購読し、OpenAI 互換の HTTP サーバを立てる.
 
-  購読:  /ground_truth/odom、/elevator/joint_states、/camera/camera_info
+  mode:=elevator（既定）  エレベーターの真値から答える
+    購読:  /ground_truth/odom、/elevator/joint_states、/camera/camera_info
+  mode:=path              道のベンチ（bench_path_node）の今のフレームと、その正解（labels）から答える
+    購読:  /bench/path、/camera/camera_info
   HTTP:  http://<host>:<port>/v1/chat/completions、/v1/models
 """
 from __future__ import annotations
 
+import json
 import math
 import threading
 from typing import Dict, List, Optional
@@ -15,9 +19,11 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, JointState
+from std_msgs.msg import String
 
 from elevator_task.core.geometry import CameraModel
 
+from .frame_labels import FrameLabels
 from .mock_vlm import MockConfig, MockVlm, make_server
 from .world_params import RobotParams, Truth, WorldParams, yaw_from_quaternion
 
@@ -33,16 +39,30 @@ class MockVlmNode(Node):
             check_flip_prob=float(self.declare_parameter("check_flip_prob", 0.0).value),
             seed=int(self.declare_parameter("seed", 0).value),
         )
+        self.mode = str(self.declare_parameter("mode", "elevator").value).strip().lower()
+        labels_path = str(self.declare_parameter("labels", "/atc_frames/labels.json").value)
+        if self.mode not in ("elevator", "path"):
+            raise RuntimeError(f"mode は elevator か path で指定してください（{self.mode}）")
         self.wp = WorldParams()
         self.robot = RobotParams()
         self._lock = threading.Lock()
         self._pose: Optional[tuple] = None
         self._joint_pos: Dict[str, float] = {}
         self._camera: Optional[CameraModel] = None
-        self.create_subscription(Odometry, "/ground_truth/odom", self._on_truth, qos_profile_sensor_data)
-        self.create_subscription(JointState, self.wp.joint_state_topic, self._on_joints, qos_profile_sensor_data)
+        self._frame_number: Optional[int] = None
+        self.labels: Optional[FrameLabels] = None
         self.create_subscription(CameraInfo, "/camera/camera_info", self._on_info, qos_profile_sensor_data)
-        self.mock = MockVlm(self.wp, cfg, self._truth, self._get_camera, self._missing)
+        if self.mode == "path":
+            self.labels = FrameLabels.load(labels_path)
+            self.create_subscription(String, "/bench/path", self._on_bench_path, 10)
+            self.mock = MockVlm(self.wp, cfg, lambda: None, self._get_camera, self._missing,
+                                path_fn=self._path_answer, statement_fn=self._statement_answer)
+            self.get_logger().info(f"道のベンチ用: 正解 {labels_path}（指差し {len(self.labels.points)} 枚、"
+                                   f"止まる条件 {len(self.labels.statements)} 文）")
+        else:
+            self.create_subscription(Odometry, "/ground_truth/odom", self._on_truth, qos_profile_sensor_data)
+            self.create_subscription(JointState, self.wp.joint_state_topic, self._on_joints, qos_profile_sensor_data)
+            self.mock = MockVlm(self.wp, cfg, self._truth, self._get_camera, self._missing)
         self.create_timer(5.0, self._report_missing)
         self.server = make_server(self.mock, host, port)
         self._server_thread = threading.Thread(target=self.server.serve_forever, name="mock_vlm_http", daemon=True)
@@ -77,9 +97,32 @@ class MockVlmNode(Node):
         with self._lock:
             return self._camera
 
+    # -- 道のベンチ ------------------------------------------------------------
+    def _on_bench_path(self, msg: String) -> None:
+        try:
+            number = json.loads(msg.data).get("frame_number")
+        except ValueError:
+            return
+        with self._lock:
+            self._frame_number = None if number is None else int(number)
+
+    def _path_answer(self):
+        with self._lock:
+            number = self._frame_number
+        return self.labels.path_point(number) if self.labels else None
+
+    def _statement_answer(self, text: str) -> Optional[bool]:
+        with self._lock:
+            number = self._frame_number
+        return self.labels.statement(text, number) if self.labels else None
+
     def _missing(self) -> List[str]:
         with self._lock:
             out = []
+            if self.mode == "path":
+                if self._frame_number is None:
+                    out.append("/bench/path")
+                return out
             if self._pose is None:
                 out.append("/ground_truth/odom")
             if self.wp.lift_joint not in self._joint_pos:

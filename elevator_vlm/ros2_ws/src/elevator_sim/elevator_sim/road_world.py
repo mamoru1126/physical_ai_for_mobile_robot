@@ -86,8 +86,10 @@ class Polyline:
 class RoadWorld:
     """道のある平面とロボット. 時刻は step(dt) を呼んだ分だけ進む."""
 
-    def __init__(self, road: Optional[RoadParams] = None, cmd_timeout_s: float = 0.5, bounded: bool = True):
+    def __init__(self, road: Optional[RoadParams] = None, cmd_timeout_s: float = 0.5, bounded: bool = True,
+                 record: bool = True):
         self.road = road or RoadParams()
+        self.record = record            # 速度指令と道のりの記録を残すか（試験用. 長く動かすベンチでは残さない）
         self.line = Polyline(self.road.points)
         self.cmd_timeout_s = cmd_timeout_s
         self.bounded = bounded          # False なら道の外にも出られる（記録だけする）
@@ -153,7 +155,8 @@ class RoadWorld:
         with self._lock:
             self.cmd = (float(linear), float(angular))
             self.cmd_at = self.t
-            self.cmd_log.append((self.t, float(linear), float(angular)))
+            if self.record:
+                self.cmd_log.append((self.t, float(linear), float(angular)))
 
     def step(self, dt: float) -> None:
         with self._lock:
@@ -176,4 +179,5 @@ class RoadWorld:
             self.ox += self.v * math.cos(self.oyaw) * dt
             self.oy += self.v * math.sin(self.oyaw) * dt
             self.oyaw = wrap_angle(self.oyaw + self.w * dt)
-            self.trace.append((self.t, self.travelled))
+            if self.record:
+                self.trace.append((self.t, self.travelled))

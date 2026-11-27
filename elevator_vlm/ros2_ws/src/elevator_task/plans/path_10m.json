@@ -1,0 +1,6 @@
+{"steps": [
+  {"instruction": "道に沿って10m走って",
+   "when": {"type": "now"},
+   "do": {"skill": "follow_path", "path": "the walkway or corridor ahead", "distance_m": 10, "stop_when": ""},
+   "timeout_s": 900}
+]}

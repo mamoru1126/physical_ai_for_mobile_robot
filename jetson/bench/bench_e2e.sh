@@ -1,20 +1,27 @@
 #!/bin/bash
 # Orin のベンチで、エレベーターのタスクを自動で1回通す（人が画面で押すのと同じ操作を、WebUI の API で行う）.
 #   bash jetson/bench/bench_e2e.sh
+#   BENCH_TASK=path bash jetson/bench/bench_e2e.sh     道のベンチで「道に沿って走って」を通す
 # ベンチが動いていなければ、先に bash jetson/bench/bench_up.sh を実行する（このスクリプトからも起動する）.
 #
-# 計画の作成 → 承認して実行 → エレベーターを呼ぶ → 終わるまで見守り、真値で成否を判定する.
+# エレベーター: 計画の作成 → 承認して実行 → エレベーターを呼ぶ → 終わるまで見守り、真値で成否を判定する.
+# 道: 映像を BENCH_PATH_START 枚目に移す → 計画を読み込む → 承認して開始の合図を待つ →
+#     ROS のトピック /vlm_drive/command に start（外のシステムの代わり）→ 止まる条件で止まるまで見守る.
 # 通している間の消費電力（tegrastats）も記録する.
-# 結果は jetson/log/bench_<日時>_<モデル>/ に残す（プッシュして共有するため）.
+# 結果は jetson/log/bench_<日時>_<モデル>/（道は bench_path_<日時>_<モデル>/）に残す（プッシュして共有するため）.
 #
 # 環境変数:
 #   BENCH_PLAN_FILE   VLM に計画を作らせず、この計画（JSON）を読み込んで実行する
 #                     （例 elevator_vlm/ros2_ws/src/elevator_task/plans/elevator_expected.json）
+#                     道の既定は plans/path_until_elevator_doors.json（エレベーターの扉の前まで道に沿って走って）
 #   BENCH_TIMEOUT_S   タスクの時間の上限 [秒]（既定 900）
+#   BENCH_PATH_START  道: 映像を始めるフレームの番号（既定 225. エレベーターの手前のロビー）
+#   BENCH_PATH_EXPECT 道: 止まるまでに映像が進んでいるべきフレームの番号（既定 243. 扉の前）
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 ROOT="$(pwd)"
 DOMAIN="${BENCH_DOMAIN_ID:-43}"
+TASK="${BENCH_TASK:-elevator}"
 
 if docker info > /dev/null 2>&1; then
   DOCKER=(docker)
@@ -24,7 +31,16 @@ fi
 
 if ! "${DOCKER[@]}" ps --format '{{.Names}}' | grep -qx elevator-bench; then
   echo "ベンチが動いていないので、起動します"
-  bash "${ROOT}/jetson/bench/bench_up.sh" || exit 1
+  BENCH_TASK="${TASK}" bash "${ROOT}/jetson/bench/bench_up.sh" || exit 1
+fi
+running="$("${DOCKER[@]}" inspect -f '{{join .Config.Cmd " "}}' elevator-bench 2> /dev/null || true)"
+if [ "${TASK}" = "path" ] && [[ "${running}" != *bench_path.launch.py* ]]; then
+  echo "NG: 動いているのはエレベーターのベンチです. bash jetson/bench/bench_down.sh の後、BENCH_TASK=path で起動し直してください" >&2
+  exit 1
+fi
+if [ "${TASK}" != "path" ] && [[ "${running}" == *bench_path.launch.py* ]]; then
+  echo "NG: 動いているのは道のベンチです. BENCH_TASK=path を付けるか、エレベーターのベンチで起動し直してください" >&2
+  exit 1
 fi
 for name in elevator-bench elevator-bench-gate; do
   "${DOCKER[@]}" ps --format '{{.Names}}' | grep -qx "${name}" || { echo "NG: ${name} が動いていません" >&2; exit 1; }
@@ -34,7 +50,11 @@ stamp="$(date +%Y%m%d_%H%M%S)"
 model="$(curl -sf --noproxy '*' --max-time 5 "http://127.0.0.1:${VLM_PORT:-8000}/v1/models" \
   | python3 -c 'import json, sys; d = json.load(sys.stdin)["data"][0]; print(d.get("root") or d["id"])' 2> /dev/null || echo unknown)"
 short="$(basename "${model}" | sed 's/[^A-Za-z0-9._-]/_/g')"
-OUT="${ROOT}/jetson/log/bench_${stamp}_${short}"
+if [ "${TASK}" = "path" ]; then
+  OUT="${ROOT}/jetson/log/bench_path_${stamp}_${short}"
+else
+  OUT="${ROOT}/jetson/log/bench_${stamp}_${short}"
+fi
 RUN_NAME="bench_e2e_${stamp}"
 mkdir -p "${OUT}" "${ROOT}/elevator_vlm/runs"
 
@@ -46,6 +66,7 @@ power_name="$(printf '%s\n' "${power}" | grep -m 1 'Power Mode' | sed 's/.*Power
   echo "Jetson Linux: $(head -n 1 /etc/nv_tegra_release 2> /dev/null || echo 不明)"
   echo "メモリ: $(awk '/^MemTotal:/ { printf "%.1f GiB", $2 / 1048576 }' /proc/meminfo)"
   echo "電源モード: ${power_name:-不明}"
+  echo "ベンチ: ${TASK}"
   echo "モデル: ${model}"
   echo "リポジトリ: $(git -C "${ROOT}" rev-parse --short HEAD 2> /dev/null || echo 不明)"
   for name in elevator-vlm elevator-bench elevator-bench-gate; do
@@ -74,12 +95,22 @@ trap stop_tegrastats EXIT
 # ROS 2 のパラメータは型を見るので、時間は小数の形で渡す（900 ではなく 900.0）
 timeout_s="$(awk -v t="${BENCH_TIMEOUT_S:-900}" 'BEGIN { printf "%.1f", t }')"
 runner_args=(-p out_dir:="/runs/${RUN_NAME}" -p task_timeout_s:="${timeout_s}")
-if [ -n "${BENCH_PLAN_FILE:-}" ]; then
-  [ -f "${BENCH_PLAN_FILE}" ] || { echo "NG: 計画のファイルがありません: ${BENCH_PLAN_FILE}" >&2; exit 1; }
-  cp "${BENCH_PLAN_FILE}" "${ROOT}/elevator_vlm/runs/${RUN_NAME}_plan.json"
+plan_file="${BENCH_PLAN_FILE:-}"
+if [ "${TASK}" = "path" ] && [ -z "${plan_file}" ]; then
+  plan_file="${ROOT}/elevator_vlm/ros2_ws/src/elevator_task/plans/path_until_elevator_doors.json"
+fi
+if [ -n "${plan_file}" ]; then
+  [ -f "${plan_file}" ] || { echo "NG: 計画のファイルがありません: ${plan_file}" >&2; exit 1; }
+  cp "${plan_file}" "${ROOT}/elevator_vlm/runs/${RUN_NAME}_plan.json"
   runner_args+=(-p plan_file:="/runs/${RUN_NAME}_plan.json")
 fi
-echo "==== 通します（計画 → 承認して実行 → エレベーターを呼ぶ）===="
+if [ "${TASK}" = "path" ]; then
+  runner_args+=(-p mode:=path -p start_frame:="${BENCH_PATH_START:-225}"
+                -p expect_min_frame:="${BENCH_PATH_EXPECT:-243}" -p expect_result:=done)
+  echo "==== 通します（映像を移す → 承認して開始の合図を待つ → /vlm_drive/command に start → 止まるまで）===="
+else
+  echo "==== 通します（計画 → 承認して実行 → エレベーターを呼ぶ）===="
+fi
 "${DOCKER[@]}" exec -e ROS_DOMAIN_ID="${DOMAIN}" -e ROS_LOCALHOST_ONLY=1 elevator-bench /entrypoint.sh \
   ros2 run elevator_sim e2e_runner --ros-args "${runner_args[@]}" 2>&1 | tee "${OUT}/e2e.txt"
 code=${PIPESTATUS[0]}
@@ -136,8 +167,18 @@ import sys
 s = json.load(open(sys.argv[1], encoding="utf-8"))
 print(f"  結果: {s.get('result')}（{s.get('outcome')}）")
 print(f"  実行系: {s.get('task_state')} {s.get('task_message') or ''}")
-ref = s.get("referee") or {}
-print(f"  真値による判定: {ref.get('summary', '不明')}")
+if "referee" in s:
+    ref = s.get("referee") or {}
+    print(f"  真値による判定: {ref.get('summary', '不明')}")
+for name, ok in (s.get("checks") or {}).items():
+    print(f"  {'OK' if ok else 'NG'}  {name}")
+path = s.get("path") or {}
+if path:
+    print(f"  道: {path.get('traveled_m')} m 走った、答え {path.get('answers')} 回（使った {path.get('accepted')}）、"
+          f"判定 {path.get('checks')} 回、1回の答えで最大 {path.get('step_m')} m、直近の答え {path.get('last_latency_s')} 秒")
+bench = s.get("bench_path") or {}
+if bench:
+    print(f"  映像: {bench.get('frame')}")
 for i, st in enumerate(s.get("steps") or []):
     print(f"  手順 {i + 1}: {st.get('phase')}（判定 {st.get('checks')} 回）{st.get('message') or ''}")
 PY

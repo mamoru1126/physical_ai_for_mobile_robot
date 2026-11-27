@@ -1,0 +1,7 @@
+{"steps": [
+  {"instruction": "エレベーターの扉の前まで道に沿って走って",
+   "when": {"type": "now"},
+   "do": {"skill": "follow_path", "path": "the walkway or corridor ahead", "distance_m": 0,
+          "stop_when": "Closed elevator doors are directly in front of the robot."},
+   "timeout_s": 900}
+]}

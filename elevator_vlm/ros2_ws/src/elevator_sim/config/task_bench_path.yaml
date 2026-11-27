@@ -1,0 +1,59 @@
+# 道のベンチ用の実行系の設定（Orin で、実機の代わりに実写の映像を流して「道に沿って走って」を通す）.
+# 書いていない項目は既定値（elevator_task の config/task.yaml と同じ）.
+#   * カメラは実機と同じ /camera/compressed（JPEG）を受ける. 画像は道のベンチ（bench_path）が、
+#     ATC のコースの映像のフレームを、前に走った道のりに合わせて流す.
+#   * camera の取り付けは、映像（地平線が画面の中ほどより少し上）に合わせたおおよその値（実機の値ではない）.
+#   * 安全ゲートは、実機と同じく、VLM が走らせていない間は速度指令を出さない（途中から・ここまで）.
+
+vlm:
+  base_url: http://127.0.0.1:8000/v1       # 環境変数 VLM_BASE_URL があればそちら
+  model: vlm
+  timeout_s: 60.0              # 電源モードを抑えた Orin では、1回目の問いが遅いことがある
+  structured_output: true
+  disable_thinking: true
+
+perception:
+  jpeg_quality: 90
+  max_image_age_s: 1.0
+  point_scale: 1000.0
+  point_order: xy
+
+skills:
+  max_linear: 0.3
+  max_angular: 0.8
+  follow_path:
+    step_m: 1.0                # VLM の答え1回で進める距離の上限（撮影した位置から）
+    speed: 0.3                 # [m/s]
+    points_per_check: 1        # 止まる条件があるとき、指差し 1 回ごとに 1 回判定する
+    stop_confirm_count: 2      # 止まる条件に yes が 2 回続いたら止まる
+
+limits:
+  default_path_distance_m: 10.0    # 「道に沿って走って」で距離を言わないときの距離
+  max_path_distance_m: 100.0
+
+safety:
+  publish_when_idle: false     # VLM が走らせていない間は速度指令を出さない（実機と同じ）
+  idle_tail_s: 0.5
+
+camera:
+  image_topic: /camera/compressed
+  info_topic: /camera/camera_info
+  height_m: 0.80
+  pitch_deg: 3.0
+  x_offset_m: 0.0
+  hfov_deg: 95.0
+
+web:
+  port: 8080
+  buttons:
+    - {name: reset_sim, label: 映像を最初に戻す, service: /sim/reset}
+  status_topics:
+    - name: bench_path
+      label: 道のベンチ（今のフレーム）
+      topic: /bench/path
+      log: [time, frame, frame_number, traveled_m]
+
+instructions:
+  - 道に沿って走って
+
+log_dir: /runs

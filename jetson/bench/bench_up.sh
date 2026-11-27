@@ -3,6 +3,9 @@
 # 本物の VLM・実行系・安全ゲートでエレベーターのタスクを動かせるようにする.
 #   bash jetson/bench/bench_up.sh              VLM が動いていなければ、既定のモデルで起動する
 #   bash jetson/bench/bench_up.sh <モデル>      VLM を、そのモデルで起動する（動いていないとき）
+#   BENCH_TASK=path bash jetson/bench/bench_up.sh
+#                                              道のベンチ: ATC のコースの映像（atc_frames/）を、前に走った
+#                                              道のりに合わせて流し、「道に沿って走って」を動かせるようにする
 #
 # 起動するもの（どれも Docker のコンテナ. 電源を入れ直しても自動では起動しない）:
 #   elevator-vlm         VLM のサーバ（jetson/vlm_up.sh と同じもの. ポート 8000）
@@ -17,11 +20,15 @@
 #   BENCH_DOMAIN_ID      ベンチの ROS 2 のドメイン（既定 43）
 #   BENCH_REBUILD=1      実行系と安全ゲートのイメージを作り直す（リポジトリを更新したとき）
 #   BENCH_ALLOW_MAXN=1   電源モードが MAXN でも始める（既定は始めない）
+#   BENCH_TASK           elevator（既定）か path（道のベンチ）
+#   BENCH_PATH_FIRST     道のベンチで、映像を始めるフレームの番号（既定 1）
+#   BENCH_PATH_M_PER_FRAME  道のベンチで、前に何 m 走ったら 1 枚進めるか（既定 0.6）
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 ROOT="$(pwd)"
 DOMAIN="${BENCH_DOMAIN_ID:-43}"
 HOLD="${BENCH_DOOR_HOLD_S:-15}"
+TASK="${BENCH_TASK:-elevator}"
 RUNTIME_IMAGE="elevator-runtime:latest"
 GATE_IMAGE="safety-gate:latest"
 VLM_PORT="${VLM_PORT:-8000}"
@@ -36,6 +43,11 @@ else
   DOCKER=(sudo docker)
 fi
 [ "${DOMAIN}" = "42" ] && fail "BENCH_DOMAIN_ID を本番と同じ 42 にはできません（ロボットに指令が届くおそれがある）"
+case "${TASK}" in
+  elevator) ;;
+  path) [ -f "${ROOT}/atc_frames/labels.json" ] || fail "道のベンチの映像がありません: ${ROOT}/atc_frames/" ;;
+  *) fail "BENCH_TASK は elevator か path です（${TASK}）" ;;
+esac
 
 # ---- 電源モード（MAXN では始めない）-------------------------------------------------
 if [ -f /etc/nv_tegra_release ]; then
@@ -114,11 +126,20 @@ sed "s/^ros_domain_id: .*/ros_domain_id: ${DOMAIN}/" "${ROOT}/jetson/bench/safet
   "${GATE_IMAGE}" > /dev/null
 
 # ---- 4. ダミーの世界と実行系 ---------------------------------------------------------------
+if [ "${TASK}" = "path" ]; then
+  # 道のベンチ: 映像のフレーム（atc_frames/）を読み取り専用で渡す
+  launch=(ros2 launch elevator_sim bench_path.launch.py frames_dir:=/atc_frames
+          first:="${BENCH_PATH_FIRST:-1}" meters_per_frame:="${BENCH_PATH_M_PER_FRAME:-0.6}")
+  extra_mount=(-v "${ROOT}/atc_frames:/atc_frames:ro")
+else
+  launch=(ros2 launch elevator_sim bench.launch.py door_hold_s:="${HOLD}")
+  extra_mount=()
+fi
 "${DOCKER[@]}" run -d --name elevator-bench --network host --ipc host \
   -e ROS_DOMAIN_ID="${DOMAIN}" -e ROS_LOCALHOST_ONLY=1 \
   -e VLM_BASE_URL="http://127.0.0.1:${VLM_PORT}/v1" -e VLM_MODEL=vlm \
-  -v "${ROOT}/elevator_vlm/runs:/runs" \
-  "${RUNTIME_IMAGE}" ros2 launch elevator_sim bench.launch.py door_hold_s:="${HOLD}" > /dev/null
+  -v "${ROOT}/elevator_vlm/runs:/runs" "${extra_mount[@]}" \
+  "${RUNTIME_IMAGE}" "${launch[@]}" > /dev/null
 
 say "実行系の準備ができるまで待ちます（カメラ、オドメトリ、VLM）"
 ready=0
@@ -144,9 +165,16 @@ fi
 
 ip="$(hostname -I 2> /dev/null | awk '{print $1}')"
 say ""
-say "OK: ベンチを起動しました"
+say "OK: ベンチを起動しました（${TASK}）"
 say "  実行系の WebUI:   http://${ip:-<OrinのIP>}:8080/"
 say "  安全ゲートの WebUI: http://${ip:-<OrinのIP>}:9001/"
-say "画面で通すとき: 「計画を作る」→「承認して実行」→「エレベーターを呼ぶ」の順に押す"
-say "自動で通すとき: bash jetson/bench/bench_e2e.sh"
+if [ "${TASK}" = "path" ]; then
+  say "画面で通すとき: 「計画を作る」（道に沿って走って）か「用意済み: path_10m.json」→「承認して実行」"
+  say "外からの合図で通すとき: 「承認して開始の合図を待つ」を押してから、次の 1 行"
+  say "  docker exec elevator-bench /entrypoint.sh ros2 topic pub --once /vlm_drive/command std_msgs/msg/String \"{data: start}\""
+  say "自動で通すとき: BENCH_TASK=path bash jetson/bench/bench_e2e.sh"
+else
+  say "画面で通すとき: 「計画を作る」→「承認して実行」→「エレベーターを呼ぶ」の順に押す"
+  say "自動で通すとき: bash jetson/bench/bench_e2e.sh"
+fi
 say "止めるとき:     bash jetson/bench/bench_down.sh"

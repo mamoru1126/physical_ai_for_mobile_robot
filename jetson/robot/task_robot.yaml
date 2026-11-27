@@ -1,0 +1,80 @@
+# 実機（ロボットに載せた Orin）で動かす実行系の設定. jetson/robot/robot_up.sh が使う.
+# 書いていない項目は既定値（elevator_vlm/ros2_ws/src/elevator_task/elevator_task/core/ の各 Config）.
+# 書き換えたら: bash jetson/robot/robot_up.sh（実行系だけを起動し直す）
+#
+# つながり（ROS 2 のドメイン 42）:
+#   カメラ（jetson/camera のサービス）→ /camera/compressed
+#   ロボットの PC（ROS 1）→ 橋渡し → /odom、/cloud、/tf
+#   実行系 → 速度の上限（このプロセスの安全ゲート）→ /vlm_cmd_vel → 点群を見る安全ゲート（safety-gate）
+#   → /cmd_vel → 橋渡し → ロボット
+#   元のシステム ↔ 橋渡し ↔ /vlm_drive/command（start / finish / stop）、/vlm_drive/state、/vlm_drive/active
+
+vlm:
+  base_url: http://127.0.0.1:8000/v1      # jetson/vlm_up.sh のサーバ
+  model: vlm
+  timeout_s: 20.0
+  structured_output: true
+  disable_thinking: true
+
+perception:
+  jpeg_quality: 90
+  max_image_age_s: 1.0
+  point_scale: 1000.0          # Qwen 系: 0〜1000 の相対座標
+  point_order: xy
+
+skills:
+  max_linear: 0.3              # [m/s]
+  max_angular: 0.8             # [rad/s]
+  follow_path:
+    step_m: 1.0                # VLM の答え1回で進める距離の上限（その画像を撮った位置から）. 次の答えが来なければ止まって待つ
+    speed: 0.3                 # [m/s]
+    points_per_check: 1        # 止まる条件があるとき、指差し 1 回ごとに 1 回判定する
+    stop_confirm_count: 2      # 止まる条件に yes が 2 回続いたら止まる
+    max_point_failures: 6      # 使えない答えがこれだけ続いたら中止
+    max_answer_wait_s: 30.0    # 使える答えがこれだけ来なければ中止
+
+limits:
+  default_path_distance_m: 10.0    # 「道に沿って走って」で距離も止まる条件も言わないときの距離
+  max_path_distance_m: 100.0       # 道に沿って走る 1 手順の上限（距離を決めないときも、ここで止まる）
+
+safety:
+  max_linear: 0.5
+  max_angular: 1.2
+  cmd_timeout_s: 0.5
+  odom_timeout_s: 1.0
+  camera_timeout_s: 2.0
+  # VLM が走らせていない間は速度指令を出さない（0 を 0.5 秒出してから黙る）. 元のシステムと /cmd_vel を使い分ける
+  publish_when_idle: false
+  idle_tail_s: 0.5
+
+# 途中から・ここまで（外からの開始と終了の合図）
+drive:
+  command_topic: /vlm_drive/command
+  state_topic: /vlm_drive/state
+  active_topic: /vlm_drive/active
+  state_hz: 2.0
+  require_arm: true            # 開始の合図は、画面で「承認して開始の合図を待つ」にした計画だけ受ける
+  disarm_after_start: false    # true なら、合図で1回走らせるたびに承認し直す
+
+# ロボットのカメラの取り付け. 指差した点を床の上の点に直すのに使う. 実機で測った値に書き換える
+#   height_m: 床からレンズまでの高さ、pitch_deg: 下向きの角度、x_offset_m: ロボットの中心からレンズまでの前後の距離
+camera:
+  image_topic: /camera/compressed
+  info_topic: /camera/camera_info
+  height_m: 0.50
+  pitch_deg: 15.0
+  x_offset_m: 0.20
+  hfov_deg: 90.0               # カメラ情報（camera_info）が届かないときだけ使う
+
+# ロボットの PC と時計が合っていないときは、オドメトリの時刻をずれの分だけ直して使う
+stamp_source: auto
+stamp_tolerance_s: 0.5
+
+web:
+  port: 8080
+  stream_hz: 5.0
+
+instructions:
+  - 道に沿って走って
+
+log_dir: /runs

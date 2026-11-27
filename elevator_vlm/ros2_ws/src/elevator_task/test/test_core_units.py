@@ -70,6 +70,14 @@ def test_bundled_plans_are_valid(name):
     assert parse_plan(plan.to_dict()).to_dict() == plan.to_dict()        # 書き出して読み直しても同じ
 
 
+def test_every_bundled_plan_parses():
+    names = sorted(n for n in os.listdir(os.path.join(PKG, "plans")) if n.endswith(".json"))
+    assert {"path_10m.json", "path_until_elevator_doors.json", "path_until_finish.json"} <= set(names)
+    for name in names:
+        with open(os.path.join(PKG, "plans", name), encoding="utf-8") as f:
+            parse_plan(f.read())
+
+
 def _step(**over):
     step = {"instruction": "x", "when": {"type": "now"}, "do": {"skill": "rotate", "angle_deg": 90}, "timeout_s": 10}
     step.update(over)

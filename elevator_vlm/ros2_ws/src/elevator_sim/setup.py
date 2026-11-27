@@ -40,6 +40,7 @@ setup(
             "e2e_runner = elevator_sim.e2e_runner:main",
             "generate_world = elevator_sim.world_gen:main",
             "bench_world = elevator_sim.bench_world_node:main",
+            "bench_path = elevator_sim.bench_path_node:main",
         ],
     },
 )

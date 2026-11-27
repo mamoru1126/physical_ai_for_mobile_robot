@@ -4,6 +4,12 @@
 
 人が画面で行う操作と同じ経路（HTTP の API）を通るので、実行系と Web UI のつながりも確かめられる.
 終了コードは、タスクが完了して審判が成功と判定すれば 0、それ以外は 1.
+
+mode:=path（道のベンチ）では、途中から・ここまで の流れを通す:
+  映像を start_frame に移す → 計画を読み込む → 「承認して開始の合図を待つ」（API）→
+  ROS のトピック /vlm_drive/command に start → 終わるまで見守る（finish_after_m を超えたら finish）.
+  成功は、実行が完了し、結果が expect_result（done か finished）で、映像が expect_min_frame 以上まで進み、
+  /vlm_drive/active が true → false と変わったこと.
 """
 from __future__ import annotations
 
@@ -21,7 +27,7 @@ from typing import Any, Dict, List, Optional
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Bool, Int32, String
 
 from elevator_task.core.http_util import urlopen
 
@@ -38,8 +44,19 @@ class E2ERunner(Node):
         self.plan_file = str(self.declare_parameter("plan_file", "").value)
         self.call_button = str(self.declare_parameter("call_button", "call").value)
         self.print_images = bool(self.declare_parameter("print_images", False).value)
+        self.mode = str(self.declare_parameter("mode", "elevator").value).strip().lower()
+        # 道のベンチ（mode:=path）
+        self.start_frame = int(self.declare_parameter("start_frame", 0).value)
+        self.arm_from = int(self.declare_parameter("arm_from", 0).value)
+        self.arm_to = int(self.declare_parameter("arm_to", 0).value)
+        self.finish_after_m = float(self.declare_parameter("finish_after_m", 0.0).value)
+        self.expect_result = str(self.declare_parameter("expect_result", "done").value)
+        self.expect_min_frame = int(self.declare_parameter("expect_min_frame", 0).value)
         self.referee: Dict[str, Any] = {}
         self.elevator: Dict[str, Any] = {}
+        self.bench_path: Dict[str, Any] = {}
+        self.drive_states: List[Dict[str, Any]] = []
+        self.active_seen: List[bool] = []
         self.exit_code = 1
         self.finished = threading.Event()
         self._shots: List[str] = []
@@ -47,6 +64,12 @@ class E2ERunner(Node):
         self._extra_cameras: List[str] = []
         self.create_subscription(String, "/sim/referee", self._on_referee, 10)
         self.create_subscription(String, "/elevator/state", self._on_elevator, 10)
+        if self.mode == "path":
+            self.create_subscription(String, "/bench/path", self._on_bench_path, 10)
+            self.create_subscription(String, "/vlm_drive/state", self._on_drive_state, 10)
+            self.create_subscription(Bool, "/vlm_drive/active", self._on_active, 10)
+            self._goto_pub = self.create_publisher(Int32, "/bench/path/goto", 10)
+            self._command_pub = self.create_publisher(String, "/vlm_drive/command", 10)
         os.makedirs(self.out_dir, exist_ok=True)
         self._worker = threading.Thread(target=self._run_guarded, name="e2e", daemon=True)
         self._worker.start()
@@ -62,6 +85,22 @@ class E2ERunner(Node):
             self.elevator = json.loads(msg.data)
         except ValueError:
             pass
+
+    def _on_bench_path(self, msg: String) -> None:
+        try:
+            self.bench_path = json.loads(msg.data)
+        except ValueError:
+            pass
+
+    def _on_drive_state(self, msg: String) -> None:
+        try:
+            self.drive_states.append(json.loads(msg.data))
+        except ValueError:
+            pass
+
+    def _on_active(self, msg: Bool) -> None:
+        if not self.active_seen or self.active_seen[-1] != bool(msg.data):
+            self.active_seen.append(bool(msg.data))
 
     # -- HTTP ---------------------------------------------------------------
     def _get(self, path: str, timeout: float = 5.0) -> bytes:
@@ -132,6 +171,8 @@ class E2ERunner(Node):
             time.sleep(1.0)
         self._log(f"準備完了（{time.monotonic() - t0:.0f} 秒）. VLM: {state['vlm']['base_url']} / {state['vlm']['info']}")
         self._extra_cameras = [c["name"] for c in state.get("extra_cameras", [])]
+        if self.mode == "path":
+            return self._run_path(state)
         self._snapshot("start")
 
         # 2. 計画
@@ -196,7 +237,133 @@ class E2ERunner(Node):
             time.sleep(0.5)
         return self._finish(state["task_state"], state)
 
-    def _finish(self, outcome: str, state: Dict[str, Any]) -> int:
+    # -- 道のベンチ: 途中から・ここまで ------------------------------------------------
+    def _load_plan(self, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.plan_file:
+            with open(self.plan_file, "r", encoding="utf-8") as f:
+                res = self._post("/api/set_plan", {"plan": json.load(f)})
+        else:
+            res = self._post("/api/plan", {"instructions": "\n".join(state["instructions"])})
+        if not res.get("ok"):
+            return None
+        t1 = time.monotonic()
+        while True:
+            state = self._state()
+            if state["plan_state"] in ("ready", "error"):
+                break
+            if time.monotonic() - t1 > 180.0:
+                return None
+            time.sleep(0.5)
+        if state["plan_state"] != "ready":
+            self._log(f"計画を作れません: {state['plan_error']}")
+            return None
+        self._log("計画:\n" + json.dumps(state["plan"], ensure_ascii=False, indent=2))
+        return state
+
+    def _run_path(self, state: Dict[str, Any]) -> int:
+        # 1. 映像を、VLM に任せる区間の始まりに移す
+        if self.start_frame > 0:
+            t0 = time.monotonic()
+            while time.monotonic() - t0 < 15.0:
+                self._goto_pub.publish(Int32(data=self.start_frame))
+                time.sleep(0.5)
+                if abs(int(self.bench_path.get("frame_number") or -999) - self.start_frame) <= 1:
+                    break
+            self._log(f"映像: {self.bench_path.get('frame')}")
+        self._snapshot("start")
+        # 2. 計画を読み込み、承認して開始の合図を待つ
+        loaded = self._load_plan(state)
+        if loaded is None:
+            return self._finish("plan_error", state, path=True)
+        body = {k: v for k, v in (("from", self.arm_from), ("to", self.arm_to)) if v > 0}
+        if not self._post("/api/arm", body).get("ok"):
+            return self._finish("arm_rejected", loaded, path=True)
+        # 3. 外（元のシステム）からの開始の合図: ROS のトピックに start
+        t1 = time.monotonic()
+        state = self._state()
+        while not state["drive"]["active"] and state["task_state"] not in ("done", "failed", "stopped"):
+            if time.monotonic() - t1 > 15.0:
+                self._log("開始の合図を受け付けません: " + json.dumps(state.get("last_command"), ensure_ascii=False))
+                return self._finish("start_not_accepted", state, path=True)
+            self._log("合図を出します: /vlm_drive/command ← start")
+            self._command_pub.publish(String(data="start"))
+            time.sleep(1.0)
+            state = self._state()
+        # 4. 終わるまで見守る
+        since = 0
+        finished_sent = False
+        t2 = time.monotonic()
+        last_report = 0.0
+        while True:
+            state = self._state(since)
+            for event in state["events"]:
+                since = max(since, event["id"])
+                if event["kind"] in ("path_start", "path_end", "path_stop_condition", "path_stalled", "skill_end",
+                                     "task_finished", "task_done", "task_failed", "command", "armed"):
+                    self._log("event " + json.dumps({k: v for k, v in event.items() if k not in ("id", "wall")},
+                                                    ensure_ascii=False))
+                if event["kind"] in ("path_stop_condition", "skill_end"):
+                    self._snapshot(event["kind"])
+            if state["task_state"] in ("done", "failed", "stopped"):
+                break
+            progress = state.get("path") or {}
+            if self.finish_after_m > 0.0 and not finished_sent and (progress.get("traveled_m") or 0.0) >= self.finish_after_m:
+                self._log(f"{self.finish_after_m} m を超えたので、合図を出します: /vlm_drive/command ← finish")
+                self._command_pub.publish(String(data="finish"))
+                finished_sent = True
+            wall = time.monotonic() - t2
+            if wall - last_report > 10.0:
+                last_report = wall
+                self._log(f"走行中: {progress.get('traveled_m')} m、答え {progress.get('answers')} 回、"
+                          f"{progress.get('state')}、映像 {self.bench_path.get('frame')}")
+            if wall > self.task_timeout_s:
+                self._log("時間切れです. 停止します")
+                self._post("/api/stop")
+                return self._finish("timeout", state, path=True)
+            time.sleep(0.5)
+        self._snapshot("end")
+        time.sleep(1.5)                   # 最後の状態のトピックを受け取る
+        return self._finish(state["task_state"], self._state(), path=True)
+
+    def _finish(self, outcome: str, state: Dict[str, Any], path: bool = False) -> int:
+        if path:
+            return self._finish_path(outcome, state)
+        return self._finish_elevator(outcome, state)
+
+    def _finish_path(self, outcome: str, state: Dict[str, Any]) -> int:
+        drive = state.get("drive") or {}
+        frame = int(self.bench_path.get("frame_number") or 0)
+        checks = {
+            "完了した": outcome == "done",
+            f"結果が {self.expect_result}": drive.get("result") == self.expect_result,
+            f"映像が {self.expect_min_frame} 枚目まで進んだ": frame >= self.expect_min_frame,
+            "外への知らせ（/vlm_drive/active）が true → false": self.active_seen[-2:] == [True, False],
+            "外への知らせ（/vlm_drive/state）を受け取った": bool(self.drive_states),
+        }
+        passed = all(checks.values())
+        summary = {
+            "result": "PASS" if passed else "FAIL",
+            "outcome": outcome,
+            "checks": checks,
+            "task_state": state.get("task_state"),
+            "task_message": state.get("task_message"),
+            "steps": (state.get("executor") or {}).get("steps"),
+            "path": state.get("path"),
+            "drive": drive,
+            "bench_path": self.bench_path,
+            "active_seen": self.active_seen,
+            "drive_state_last": self.drive_states[-1] if self.drive_states else None,
+            "run_dir": state.get("run_dir"),
+        }
+        with open(os.path.join(self.out_dir, "summary.json"), "w", encoding="utf-8") as f:
+            json.dump(summary, f, ensure_ascii=False, indent=2)
+        self._log("まとめ:\n" + json.dumps(summary, ensure_ascii=False, indent=2))
+        if self.print_images:
+            self._print_images()
+        self._log(f"E2E RESULT: {summary['result']}")
+        return 0 if passed else 1
+
+    def _finish_elevator(self, outcome: str, state: Dict[str, Any]) -> int:
         passed = outcome == "done" and bool(self.referee.get("success"))
         summary = {
             "result": "PASS" if passed else "FAIL",

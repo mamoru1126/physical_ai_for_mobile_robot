@@ -1,9 +1,12 @@
 name: elevator-bench
 
 # Orin のベンチ（実機の代わりにダミーの世界をつないで、エレベーターのタスクを通す）の確認.
-#   bench-e2e:   x86 で、Orin 用のスクリプト（bench_up.sh、bench_e2e.sh）をそのまま動かし、モック VLM で1回通す
-#                （ダミーの世界 → 実行系 → 安全ゲート（Python）→ 安全ゲート（点群、C++）→ ダミーの世界）
-#   build-arm64: Orin と同じ arm64 で、2つのイメージが作れるか（中の単体テストも通す）
+#   bench-e2e:      x86 で、Orin 用のスクリプト（bench_up.sh、bench_e2e.sh）をそのまま動かし、モック VLM で1回通す
+#                   （ダミーの世界 → 実行系 → 安全ゲート（Python）→ 安全ゲート（点群、C++）→ ダミーの世界）
+#   bench-path-e2e: 道のベンチ（ATC のコースの映像）で「エレベーターの扉の前まで道に沿って走って」を通す.
+#                   承認して開始の合図を待つ → ROS のトピックで start → 止まる条件で止まる、までの流れ
+#                   （モック VLM は、映像のフレームの正解 atc_frames/labels.json から答える）
+#   build-arm64:    Orin と同じ arm64 で、2つのイメージが作れるか（中の単体テストも通す）
 
 on:
   push:
@@ -14,6 +17,7 @@ on:
       - "safety_gate/**"
       - "jetson/bench/**"
       - "jetson/vlm_up.sh"
+      - "atc_frames/**"
       - ".github/workflows/elevator-bench.yml"
   workflow_dispatch:
 
@@ -69,6 +73,59 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: elevator-bench-log
+          path: jetson/log
+          retention-days: 14
+
+  bench-path-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the runtime image (unit tests run inside)
+        run: |
+          set -o pipefail
+          DOCKER_BUILDKIT=1 docker build --progress=plain -f elevator_vlm/docker/Dockerfile.runtime \
+            -t elevator-runtime:latest elevator_vlm 2>&1 | tail -n 60
+
+      # モック VLM（道のモード）: 今の映像のフレームの正解（走れる範囲、止まる条件）から答える
+      - name: Start a mock VLM (path mode) on port 8000
+        run: |
+          docker run -d --name mock-vlm --network host --ipc host -e ROS_DOMAIN_ID=43 -e ROS_LOCALHOST_ONLY=1 \
+            -v "$PWD/atc_frames:/atc_frames:ro" elevator-runtime:latest \
+            ros2 run elevator_sim mock_vlm --ros-args -p port:=8000 -p latency_s:=0.5 -p mode:=path \
+            -p labels:=/atc_frames/labels.json
+          for _ in $(seq 1 30); do (exec 3<> /dev/tcp/127.0.0.1/8000) 2> /dev/null && break; sleep 1; done
+          curl -s http://127.0.0.1:8000/v1/models; echo
+
+      - name: bench_up.sh (path bench)
+        run: BENCH_TASK=path bash jetson/bench/bench_up.sh
+
+      - name: bench_e2e.sh (arm, start over ROS, stop at the elevator doors)
+        run: BENCH_TASK=path bash jetson/bench/bench_e2e.sh
+
+      - name: Check the Web UIs and the drive state topic
+        if: always()
+        run: |
+          curl -sf "http://127.0.0.1:8080/api/state" | python3 -c "import json,sys; s=json.load(sys.stdin); print('task:', s['task_state'], s['task_message']); print('drive:', s['drive']); print('path:', s['path'])"
+          curl -sf http://127.0.0.1:9001/latest | python3 -c "import json,sys; s=json.load(sys.stdin); print('safety gate:', s['state'], s['reason'], 'publishing', s.get('pub'))"
+          docker exec elevator-bench /entrypoint.sh timeout 10 ros2 topic echo --once /vlm_drive/state || true
+
+      - name: Logs
+        if: always()
+        run: |
+          echo "==== safety gate ===="; docker logs elevator-bench-gate 2>&1 | grep -E "状態|速度指令" | head -n 40
+          echo "==== elevator-bench ===="; docker logs elevator-bench 2>&1 | tail -n 150
+          echo "==== mock-vlm ===="; docker logs mock-vlm 2>&1 | tail -n 20
+          ls -la jetson/log/ || true
+          bash jetson/bench/bench_down.sh
+          docker rm -f mock-vlm > /dev/null 2>&1 || true
+
+      - name: Upload the bench records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elevator-bench-path-log
           path: jetson/log
           retention-days: 14
 

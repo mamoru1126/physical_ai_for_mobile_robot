@@ -534,7 +534,8 @@ def test_runtime_and_web_api_end_to_end(make_stack, tmp_path):
             assert json.loads(_http(base + "/api/set_plan", {"plan": f.read()}))["ok"]
         assert not json.loads(_http(base + "/api/set_plan", {"plan": {"steps": []}}))["ok"]
         # 用意済みの計画
-        assert state["presets"] == ["elevator_expected.json", "elevator_fixed_distance.json"]
+        assert state["presets"] == ["elevator_expected.json", "elevator_fixed_distance.json", "path_10m.json",
+                                    "path_until_elevator_doors.json", "path_until_finish.json"]
         assert json.loads(_http(base + "/api/load_preset", {"name": "elevator_expected.json"}))["ok"]
         assert not json.loads(_http(base + "/api/load_preset", {"name": "../config/task.yaml"}))["ok"]
         # VLM に渡した画像と記録がディスクに残っている

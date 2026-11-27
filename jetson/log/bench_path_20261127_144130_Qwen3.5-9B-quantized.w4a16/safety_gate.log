@@ -1,0 +1,46 @@
+設定ファイル: /config/config.yaml、ROS 2 のドメイン: 43
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-11-27-05-38-57-287692-ubuntu-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [safety_gate_node-1]: process started with pid [23]
+[INFO] [safety_gate_web.py-2]: process started with pid [25]
+[safety_gate_node-1] [INFO] [1795757937.426676064] [safety_gate_node]: 設定ファイル: /config/config.yaml
+[safety_gate_node-1] [INFO] [1795757937.435268544] [safety_gate_node]: 受ける: /vlm_cmd_vel、/cloud  出す: /cmd_vel（base_link 座標系で判定）
+[safety_gate_node-1] [INFO] [1795757937.435347392] [safety_gate_node]: 指令が来ていない間は、0 を 0.50 秒出してから黙ります（元のシステムと /cmd_vel を使い分ける）
+[safety_gate_node-1] [INFO] [1795757937.485429920] [safety_gate_node]: 状態: (起動) → IDLE（指令がまだ来ていません）
+[safety_gate_web.py-2] [INFO] [1795757948.313749600] [safety_gate_web]: WebUI: http://<この PC の IP>:9001/ （/safety_gate/debug を表示）
+[safety_gate_node-1] [INFO] [1795757967.535516160] [safety_gate_node]: 速度指令を出し始めました
+[safety_gate_node-1] [INFO] [1795757971.635511200] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795757975.035388800] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795757979.585407520] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795757982.985465600] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795757987.535455040] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795757990.935431328] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795757995.485497344] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795757998.835435040] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758003.435430464] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758006.835429376] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758011.435443264] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758014.835471072] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758019.335465728] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758022.735436960] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758027.285439104] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758030.685471040] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758035.235487872] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758038.635425664] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758043.235433504] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758046.635426144] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758051.185483648] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758053.735437184] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758055.735413600] [safety_gate_node]: 指令が来ていないので、速度指令を出すのをやめました
+[safety_gate_node-1] [INFO] [1795758093.385481824] [safety_gate_node]: 速度指令を出し始めました
+[safety_gate_node-1] [INFO] [1795758100.235483552] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758103.635464992] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758106.285502432] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758108.535455040] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758113.135457184] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758116.535416128] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758119.635420864] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758121.985385888] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758126.535392832] [safety_gate_node]: 状態: IDLE → PASS（進む先に障害物はありません）
+[safety_gate_node-1] [INFO] [1795758129.935456544] [safety_gate_node]: 状態: PASS → IDLE（指令が 0 です）
+[safety_gate_node-1] [INFO] [1795758137.285416544] [safety_gate_node]: 指令が来ていないので、速度指令を出すのをやめました

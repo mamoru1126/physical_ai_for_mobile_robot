@@ -1,0 +1,23 @@
+記録: /runs/20261127_053857   VLM: vlm（http://127.0.0.1:8000/v1）
+判定 7 回（平均 2.49 秒、最大 2.88 秒）、指差し 28 回（平均 3.97 秒、最大 4.17 秒）
+この記録には真値が添えられていません（古い版の記録）. 答えの並びだけを出します
+
+計画（読み込み）
+  1. 道に沿って10m走って
+     [now] → follow_path path=the walkway or corridor ahead distance_m=10.0 stop_when=
+
+計画（読み込み）
+  1. エレベーターの扉の前まで道に沿って走って
+     [now] → follow_path path=the walkway or corridor ahead distance_m=0.0 stop_when=Closed elevator doors are directly in front of the robot.
+
+実行 1（開始 t=1795757967.493）
+ 手順 1「道に沿って10m走って」
+   動作 follow_path path=the walkway or corridor ahead distance_m=10.0 stop_when=
+     結果: 道に沿って 9.9 m 走りました（86.2 秒）
+ 終わり方: 実行系の報告は「完了」
+
+実行 2（開始 t=1795758093.335）
+ 手順 1「エレベーターの扉の前まで道に沿って走って」
+   動作 follow_path path=the walkway or corridor ahead distance_m=0.0 stop_when=Closed elevator doors are directly in front of the robot.
+     結果: 止まる条件が成り立ちました（3.9 m 走りました）（41.9 秒）
+ 終わり方: 実行系の報告は「完了」

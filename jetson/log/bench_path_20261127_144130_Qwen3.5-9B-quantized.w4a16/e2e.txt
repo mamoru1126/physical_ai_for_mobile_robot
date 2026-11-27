@@ -1,0 +1,137 @@
+[e2e] 準備完了（0 秒）. VLM: http://127.0.0.1:8000/v1 / vlm
+[e2e] 映像: frame_00225.jpg
+[e2e] POST /api/set_plan → {'ok': True, 'message': '計画を読み込みました'}
+[e2e] 計画:
+{
+  "steps": [
+    {
+      "instruction": "エレベーターの扉の前まで道に沿って走って",
+      "when": {
+        "type": "now"
+      },
+      "do": {
+        "skill": "follow_path",
+        "path": "the walkway or corridor ahead",
+        "distance_m": 0.0,
+        "stop_when": "Closed elevator doors are directly in front of the robot."
+      },
+      "timeout_s": 900.0
+    }
+  ]
+}
+[e2e] POST /api/arm → {'ok': True, 'message': '承認しました. 開始の合図を待ちます（手順1〜1）'}
+[e2e] 合図を出します: /vlm_drive/command ← start
+[e2e] 走行中: 0.93 m、答え 1 回、holding、映像 frame_00226.jpg
+[e2e] 走行中: 1.88 m、答え 3 回、driving、映像 frame_00228.jpg
+[e2e] 走行中: 3.03 m、答え 4 回、holding、映像 frame_00230.jpg
+[e2e] 走行中: 3.95 m、答え 6 回、holding、映像 frame_00231.jpg
+[e2e] event {"kind": "path_stop_condition", "condition": "Closed elevator doors are directly in front of the robot.", "traveled_m": 3.949, "t": 1795758135.259}
+[e2e] event {"kind": "path_end", "ok": true, "message": "止まる条件が成り立ちました（3.9 m 走りました）", "traveled_m": 3.949, "answers": 6, "accepted": 5, "checks": 7, "t": 1795758135.259}
+[e2e] event {"kind": "skill_end", "step": 0, "ok": true, "message": "止まる条件が成り立ちました（3.9 m 走りました）", "finished": false, "t": 1795758135.259}
+[e2e] event {"kind": "task_done", "t": 1795758135.26}
+[e2e] まとめ:
+{
+  "result": "FAIL",
+  "outcome": "done",
+  "checks": {
+    "完了した": true,
+    "結果が done": true,
+    "映像が 243 枚目まで進んだ": false,
+    "外への知らせ（/vlm_drive/active）が true → false": true,
+    "外への知らせ（/vlm_drive/state）を受け取った": true
+  },
+  "task_state": "done",
+  "task_message": "すべての手順が完了しました（道のベンチ（今のフレーム）: frame_00231.jpg（13.9 m 走った））",
+  "steps": [
+    {
+      "phase": "done",
+      "seen_false": true,
+      "checks": 0,
+      "streak": 0,
+      "streak_answer": null,
+      "started_at": 1795758093.335912,
+      "confirmed_at": null,
+      "finished_at": 1795758135.2594404,
+      "message": "止まる条件が成り立ちました（3.9 m 走りました）"
+    }
+  ],
+  "path": {
+    "active": false,
+    "path": "the walkway or corridor ahead",
+    "stop_when": "Closed elevator doors are directly in front of the robot.",
+    "distance_m": 0.0,
+    "limit_m": 100.0,
+    "step_m": 1.0,
+    "traveled_m": 3.95,
+    "allow_m": 0.0,
+    "answers": 6,
+    "accepted": 5,
+    "rejected": 1,
+    "checks": 7,
+    "stop_streak": 2,
+    "last_latency_s": 4.16,
+    "state": "done",
+    "reason": "点が画像の外か端にあります（u=488, v=538）",
+    "result": "止まる条件が成り立ちました（3.9 m 走りました）"
+  },
+  "drive": {
+    "active": false,
+    "task_state": "done",
+    "message": "すべての手順が完了しました（道のベンチ（今のフレーム）: frame_00231.jpg（13.9 m 走った））",
+    "stopped": false,
+    "armed": [
+      1,
+      1
+    ],
+    "range": [
+      1,
+      1
+    ],
+    "source": "ros",
+    "run": 2,
+    "result": "done",
+    "steps": 1,
+    "plan_ready": true,
+    "step": 0,
+    "skill": ""
+  },
+  "bench_path": {
+    "time": 187.023,
+    "frame": "frame_00231.jpg",
+    "frame_number": 231,
+    "traveled_m": 13.88,
+    "meters_per_frame": 0.6,
+    "first": 1,
+    "last": 313,
+    "summary": "frame_00231.jpg（13.9 m 走った）"
+  },
+  "active_seen": [
+    false,
+    true,
+    false
+  ],
+  "drive_state_last": {
+    "active": false,
+    "armed": [
+      1,
+      1
+    ],
+    "message": "すべての手順が完了しました（道のベンチ（今のフレーム）: frame_00231.jpg（13.9 m 走った））",
+    "plan_ready": true,
+    "range": [
+      1,
+      1
+    ],
+    "result": "done",
+    "run": 2,
+    "skill": "",
+    "source": "ros",
+    "step": 0,
+    "steps": 1,
+    "stopped": false,
+    "task_state": "done"
+  },
+  "run_dir": "/runs/20261127_053857"
+}
+[e2e] E2E RESULT: FAIL
+[ros2run]: Process exited with failure 1
